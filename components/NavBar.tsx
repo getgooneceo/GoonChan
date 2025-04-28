@@ -246,7 +246,7 @@ const NavBar = () => {
       ) : (
         // Desktop Layout
         <div className="flex flex-col">
-          <div className="relative h-[6rem] flex justify-between items-center">
+          <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
             <Link href={"/"} className="flex items-center cursor-pointer hover:opacity-90 hover:scale-[1.015] transition-all ease-out space-x-2">
               <Image
                 src="/logo2.webp"
@@ -306,7 +306,6 @@ const NavBar = () => {
             </div>
           </div>
 
-          {/* Categories Navigation */}
           {!isMobile && (
             <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide">
               <div className="flex items-center justify-between w-full gap-1">
@@ -318,8 +317,8 @@ const NavBar = () => {
                       flex-1 cursor-pointer transition-all ease-out duration-200 whitespace-nowrap
                       
                       ${/* Large screens - buttons with background */''}
-                      lg:flex lg:flex-row lg:items-center lg:justify-center lg:px-3 lg:py-2 lg:rounded-full
-                      lg:hover:scale-[1.02] lg:mx-0.5
+                      lg:flex lg:flex-row lg:items-center lg:justify-center lg:px-3 lg:py-[0.6rem] lg:rounded-full
+                      lg:hover:scale-[1.02] lg:transform-gpu lg:mx-0.5
                       ${activeCategory === category.id 
                         ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_4px_12px_rgba(234,65,151,0.1)]' 
                         : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white'}
@@ -339,8 +338,10 @@ const NavBar = () => {
                         : 'text-[#b3b3b3]'}
                     `}
                   >
-                    <span className="lg:mr-2 lg:translate-y-[1px] md:mr-1.5 md:translate-y-[1px] text-base sm:text-lg block mb-1 md:mb-0">{category.icon}</span>
-                    <span className="text-[10px] sm:text-xs md:text-sm font-inter font-medium">{category.name}</span>
+                    <div className="flex items-center justify-center">
+                      <span className="lg:mr-2 md:mr-1.5 text-base sm:text-lg block mb-1 md:mb-0">{category.icon}</span>
+                      <span className="text-[10px] sm:text-xs md:text-sm font-pop font-medium">{category.name}</span>
+                    </div>
                   </button>
                 ))}
               </div>
