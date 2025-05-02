@@ -7,9 +7,9 @@
   --font-inter: Inter, sans-serif;
   --font-roboto: Roboto, sans-serif;
 
-  --screen-xss: 220px;
-  --screen-xs: 480px;
-  --screen-3xl: 1920px;
+  --breakpoint-xss: 220px;
+  --breakpoint-xs: 480px;
+  --breakpoint-3xl: 1920px;
 }
 
 @layer tailwind-utilities {

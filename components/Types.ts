@@ -19,7 +19,7 @@ export interface CommentType {
 export interface VideoType {
   id: number;
   title: string;
-  thumbnail: string;
+  thumbnail?: string;
   duration: string;
   views: number;
   uploader: string;
