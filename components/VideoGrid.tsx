@@ -33,8 +33,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
     >
       <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
         <Image 
-          src={video.thumbnail} 
-          alt={video.title}
+          src={video.thumbnail || ''} 
+          alt={video.title || ''}
           width={640}
           height={360}
           className="object-cover w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"

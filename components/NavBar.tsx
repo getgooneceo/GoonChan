@@ -5,9 +5,12 @@ import { FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { FaUserAlt, FaRegUser, FaRandom, FaHeart, FaFire, FaPlay, FaList, FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
 import { RiVideoUploadFill, RiVideoUploadLine } from "react-icons/ri";
 import { IoSearchSharp } from "react-icons/io5";
+import AuthModel from './authModel' 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-const NavBar = () => {
+const NavBar = ({user}: {user?: any}) => {
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [activeCategory, setActiveCategory] = useState("discover");
@@ -15,6 +18,7 @@ const NavBar = () => {
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -78,6 +82,22 @@ const NavBar = () => {
     };
   }, []);
 
+  const handleProfileNavigation = () => {
+    if (user) {
+      router.push("/profile");
+    } else{
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleUploadNavigation = () => {
+    if (user) {
+      router.push("/upload");
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
   const focusSearchInput = (isMobileView: boolean) => {
     if (isMobileView) {
       mobileSearchInputRef.current?.focus();
@@ -93,13 +113,15 @@ const NavBar = () => {
     { id: "recent", name: "Recently Added", icon: <FaClock /> },
     { id: "liked", name: "Most Liked", icon: <FaHeart /> },
     { id: "random", name: "Random", icon: <FaRandom /> },
-    { id: "categories", name: "Categories", icon: <FaList /> },
+    { id: "subscriptions", name: "Subscriptions", icon: <FaList /> },
     { id: "profiles", name: "Profiles", icon: <FaUser /> },
   ];
 
   return (
-    <div className="max-w-[79rem] mx-auto px-4">
-      {/* Mobile Sidebar */}
+    <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
+
+      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} />}
+      
       {isMobile && (
         <>
           <div 
@@ -165,11 +187,17 @@ const NavBar = () => {
               <div className="mt-6 pt-6 border-t border-[#2a2a2a]">
                 <h3 className="text-[#9e9e9e] text-xs font-medium uppercase tracking-wider mb-3 pl-2">Account</h3>
                 <div className="flex flex-col space-y-1">
-                  <button className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200">
+                  <button 
+                    onClick={handleProfileNavigation}
+                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
+                  >
                     <FaUserAlt className="text-lg mr-4" />
                     <span className="font-medium">Profile</span>
                   </button>
-                  <button className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200">
+                  <button 
+                    onClick={handleUploadNavigation}
+                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
+                  >
                     <RiVideoUploadFill className="text-lg mr-4" />
                     <span className="font-medium">Upload Video</span>
                   </button>
@@ -181,7 +209,7 @@ const NavBar = () => {
       )}
 
       {isMobile ? (
-        <div className="flex flex-col">
+        <div className="flex flex-col md:hidden">
           <div className="relative h-[4rem] flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <FiMenu 
@@ -206,10 +234,15 @@ const NavBar = () => {
             </Link>
 
             <div className="flex items-center space-x-5">
-              <RiVideoUploadLine size={22} className="text-[#c2c2c2] cursor-pointer" />
+              <RiVideoUploadLine 
+                size={22} 
+                className="text-[#c2c2c2] cursor-pointer"
+                onClick={handleUploadNavigation}
+              />
               <FaRegUser
                 size={20}
                 className="text-[#c2c2c2] cursor-pointer"
+                onClick={handleProfileNavigation}
               />
             </div>
           </div>
@@ -245,9 +278,9 @@ const NavBar = () => {
         </div>
       ) : (
         // Desktop Layout
-        <div className="flex flex-col">
+        <div className="hidden md:flex flex-col">
           <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
-            <Link href={"/"} className="flex items-center cursor-pointer hover:opacity-90 hover:scale-[1.015] transition-all ease-out space-x-2">
+            <Link href={"/"} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
               <Image
                 src="/logo2.webp"
                 alt="GoonChan Logo"
@@ -290,12 +323,15 @@ const NavBar = () => {
             </div>
 
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <button className="flex items-center justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out cursor-pointer text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4">
+              <button 
+                onClick={handleUploadNavigation}
+                className="flex items-center justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out cursor-pointer text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+              >
                 <RiVideoUploadFill size={20} />
                 <span className="font-pop font-semibold hidden sm:ml-2 md:inline">Upload</span>
               </button>
 
-              <div className="cursor-pointer">
+              <div className="cursor-pointer" onClick={handleProfileNavigation}>
                 <div className="border-2 group border-[#595959] hover:scale-[1.05] transition-all bg-[#181818] p-[0.55rem] rounded-full flex items-center justify-center">
                   <FaUserAlt
                     size={18}
@@ -307,7 +343,7 @@ const NavBar = () => {
           </div>
 
           {!isMobile && (
-            <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide">
+            <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide hidden md:block">
               <div className="flex items-center justify-between w-full gap-1">
                 {categories.map((category) => (
                   <button

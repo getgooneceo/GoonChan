@@ -90,11 +90,12 @@ const WatchPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isScrollLocked, setIsScrollLocked] = useState(true);
+  // const [isScrollLocked, setIsScrollLocked] = useState(true);
   const commentsRef = useRef<HTMLDivElement>(null);
 
   // Add container ref and state for dynamic 16:9 sizing
   const streamContainerRef = useRef<HTMLDivElement>(null);
+  const [loadingMessage, setLoadingMessage] = useState("Loading video...");
   const [streamSize, setStreamSize] = useState({ width: 0, height: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -130,21 +131,21 @@ const WatchPage = () => {
     }, 100);
   };
 
-  useEffect(() => {
-    if (isScrollLocked) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+  // useEffect(() => {
+  //   if (isScrollLocked) {
+  //     document.body.style.overflow = 'hidden';
+  //   } else {
+  //     document.body.style.overflow = '';
+  //   }
 
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isScrollLocked]);
+  //   return () => {
+  //     document.body.style.overflow = '';
+  //   };
+  // }, [isScrollLocked]);
 
   const handleVideoLoad = () => {
     setIsLoading(false);
-    setIsScrollLocked(false);
+    // setIsScrollLocked(false);
   }
 
   if (!video) {
@@ -215,16 +216,25 @@ const WatchPage = () => {
           <div className="">
             {isLoading && (
               <div
-                className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black z-10"
+                className="aspect-video w-full h-full flex items-center justify-center bg-black relative"
                 id="video-loading-overlay"
               >
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
-                  <p className="text-white text-sm">Loading video...</p>
+                {video.thumbnail && (
+                  <img
+                    src={video.thumbnail}
+                    alt="Loading thumbnail"
+                    className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
+                  />
+                )}
+                <div className="flex flex-col items-center z-10">
+                  {loadingMessage == "Loading video..." && (
+                    <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
+                  )}
+                  {/* <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div> */}
+                  <p className="text-white text-base">{loadingMessage}</p>
                 </div>
               </div>
             )}
-
             <Stream
               controls
               src={video.videoUrl || ''}
@@ -232,10 +242,11 @@ const WatchPage = () => {
               poster={video.thumbnail || ""}
               preload="metadata"
               onLoadedMetaData={() => handleVideoLoad()}
+              onError={() => setLoadingMessage("Error 404 - Video not found")}
               // height={streamSize.height ? `${streamSize.height}px` : '100%'}
               // width={streamSize.width ? `${streamSize.width}px` : '100%'}
               // responsive={false}
-              className="w-full h-full"
+              className={`w-full h-full ${isLoading ? "hidden" : ""}`}
               autoplay={false}
               muted={false}
             />
