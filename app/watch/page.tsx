@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import NavBar from "@/components/NavBar";
@@ -58,7 +58,21 @@ const formatCount = (count: number): string => {
   }
 };
 
-const WatchPage = () => {
+// Loading component to show while the page content is loading
+const WatchPageLoading = () => {
+  return (
+    <div className="bg-[#080808] min-h-screen w-full">
+      <NavBar />
+      <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
+        <div className="inline-block w-10 h-10 border-4 border-t-[#ea4197] border-r-[#ea4197] border-b-transparent border-l-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-white font-medium">Loading video...</p>
+      </div>
+    </div>
+  );
+};
+
+// Main content component that uses useSearchParams
+const WatchPageContent = () => {
   const searchParams = useSearchParams();
   const videoId = searchParams.get("v")
     ? parseInt(searchParams.get("v") as string)
@@ -111,7 +125,7 @@ const WatchPage = () => {
 
   const handleVideoLoad = () => {
     setIsLoading(false);
-  }
+  };
 
   if (!video) {
     return (
@@ -131,7 +145,6 @@ const WatchPage = () => {
   return (
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar />
-      {/* <ExternalScript /> */}
       <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8">
         <div className="w-full  rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">
@@ -154,13 +167,9 @@ const WatchPage = () => {
             ].map((ad, index) => (
               <div
                 key={index}
-                className={`
-                  w-full 
-                  ${index >= 1 ? "hidden sm:block" : ""} 
-                  ${index >= 2 ? "sm:hidden lg:block" : ""} 
-                  sm:w-[calc(50%-8px)] 
-                  lg:w-[calc(33.333%-11px)]
-                `}
+                className={`w-full ${index >= 1 ? "hidden sm:block" : ""} ${
+                  index >= 2 ? "sm:hidden lg:block" : ""
+                } sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]`}
               >
                 <a href={ad.href} className="block w-full">
                   <img
@@ -201,7 +210,7 @@ const WatchPage = () => {
             )}
             <Stream
               controls
-              src={video.videoUrl || ''}
+              src={video.videoUrl || ""}
               primaryColor="#cfcfcf"
               poster={video.thumbnail || ""}
               preload="metadata"
@@ -416,13 +425,9 @@ const WatchPage = () => {
           ].map((ad, index) => (
             <div
               key={index}
-              className={`
-                  w-full 
-                  ${index >= 1 ? "hidden sm:block" : ""} 
-                  ${index >= 2 ? "sm:hidden lg:block" : ""} 
-                  sm:w-[calc(50%-8px)] 
-                  lg:w-[calc(33.333%-11px)]
-                `}
+              className={`w-full ${index >= 1 ? "hidden sm:block" : ""} ${
+                index >= 2 ? "sm:hidden lg:block" : ""
+              } sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]`}
             >
               <a href={ad.href} className="block w-full">
                 <img
@@ -532,7 +537,9 @@ const WatchPage = () => {
                     <button className="flex items-center gap-1 cursor-pointer hover:text-[#ea4198ea]">
                       <i className="ri-thumb-down-fill text-[1rem]"></i>
                     </button>
-                    <button className="hover:text-[#ea4198ea] font-inter cursor-pointer">Reply</button>
+                    <button className="hover:text-[#ea4198ea] font-inter cursor-pointer">
+                      Reply
+                    </button>
                   </div>
 
                   {comment.replies && comment.replies.length > 0 && (
@@ -564,7 +571,9 @@ const WatchPage = () => {
                               <div className="flex items-center gap-4 text-[#909090] text-xs">
                                 <button className="flex items-center gap-1 hover:text-[#ea4197]">
                                   <i className="ri-thumb-up-fill text-[1rem]"></i>
-                                  <span className="font-inter">{reply.likes}</span>
+                                  <span className="font-inter">
+                                    {reply.likes}
+                                  </span>
                                 </button>
                                 <button className="flex items-center gap-1 hover:text-[#ea4197]">
                                   <i className="ri-thumb-down-fill text-[1rem]"></i>
@@ -583,6 +592,15 @@ const WatchPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Main component that wraps the content in a Suspense boundary
+const WatchPage = () => {
+  return (
+    <Suspense fallback={<WatchPageLoading />}>
+      <WatchPageContent />
+    </Suspense>
   );
 };
 

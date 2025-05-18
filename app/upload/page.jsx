@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   RiImageAddLine,
@@ -12,7 +12,20 @@ import Link from "next/link";
 import { Toaster, toast } from "sonner";
 import NavBar from "@/components/NavBar";
 
-const UploadPage = ({ user }) => {
+// Loading component to show while the page content is loading
+const UploadPageLoading = () => {
+  return (
+    <div className="md:py-14 py-7 flex justify-center items-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="inline-block w-8 h-8 border-4 border-t-[#ea4197] border-r-[#ea4197] border-b-transparent border-l-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-white font-medium">Loading upload page...</p>
+      </div>
+    </div>
+  );
+};
+
+// Main content component that uses useSearchParams
+const UploadPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const uploadType = searchParams.get("type") || "video";
@@ -588,6 +601,15 @@ const UploadPage = ({ user }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Main component that wraps the content in a Suspense boundary
+const UploadPage = () => {
+  return (
+    <Suspense fallback={<UploadPageLoading />}>
+      <UploadPageContent />
+    </Suspense>
   );
 };
 
