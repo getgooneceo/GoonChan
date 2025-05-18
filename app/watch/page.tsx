@@ -2,18 +2,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import "remixicon/fonts/remixicon.css";
 import VideoGrid from "@/components/VideoGrid";
-import { VideoType, CommentType } from "@/components/Types";
-import { MdReportProblem } from "react-icons/md";
+import { VideoType } from "@/components/Types";
 import {
   FaThumbsUp,
   FaThumbsDown,
   FaShare,
   FaBell,
-  FaRegClock,
   FaCommentAlt,
   FaList,
   FaFireAlt,
@@ -22,22 +19,6 @@ import { FaFlag } from "react-icons/fa6";
 import { Stream } from "@cloudflare/stream-react";
 
 import { videoData } from "../data"; // Adjust path if necessary
-
-// // Script component for adding external script
-// const ExternalScript = () => {
-//   useEffect(() => {
-//     const script = document.createElement('script');
-//     script.defer = true;
-//     script.src = "https://crxcr1.com/im_jerky?landing_id=%7Boffer_url_id%7D&genders=f%2Cff&providersId=27&skin=1&containerAlignment=center&cols=4&rows=1&number=4&background=transparent&useFeed=1&animateFeed=1&smoothAnimation=1&ratio=1&verticalSpace=10px&horizontalSpace=10px&colorFilter=0&colorFilterStrength=0&AuxiliaryCSS=%0A&lang=en&token=0af51e20-2546-11f0-a644-8fc73a68aa47";
-//     document.body.appendChild(script);
-
-//     return () => {
-//       document.body.removeChild(script);
-//     };
-//   }, []);
-
-//   return null;
-// };
 
 const getRelativeTimeFromDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -89,14 +70,11 @@ const WatchPage = () => {
   );
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  // const [isScrollLocked, setIsScrollLocked] = useState(true);
   const commentsRef = useRef<HTMLDivElement>(null);
 
   // Add container ref and state for dynamic 16:9 sizing
   const streamContainerRef = useRef<HTMLDivElement>(null);
   const [loadingMessage, setLoadingMessage] = useState("Loading video...");
-  const [streamSize, setStreamSize] = useState({ width: 0, height: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -131,21 +109,8 @@ const WatchPage = () => {
     }, 100);
   };
 
-  // useEffect(() => {
-  //   if (isScrollLocked) {
-  //     document.body.style.overflow = 'hidden';
-  //   } else {
-  //     document.body.style.overflow = '';
-  //   }
-
-  //   return () => {
-  //     document.body.style.overflow = '';
-  //   };
-  // }, [isScrollLocked]);
-
   const handleVideoLoad = () => {
     setIsLoading(false);
-    // setIsScrollLocked(false);
   }
 
   if (!video) {
@@ -159,9 +124,9 @@ const WatchPage = () => {
     );
   }
 
-  const videoSource = video.videoUrl
-    ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.videoUrl}/iframe`
-    : "";
+  // const videoSource = video.videoUrl
+  //  ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.videoUrl}/iframe`
+  //  : "";
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
@@ -230,7 +195,6 @@ const WatchPage = () => {
                   {loadingMessage == "Loading video..." && (
                     <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
                   )}
-                  {/* <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div> */}
                   <p className="text-white text-base">{loadingMessage}</p>
                 </div>
               </div>
@@ -243,14 +207,11 @@ const WatchPage = () => {
               preload="metadata"
               onLoadedMetaData={() => handleVideoLoad()}
               onError={() => setLoadingMessage("Error 404 - Video not found")}
-              // height={streamSize.height ? `${streamSize.height}px` : '100%'}
-              // width={streamSize.width ? `${streamSize.width}px` : '100%'}
-              // responsive={false}
               className={`w-full h-full ${isLoading ? "hidden" : ""}`}
               autoplay={false}
               muted={false}
             />
-            {/* <iframe
+{/* <iframe
               src={videoSource}
               // style={"border: none"}
               className="absolute top-0 left-0 w-full h-full border-none"

@@ -6,7 +6,9 @@ import { config } from "dotenv";
 
 config();
 
-// import { ChatBot } from "./routes/response.js";
+import signupRoute from "./routes/signup.js";
+import signinRoute from "./routes/signin.js";
+import deleteUserRoute from "./routes/deleteUser.js";
 
 const app = new Hono();
 
@@ -23,8 +25,9 @@ const server = serve({
 });
 
 app.get("/", (c) => c.text("Hello World!"));
-// app.route('/api/response', responseRoute)
-
+app.route('/api/signup', signupRoute);
+app.route('/api/signin', signinRoute);
+app.route('/api/deleteuser', deleteUserRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

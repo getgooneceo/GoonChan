@@ -2,14 +2,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { FiSearch, FiMenu, FiX } from "react-icons/fi";
-import { FaUserAlt, FaRegUser, FaRandom, FaHeart, FaFire, FaPlay, FaList, FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
+import { FaUserAlt, FaRegUser, FaRandom, FaHeart, FaList, FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
 import { RiVideoUploadFill, RiVideoUploadLine } from "react-icons/ri";
 import { IoSearchSharp } from "react-icons/io5";
-import AuthModel from './authModel' 
+import AuthModel from './authModel';
+import UploadModal from './UploadModal';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const NavBar = ({user}: {user?: any}) => {
+const NavBar = ({user, showCategories = true}: {user?: any; showCategories?: boolean;}) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -19,6 +20,7 @@ const NavBar = ({user}: {user?: any}) => {
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -92,7 +94,7 @@ const NavBar = ({user}: {user?: any}) => {
 
   const handleUploadNavigation = () => {
     if (user) {
-      router.push("/upload");
+      setShowUploadModal(true);
     } else {
       setShowAuthModal(true);
     }
@@ -113,14 +115,16 @@ const NavBar = ({user}: {user?: any}) => {
     { id: "recent", name: "Recently Added", icon: <FaClock /> },
     { id: "liked", name: "Most Liked", icon: <FaHeart /> },
     { id: "random", name: "Random", icon: <FaRandom /> },
-    { id: "subscriptions", name: "Subscriptions", icon: <FaList /> },
-    { id: "profiles", name: "Profiles", icon: <FaUser /> },
+    { id: "categories", name: "Categories", icon: <FaList /> },
+    { id: "subscriptions", name: "Subscriptions", icon: <FaUser /> },
   ];
 
   return (
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
 
+      {/* Modals */}
       {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} />}
+      {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
       
       {isMobile && (
         <>
@@ -142,7 +146,7 @@ const NavBar = ({user}: {user?: any}) => {
               <div className="flex items-center justify-between mb-8">
                 <Link href="/" className="flex items-center" onClick={() => setIsSidebarOpen(false)}>
                   <Image
-                    src="/logo2.webp"
+                    src="/logo.webp"
                     alt="GoonChan Logo"
                     width={32}
                     height={32}
@@ -222,7 +226,7 @@ const NavBar = ({user}: {user?: any}) => {
 
             <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center cursor-pointer">
               <Image
-                src="/logo2.webp"
+                src="/logo.webp"
                 alt="GoonChan Logo"
                 width={30}
                 height={30}
@@ -282,10 +286,10 @@ const NavBar = ({user}: {user?: any}) => {
           <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
             <Link href={"/"} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
               <Image
-                src="/logo2.webp"
+                src="/logo.webp"
                 alt="GoonChan Logo"
-                width={37}
-                height={37}
+                width={34}
+                height={34}
                 className="rounded-full opacity-95"
               />
               <h1 className="font-inter text-2xl font-semibold text-white hidden sm:block">
@@ -342,7 +346,7 @@ const NavBar = ({user}: {user?: any}) => {
             </div>
           </div>
 
-          {!isMobile && (
+          {!isMobile && showCategories && (
             <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide hidden md:block">
               <div className="flex items-center justify-between w-full gap-1">
                 {categories.map((category) => (

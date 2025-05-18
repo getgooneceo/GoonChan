@@ -1,12 +1,11 @@
 'use client'
-import Image from "next/image";
 import React, {useState} from "react";
 import NavBar from "@/components/NavBar";
 import VideoCard from "@/components/VideoGrid";
 import { videoData } from "@/app/data";
 
 export default function Home() {
-  const [user, setUser] = useState("user");
+  const [user, setUser] = useState(null);
   return (
     <>
       <div className="bg-[#080808] min-h-screen w-full">
