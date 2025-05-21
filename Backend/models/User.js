@@ -11,7 +11,6 @@ const UserSchema = new mongoose.Schema({
   avatar: { type: String, default: null },
   avatarColor: { type: String, default: generateRandomHexColor },
   bio: { type: String, default: '' },
-  isVerified: { type: Boolean, default: false },
   token: { type: String, default: null },
   subscriberCount: { type: Number, default: 0 },
   subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

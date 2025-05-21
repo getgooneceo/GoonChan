@@ -71,7 +71,6 @@ const UploadModal = ({ setShowUploadModal, user }) => {
             : "scale-100 opacity-100"
         }`}
       >
-        {/* Header with close button */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-[#2a2a2a]">
           <div className="flex items-center space-x-2.5">
             <Image
@@ -91,7 +90,6 @@ const UploadModal = ({ setShowUploadModal, user }) => {
           </button>
         </div>
 
-        {/* Main content - Upload type selection */}
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <button

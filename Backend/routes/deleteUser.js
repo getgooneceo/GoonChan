@@ -7,7 +7,7 @@ const router = new Hono()
 
 const limiter = rateLimiter({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (c) => c.req.header('x-forwarded-for') || c.req.ip,

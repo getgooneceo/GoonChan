@@ -9,6 +9,12 @@ config();
 import signupRoute from "./routes/signup.js";
 import signinRoute from "./routes/signin.js";
 import deleteUserRoute from "./routes/deleteUser.js";
+import verifyRoute from "./routes/verify.js";
+import resendRoute from "./routes/resend.js";
+import resetPassRoute from "./routes/resetPass.js";
+import resetVerifyRoute from "./routes/resetVerify.js";
+import resetDoneRoute from "./routes/resetDone.js";
+import checkRoute from "./routes/check.js";
 
 const app = new Hono();
 
@@ -26,8 +32,14 @@ const server = serve({
 
 app.get("/", (c) => c.text("Hello World!"));
 app.route('/api/signup', signupRoute);
+app.route('/api/signup/verify', verifyRoute);
+app.route('/api/signup/resend', resendRoute);
 app.route('/api/signin', signinRoute);
+app.route('/api/resetpass', resetPassRoute);
+app.route('/api/resetpass/verify', resetVerifyRoute);
 app.route('/api/deleteuser', deleteUserRoute);
+app.route('/api/resetdone', resetDoneRoute);
+app.route('/api/check', checkRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

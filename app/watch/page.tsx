@@ -58,7 +58,6 @@ const formatCount = (count: number): string => {
   }
 };
 
-// Loading component to show while the page content is loading
 const WatchPageLoading = () => {
   return (
     <div className="bg-[#080808] min-h-screen w-full">
@@ -74,6 +73,7 @@ const WatchPageLoading = () => {
 // Main content component that uses useSearchParams
 const WatchPageContent = () => {
   const searchParams = useSearchParams();
+  const [user, setUser] = useState(null);
   const videoId = searchParams.get("v")
     ? parseInt(searchParams.get("v") as string)
     : 1;
@@ -144,7 +144,7 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
-      <NavBar />
+      <NavBar user={user} setUser={setUser} />
       <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8">
         <div className="w-full  rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">

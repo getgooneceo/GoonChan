@@ -9,8 +9,9 @@ import AuthModel from './authModel';
 import UploadModal from './UploadModal';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import config from "../config.json";
 
-const NavBar = ({user, showCategories = true}: {user?: any; showCategories?: boolean;}) => {
+const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (user: any) => void; showCategories?: boolean;}) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -21,6 +22,38 @@ const NavBar = ({user, showCategories = true}: {user?: any; showCategories?: boo
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  useEffect(() => {
+    const checkAuthentication = async () => {
+
+      try {
+        const token = localStorage.getItem('token');
+
+        if (!token) return;
+
+        const response = await fetch(`${config.url}/api/check`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.user) {
+          if (setUser) {
+            setUser(data.user);
+            console.log("User authenticated:", data.user);
+          }
+        }
+      } catch (error) {
+        console.error("Authentication check failed:", error);
+      }
+    }
+
+    checkAuthentication();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,29 +94,6 @@ const NavBar = ({user, showCategories = true}: {user?: any; showCategories?: boo
     };
   }, [isSidebarOpen]);
 
-  const [screenSize, setScreenSize] = useState({
-    isLg: false,
-    isMd: false,
-    isSm: false
-  });
-
-  useEffect(() => {
-    const handleScreenResize = () => {
-      setScreenSize({
-        isLg: window.innerWidth >= 1024,
-        isMd: window.innerWidth >= 768 && window.innerWidth < 1024,
-        isSm: window.innerWidth >= 640 && window.innerWidth < 768
-      });
-    };
-
-    handleScreenResize();
-    window.addEventListener("resize", handleScreenResize);
-
-    return () => {
-      window.removeEventListener("resize", handleScreenResize);
-    };
-  }, []);
-
   const handleProfileNavigation = () => {
     if (user) {
       router.push("/profile");
@@ -123,7 +133,7 @@ const NavBar = ({user, showCategories = true}: {user?: any; showCategories?: boo
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
 
       {/* Modals */}
-      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} />}
+      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
       {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
       
       {isMobile && (

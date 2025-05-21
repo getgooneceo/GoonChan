@@ -30,7 +30,7 @@ router.post('/', limiter, async (c) => {
       return c.json({ 
         success: false, 
         message: 'Email not found' 
-      }, 401)
+      }, 200)
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password)
@@ -39,7 +39,7 @@ router.post('/', limiter, async (c) => {
       return c.json({ 
         success: false, 
         message: 'Invalid credentials' 
-      }, 401)
+      }, 200)
     }
 
     const userResponse = user.toObject();
