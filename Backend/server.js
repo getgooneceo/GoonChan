@@ -15,6 +15,7 @@ import resetPassRoute from "./routes/resetPass.js";
 import resetVerifyRoute from "./routes/resetVerify.js";
 import resetDoneRoute from "./routes/resetDone.js";
 import checkRoute from "./routes/check.js";
+import profileRoute from "./routes/profile.js";
 
 const app = new Hono();
 
@@ -40,6 +41,7 @@ app.route('/api/resetpass/verify', resetVerifyRoute);
 app.route('/api/deleteuser', deleteUserRoute);
 app.route('/api/resetdone', resetDoneRoute);
 app.route('/api/check', checkRoute);
+app.route('/api/profile', profileRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

@@ -10,6 +10,7 @@ import UploadModal from './UploadModal';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import config from "../config.json";
+import useUserAvatar from '../hooks/useUserAvatar';
 
 const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (user: any) => void; showCategories?: boolean;}) => {
   const router = useRouter();
@@ -22,14 +23,19 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const { avatarUrl } = useUserAvatar(user) as { avatarUrl: string; isLoading: boolean };
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   useEffect(() => {
     const checkAuthentication = async () => {
-
+      setIsAuthChecking(true);
       try {
         const token = localStorage.getItem('token');
 
-        if (!token) return;
+        if (!token) {
+          setIsAuthChecking(false);
+          return;
+        }
 
         const response = await fetch(`${config.url}/api/check`, {
           method: 'POST',
@@ -49,6 +55,8 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
         }
       } catch (error) {
         console.error("Authentication check failed:", error);
+      } finally {
+        setIsAuthChecking(false);
       }
     }
 
@@ -95,6 +103,8 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
   }, [isSidebarOpen]);
 
   const handleProfileNavigation = () => {
+    if (isAuthChecking) return; // Block navigation while authentication is checking
+    
     if (user) {
       router.push("/profile");
     } else{
@@ -103,6 +113,8 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
   };
 
   const handleUploadNavigation = () => {
+    if (isAuthChecking) return; // Block navigation while authentication is checking
+    
     if (user) {
       setShowUploadModal(true);
     } else {
@@ -253,11 +265,23 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
                 className="text-[#c2c2c2] cursor-pointer"
                 onClick={handleUploadNavigation}
               />
-              <FaRegUser
-                size={20}
-                className="text-[#c2c2c2] cursor-pointer"
-                onClick={handleProfileNavigation}
-              />
+              {user && avatarUrl ? (
+                <div className="cursor-pointer" onClick={handleProfileNavigation}>
+                  <Image
+                    src={avatarUrl}
+                    alt={user.username || "User Avatar"}
+                    width={20}
+                    height={20}
+                    className="rounded-full object-cover"
+                  />
+                </div>
+              ) : (
+                <FaRegUser
+                  size={20}
+                  className="text-[#c2c2c2] cursor-pointer"
+                  onClick={handleProfileNavigation}
+                />
+              )}
             </div>
           </div>
 
@@ -339,18 +363,33 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button 
                 onClick={handleUploadNavigation}
-                className="flex items-center justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out cursor-pointer text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+                className="flex items-center justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
               >
                 <RiVideoUploadFill size={20} />
-                <span className="font-pop font-semibold hidden sm:ml-2 md:inline">Upload</span>
+                <span className="font-pop cursor-pointer font-semibold hidden sm:ml-2 md:inline">
+                  Upload
+                </span>
               </button>
 
-              <div className="cursor-pointer" onClick={handleProfileNavigation}>
-                <div className="border-2 group border-[#595959] hover:scale-[1.05] transition-all bg-[#181818] p-[0.55rem] rounded-full flex items-center justify-center">
-                  <FaUserAlt
-                    size={18}
-                    className="text-[#c2c2c2] group-hover:text-[#cfcfcf]"
-                  />
+              <div 
+                className="cursor-pointer" 
+                onClick={handleProfileNavigation}
+              >
+                <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && avatarUrl ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
+                  {user && avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={user.username || "User Avatar"}
+                      width={41}
+                      height={41}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <FaUserAlt
+                      size={18}
+                      className="text-[#c2c2c2] group-hover:text-[#cfcfcf]"
+                    />
+                  )}
                 </div>
               </div>
             </div>

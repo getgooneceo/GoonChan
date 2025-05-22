@@ -1,48 +1,49 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams, useRouter } from "next/navigation";
 import { FiUpload, FiEdit2, FiLogOut } from "react-icons/fi";
 import { RiVideoLine, RiImageLine, RiUser3Line } from "react-icons/ri";
 import { MdFavoriteBorder } from "react-icons/md";
 import { TbUsers } from "react-icons/tb";
+import { FaBell } from "react-icons/fa";
 import NavBar from "@/components/NavBar";
-
-// Mock user data - replace with actual data fetching
-const mockUserData = {
-  username: "GoonMaster69",
-  profilePicture: "/logo.webp", // Replace with actual profile picture
-  bio: "Just a casual enthusiast exploring the finest content on the internet. Been here for 2 years now and loving the community!",
-  joinDate: "May 2023",
-  totalViews: 145872,
-  totalLikes: 2340,
-  totalUploads: 26,
-  followers: 342,
-  following: 128,
-};
+import ProfileVideoGrid from "@/components/ProfileVideoGrid";
+import SubscriptionGrid from "@/components/SubscriptionGrid";
+import config from "@/config.json";
+import useUserAvatar from "@/hooks/useUserAvatar";
 
 const ProfilePage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const username = searchParams.get('user');
+  
   const [activeTab, setActiveTab] = useState("general");
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bio, setBio] = useState(mockUserData.bio);
-  const [profilePicture, setProfilePicture] = useState(
-    mockUserData.profilePicture
-  );
+  const [user, setUser] = useState(null);
+  const [profileData, setProfileData] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [bio, setBio] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isHoveringPfp, setIsHoveringPfp] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const fileInputRef = useRef(null);
   const bioTextareaRef = useRef(null);
   const [fadeInOut, setFadeInOut] = useState(false);
-  // const [prevTab, setPrevTab] = useState("general");
-
+  const [updateData, setUpdateData] = useState(false);
+  const { avatarUrl } = useUserAvatar(profileData);
+  
   const handlePictureUpload = () => {
-    fileInputRef.current?.click();
+    if (isOwnProfile) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleTabChange = (tabId) => {
     if (tabId === activeTab) return;
     
     setFadeInOut(true);
-    // setPrevTab(activeTab);
 
     setTimeout(() => {
       setActiveTab(tabId);
@@ -54,20 +55,31 @@ const ProfilePage = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (file && isOwnProfile) {
       const imageUrl = URL.createObjectURL(file);
-      setProfilePicture(imageUrl);
-
-      // Handle image upload logic here
+      // Upload image to server logic would go here
       console.log("File selected:", file);
-      // You would typically upload this to your server and update the URL
     }
   };
 
-  const handleBioSubmit = () => {
+  const handleBioSubmit = async () => {
+    if (!isOwnProfile) return;
+    
     setIsEditingBio(false);
-    // Update bio in backend here
-    console.log("Saving bio:", bio);
+    try {
+      // Update bio API call would go here
+      console.log("Saving bio:", bio);
+      // Then refresh profile data
+      setUpdateData(!updateData);
+    } catch (error) {
+      console.error("Failed to update bio:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    router.push('/');
   };
 
   useEffect(() => {
@@ -76,17 +88,156 @@ const ProfilePage = () => {
     }
   }, [isEditingBio]);
 
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = username ? null : localStorage.getItem('token');
+
+        if (!token && !username) {
+          router.push('/');
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch(`${config.url}/api/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            token,
+            username: username || null
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.user) {
+          // setUser(data.authedUser || null);
+          setProfileData(data.user);
+          setIsOwnProfile(data.isOwnProfile);
+          setBio(data.user.bio || "");
+
+          if (!data.isOwnProfile) {
+            setActiveTab("videos");
+          }
+        } else {
+          setError(data.message || "Failed to load profile");
+        }
+      } catch (error) {
+        console.error("Profile data fetch failed:", error);
+        setError("Failed to load profile data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [username, router, updateData]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long'
+    });
+  };
+
   const categories = [
     { id: "general", label: "General", icon: <RiUser3Line /> },
     { id: "videos", label: "Videos", icon: <RiVideoLine /> },
-    { id: "images", label: "Images", icon: <RiImageLine /> },
     { id: "subscriptions", label: "Subs", icon: <TbUsers /> },
+    { id: "images", label: "Images", icon: <RiImageLine /> },
     { id: "liked", label: "Liked", icon: <MdFavoriteBorder /> },
   ];
 
+  if (isLoading) {
+    return (
+      // skelly
+      <div className="min-h-screen bg-[#080808] text-white">
+        <NavBar user={user} setUser={setUser} />
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="hidden md:block w-64 shrink-0">
+              <div className="bg-[#121212] rounded-xl p-4">
+                {[...Array(5)].map((_, index) => (
+                  <div 
+                    key={index} 
+                    className="h-10 bg-[#1a1a1a] rounded-lg mb-1 animate-pulse"
+                  ></div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                  <div className="w-24 h-24 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+
+                  <div className="flex-1 w-full">
+                    <div className="h-8 bg-[#1a1a1a] rounded-lg w-40 mb-4 animate-pulse"></div>
+                    <div className="flex gap-4 mb-4">
+                      <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
+                      <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                    </div>
+                    <div className="h-28 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-16">
+                <div className="h-8 bg-[#1a1a1a] rounded-lg w-48 mb-6 animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[...Array(2)].map((_, index) => (
+                    <div key={index} className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
+                      <div className="h-6 bg-[#1a1a1a] rounded w-32 mb-4 animate-pulse"></div>
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="flex justify-between">
+                            <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
+                            <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profileData) {
+    return (
+      <div className="min-h-screen bg-[#080808] text-white">
+        <NavBar user={user} setUser={setUser} />
+        <div className="flex flex-col items-center justify-center h-[80vh] px-4 max-w-md mx-auto text-center">
+          <h1 className="text-3xl font-semibold text-white mb-3">Profile Not Found</h1>
+          <p className="text-white/70 mb-5 leading-relaxed">
+            {"We couldn't find the profile you're looking for. It may have been removed or does not exist."}
+          </p>
+          <div className="flex flex-col items-center space-y-1">
+            <a 
+              href="/"
+              className="text-[#ea4197] hover:text-[#f06db3] transition-colors text-base underline underline-offset-4 decoration-1"
+            >
+              Return to the homepage
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#080808] text-white">
-      <NavBar />
+      <NavBar user={user} setUser={setUser} />
 
       {/* Full-width bottom navigation for mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
@@ -106,13 +257,11 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl pb-16 md:pb-8">
+      <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="hidden md:block w-64 shrink-0">
             <div className="bg-[#121212] rounded-xl p-4 sticky top-24">
-              {/* <h2 className="font-bold font-inter text-lg mb-4 text-[#ea4197] px-4">Profile</h2> */}
-
-              <div className="space-y-1 pb-3">
+              <div className={`space-y-1 ${isOwnProfile ? "pb-2.5" : ""}`}>
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -131,66 +280,61 @@ const ProfilePage = () => {
                 ))}
               </div>
 
-              <div className="pt-3 border-t border-white/10 mt-6">
-                <button
-                  className="flex items-center cursor-pointer w-full px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-900/20"
-                  onClick={() => console.log("Logout clicked")}
-                >
-                  <FiLogOut className="mr-[0.7rem] text-lg" />
-                  <span className="-translate-y-[2px] font-pop">Logout</span>
-                </button>
-              </div>
+              {isOwnProfile && (
+                <div className="pt-3 border-t border-white/10 mt-0">
+                  <button
+                    className="flex items-center cursor-pointer w-full px-4 py-2.5 rounded-lg text-red-400 hover:bg-red-900/20"
+                    onClick={handleLogout}
+                  >
+                    <FiLogOut className="mr-[0.7rem] text-lg" />
+                    <span className="-translate-y-[2px] font-pop">Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Main content area */}
           <div className="flex-1">
-            <div className="relative bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-8 overflow-hidden">
-              {/* Background decoration */}
-              {/* <div className="absolute top-0 right-0 w-64 h-64 bg-[#ea4197] opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div> */}
-              {/* <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#4197ea] opacity-5 rounded-full blur-2xl -translate-x-1/2"></div> */}
-
-              <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative">
+            <div className="relative bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-1 md:gap-6 relative">
                 {/* Profile Picture with upload button overlay */}
                 <div
-                  className="relative cursor-pointer"
-                  onMouseEnter={() => setIsHoveringPfp(true)}
-                  onMouseLeave={() => setIsHoveringPfp(false)}
-                  onClick={handlePictureUpload}
+                  className={`relative ${isOwnProfile ? 'cursor-pointer' : ''}`}
+                  onMouseEnter={() => isOwnProfile && setIsHoveringPfp(true)}
+                  onMouseLeave={() => isOwnProfile && setIsHoveringPfp(false)}
+                  onClick={isOwnProfile ? handlePictureUpload : undefined}
                 >
-                  <div className="w-28 h-28 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-[#1f1f1f] bg-[#1f1f1f] relative">
-                    <Image
-                      src={profilePicture}
-                      alt="Profile Picture"
-                      fill
-                      className="object-cover transition-transform duration-200 ease-in-out"
-                    />
+                  <div className="w-26 h-26 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-[#1f1f1f] bg-[#1f1f1f] relative">
+                    {(profileData.avatar || avatarUrl) ? (
+                      <Image
+                        src={profileData.avatar || avatarUrl}
+                        alt="Profile Picture"
+                        fill
+                        className="object-cover transition-transform duration-200 ease-in-out"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#1f1f1f]">
+                        <RiUser3Line className="text-[#444] text-4xl" />
+                      </div>
+                    )}
 
                     {/* Edit button overlay - visible on hover */}
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center bg-black/60 transition-opacity duration-300 ${
-                        isHoveringPfp ? "opacity-100" : "opacity-0"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center">
-                        <FiUpload className="text-white text-xl mb-2" />
-                        <span className="text-white text-xs text-center px-2">
-                          Change photo
-                        </span>
+                    {isOwnProfile && (
+                      <div
+                        className={`absolute inset-0 flex items-center justify-center bg-black/60 transition-opacity duration-300 ${
+                          isHoveringPfp ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <FiUpload className="text-white text-xl mb-2" />
+                          <span className="text-white text-xs text-center px-2">
+                            Change photo
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-
-                  {/* Edit button that appears outside the profile picture for mobile */}
-                  {/* <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePictureUpload();
-                    }}
-                    className=" absolute -bottom-0.5 md:-bottom-1 right-1.5 bg-[#ea4197] rounded-full p-1 shadow-lg"
-                  >
-                    <FiEdit2 className="text-white text-xs" />
-                  </button> */}
 
                   <input
                     type="file"
@@ -203,20 +347,22 @@ const ProfilePage = () => {
 
                 {/* Profile Info */}
                 <div className="flex-1 text-center md:text-left w-full">
-                  <h1 className="text-2xl md:text-2xl font-pop font-bold text-white mb-1.5">
-                    @{mockUserData.username}
-                  </h1>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <h1 className="text-2xl md:text-2xl font-pop font-bold text-white">
+                      @{profileData.username}
+                    </h1>
+                  </div>
 
-                  <div className="flex flex-wrap gap-4 justify-center md:justify-start lg:mb-4 mb-4">
+                  <div className="flex flex-wrap gap-4 justify-center md:justify-start lg:mb-3 mb-4 mt-0 lg:mt-2">
                     <div className="text-white/70">
                       <span className="text-white font-bold">
-                        {mockUserData.followers}
+                        {profileData.subscriberCount}
                       </span>{" "}
                       Subscribers
                     </div>
                     <div className="text-white/70">
                       <span className="text-white font-bold">
-                        {mockUserData.totalUploads}
+                        {profileData.totalUploads}
                       </span>{" "}
                       Uploads
                     </div>
@@ -241,7 +387,7 @@ const ProfilePage = () => {
                           <div className="flex gap-2">
                             <button
                               onClick={() => {
-                                setBio(mockUserData.bio);
+                                setBio(profileData.bio);
                                 setIsEditingBio(false);
                               }}
                               className="px-3 py-1 text-sm bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-md transition-colors"
@@ -259,23 +405,22 @@ const ProfilePage = () => {
                       </div>
                     ) : (
                       <div
-                        className="p-3 bg-[#1a1a1a] border border-[#2a2a2a] border-dashed rounded-lg hover:border-[#3a3a3a] cursor-text"
-                        onClick={() => setIsEditingBio(true)}
+                        className={`p-3 bg-[#1a1a1a] border border-[#2a2a2a] border-dashed rounded-lg ${isOwnProfile ? 'hover:border-[#3a3a3a] cursor-text' : ''}`}
+                        onClick={isOwnProfile ? () => setIsEditingBio(true) : undefined}
                       >
-                        {bio ? (
+                        {profileData.bio ? (
                           <p className="text-white/80 text-sm md:text-base">
-                            {bio}
+                            {profileData.bio}
                           </p>
                         ) : (
                           <p className="text-white/40 text-sm md:text-base italic">
-                            Add a bio to your profile...
+                            {isOwnProfile ? "Add a bio to your profile..." : "No bio available."}
                           </p>
                         )}
                       </div>
                     )}
                     <div className="flex items-center justify-end mt-2.5">
-                      {/* <h3 className="text-[#ea4197] text-sm font-semibold">Bio</h3> */}
-                      {!isEditingBio && (
+                      {!isEditingBio && isOwnProfile && (
                         <button
                           onClick={() => setIsEditingBio(true)}
                           className="flex cursor-pointer items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
@@ -291,7 +436,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6">
+            <div className={`bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 ${activeTab=="general" && isOwnProfile ? "mb-0" : "mb-16"}`}>
               {activeTab === "general" && (
                 <div className={`space-y-6 transition-opacity duration-200 ease-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
                   <h2 className="text-xl font-pop font-semibold mb-4 text-white/90">
@@ -307,21 +452,23 @@ const ProfilePage = () => {
                         <div className="flex justify-between">
                           <span className="text-white/70">Total Views</span>
                           <span className="text-white font-medium">
-                            {mockUserData.totalViews.toLocaleString()}
+                            {profileData.totalViews.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-white/70">Total Likes</span>
                           <span className="text-white font-medium">
-                            {mockUserData.totalLikes.toLocaleString()}
+                            {profileData.totalLikes.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Uploads</span>
-                          <span className="text-white font-medium">
-                            {mockUserData.totalUploads}
-                          </span>
-                        </div>
+                        {isOwnProfile && profileData.email && (
+                          <div className="flex justify-between">
+                            <span className="text-white/70">Uploads</span>
+                            <span className="text-white font-medium">
+                              {profileData.totalUploads}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -333,33 +480,24 @@ const ProfilePage = () => {
                         <div className="flex justify-between">
                           <span className="text-white/70">Username</span>
                           <span className="text-white font-medium">
-                            @{mockUserData.username}
+                            @{profileData.username}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-white/70">Member Since</span>
                           <span className="text-white font-medium">
-                            {mockUserData.joinDate}
+                            {formatDate(profileData.createdAt)}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Email</span>
-                          <span className="text-white font-medium">
-                            user***@example.com
-                          </span>
-                        </div>
+                        {isOwnProfile && profileData.email && (
+                          <div className="flex justify-between">
+                            <span className="text-white/70">Email</span>
+                            <span className="text-white font-medium">
+                              {profileData.email}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
-                    <h3 className="text-lg font-medium mb-4 text-[#ea4197]">
-                      Recent Activity
-                    </h3>
-                    <div className="text-center py-8">
-                      <p className="text-white/50">
-                        Your recent activity will appear here
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -370,18 +508,23 @@ const ProfilePage = () => {
                   <h2 className="text-xl font-semibold mb-4 text-white/90">
                     Uploaded Videos
                   </h2>
-                  <div className="text-center py-16">
-                    <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
-                      <RiVideoLine size={40} className="text-[#ea4197]" />
+                  {profileData.videos && profileData.videos.length > 0 ? (
+                    <ProfileVideoGrid videos={profileData.videos} />
+                  ) : (
+                    <div className="text-center py-16">
+                      <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
+                        <RiVideoLine size={40} className="text-[#ea4197]" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">
+                        No videos uploaded yet
+                      </h3>
+                      <p className="text-white/50 max-w-md mx-auto">
+                        {isOwnProfile ? 
+                          "Your uploaded videos will appear here. Start uploading to grow your channel!" : 
+                          "This user hasn't uploaded any videos yet."}
+                      </p>
                     </div>
-                    <h3 className="text-lg font-medium mb-2">
-                      No videos uploaded yet
-                    </h3>
-                    <p className="text-white/50 max-w-md mx-auto">
-                      Your uploaded videos will appear here. Start uploading to
-                      grow your channel!
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -398,8 +541,9 @@ const ProfilePage = () => {
                       No images uploaded yet
                     </h3>
                     <p className="text-white/50 max-w-md mx-auto">
-                      Your uploaded images will appear here. Share your best
-                      content with the community!
+                      {isOwnProfile ?
+                        "Your uploaded images will appear here. Share your best content with the community!" :
+                        "This user hasn't uploaded any images yet."}
                     </p>
                   </div>
                 </div>
@@ -410,18 +554,23 @@ const ProfilePage = () => {
                   <h2 className="text-xl font-semibold mb-4 text-white/90">
                     Subscriptions
                   </h2>
-                  <div className="text-center py-16">
-                    <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
-                      <TbUsers size={40} className="text-[#ea4197]" />
+                  {profileData.subscriptions && profileData.subscriptions.length > 0 ? (
+                    <SubscriptionGrid subscriptions={profileData.subscriptions} />
+                  ) : (
+                    <div className="text-center py-16">
+                      <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
+                        <TbUsers size={40} className="text-[#ea4197]" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">
+                        No subscriptions yet
+                      </h3>
+                      <p className="text-white/50 max-w-md mx-auto">
+                        {isOwnProfile ?
+                          "Channels you subscribe to will appear here. Discover creators and subscribe to see their content!" :
+                          "This user isn't subscribed to any channels yet."}
+                      </p>
                     </div>
-                    <h3 className="text-lg font-medium mb-2">
-                      No subscriptions yet
-                    </h3>
-                    <p className="text-white/50 max-w-md mx-auto">
-                      Channels you subscribe to will appear here. Discover
-                      creators and subscribe to see their content!
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -438,8 +587,9 @@ const ProfilePage = () => {
                       No liked content yet
                     </h3>
                     <p className="text-white/50 max-w-md mx-auto">
-                      Videos and images you like will appear here. Start
-                      exploring and liking content!
+                      {isOwnProfile ?
+                        "Videos and images you like will appear here. Start exploring and liking content!" :
+                        "This user hasn't liked any content yet."}
                     </p>
                   </div>
                 </div>
@@ -447,15 +597,18 @@ const ProfilePage = () => {
             </div>
 
             {/* Logout button at the bottom on mobile */}
-            <div className="md:hidden mt-6 mb-20">
-              <button
-                className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-lg text-red-400 bg-[#1a1a1a] hover:bg-[#252525]"
-                onClick={() => console.log("Logout clicked")}
-              >
-                <FiLogOut className="mr-1" />
-                Logout
-              </button>
-            </div>
+            {isOwnProfile && activeTab=="general" && (
+              <div className="md:hidden mt-6 mb-20">
+                <button
+                  className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-lg text-red-400 bg-[#1a1a1a] hover:bg-[#252525]"
+                  onClick={handleLogout}
+                >
+                  <FiLogOut className="mr-1" />
+                  Logout
+                </button>
+              </div>
+            
+            )}
           </div>
         </div>
       </div>

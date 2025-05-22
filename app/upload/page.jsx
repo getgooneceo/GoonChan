@@ -7,12 +7,11 @@ import {
   RiVideoAddLine,
   RiUpload2Line,
   RiArrowGoBackLine,
+  RiCloseLine,
 } from "react-icons/ri";
 import Link from "next/link";
 import { Toaster, toast } from "sonner";
-import NavBar from "@/components/NavBar";
 
-// Loading component to show while the page content is loading
 const UploadPageLoading = () => {
   return (
     <div className="md:py-14 py-7 flex justify-center items-center min-h-[60vh]">
@@ -24,7 +23,6 @@ const UploadPageLoading = () => {
   );
 };
 
-// Main content component that uses useSearchParams
 const UploadPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,6 +42,11 @@ const UploadPageContent = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState(null);
+  
+  // New state for multi-image gallery
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
+  const MAX_GALLERY_FILES = 12;
 
   const fileInputRef = React.useRef(null);
   const thumbnailInputRef = React.useRef(null);
@@ -68,26 +71,53 @@ const UploadPageContent = () => {
   }, [uploadType]);
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-    if (uploadType === "photo" && !file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
+    if (uploadType === "photo") {
+      const validImages = files.filter((file) => file.type.startsWith("image/"));
+      if (validImages.length === 0) {
+        toast.error("Please select valid image files");
+        return;
+      }
+      
+      // Check if adding these would exceed the limit
+      if (galleryFiles.length + validImages.length > MAX_GALLERY_FILES) {
+        toast.info(`You can upload a maximum of ${MAX_GALLERY_FILES} images. Only the first ${MAX_GALLERY_FILES - galleryFiles.length} will be added.`);
+      }
+      
+      // Add new images, respecting the maximum
+      const newGallery = [...galleryFiles, ...validImages].slice(0, MAX_GALLERY_FILES);
+      setGalleryFiles(newGallery);
+      
+      // Set the first image as selected if none was selected before
+      if (!fileSelected) {
+        setFileSelected(newGallery[0]);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFilePreview(reader.result);
+        };
+        reader.readAsDataURL(newGallery[0]);
+      }
+      
+      // Set the first new image as the thumbnail if none exists
+      if (selectedThumbnailIndex === null && newGallery.length > 0) {
+        setSelectedThumbnailIndex(0);
+      }
+    } else if (uploadType === "video") {
+      const videoFile = files.find((file) => file.type.startsWith("video/"));
+      if (!videoFile) {
+        toast.error("Please select a valid video file");
+        return;
+      }
+      setFileSelected(videoFile);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(videoFile);
     }
-
-    if (uploadType === "video" && !file.type.startsWith("video/")) {
-      toast.error("Please select a video file");
-      return;
-    }
-
-    setFileSelected(file);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFilePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleThumbnailChange = (e) => {
@@ -121,26 +151,53 @@ const UploadPageContent = () => {
     e.preventDefault();
     setIsDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-
-      if (uploadType === "photo" && !file.type.startsWith("image/")) {
-        toast.error("Please drop an image file");
-        return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      
+      if (uploadType === "photo") {
+        const validImages = files.filter((file) => file.type.startsWith("image/"));
+        if (validImages.length === 0) {
+          toast.error("Please drop valid image files");
+          return;
+        }
+        
+        // Check if adding these would exceed the limit
+        if (galleryFiles.length + validImages.length > MAX_GALLERY_FILES) {
+          toast.info(`You can upload a maximum of ${MAX_GALLERY_FILES} images. Only the first ${MAX_GALLERY_FILES - galleryFiles.length} will be added.`);
+        }
+        
+        // Add new images, respecting the maximum
+        const newGallery = [...galleryFiles, ...validImages].slice(0, MAX_GALLERY_FILES);
+        setGalleryFiles(newGallery);
+        
+        // Set the first image as selected if none was selected before
+        if (!fileSelected) {
+          setFileSelected(newGallery[0]);
+          const reader = new FileReader();
+          reader.onload = () => {
+            setFilePreview(reader.result);
+          };
+          reader.readAsDataURL(newGallery[0]);
+        }
+        
+        // Set the first new image as the thumbnail if none exists
+        if (selectedThumbnailIndex === null && newGallery.length > 0) {
+          setSelectedThumbnailIndex(0);
+        }
+      } else if (uploadType === "video") {
+        const videoFile = files.find((file) => file.type.startsWith("video/"));
+        if (!videoFile) {
+          toast.error("Please drop a valid video file");
+          return;
+        }
+        
+        setFileSelected(videoFile);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFilePreview(reader.result);
+        };
+        reader.readAsDataURL(videoFile);
       }
-
-      if (uploadType === "video" && !file.type.startsWith("video/")) {
-        toast.error("Please drop a video file");
-        return;
-      }
-
-      setFileSelected(file);
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFilePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -203,7 +260,12 @@ const UploadPageContent = () => {
   };
 
   const handleUpload = async () => {
-    if (!fileSelected || !title || !description) {
+    if (uploadType === 'photo') {
+      if (galleryFiles.length === 0 || !title || !description) {
+        toast.error("Please select at least one image and add a title and description");
+        return;
+      }
+    } else if (!fileSelected || !title || !description) {
       toast.error("Please select a file and add a title and description");
       return;
     }
@@ -226,9 +288,26 @@ const UploadPageContent = () => {
     }, 150);
 
     try {
-      console.log("Uploading main file:", fileSelected);
-      if (thumbnailFile) {
-        console.log("Uploading custom thumbnail:", thumbnailFile);
+      if (uploadType === "photo") {
+        console.log(`Uploading gallery of ${galleryFiles.length} images`);
+        console.log(`Using image ${selectedThumbnailIndex + 1} as thumbnail`);
+        
+        // In a real application, you would prepare a FormData object with all gallery files
+        // Example:
+        // const formData = new FormData();
+        // formData.append('title', title);
+        // formData.append('description', description);
+        // formData.append('thumbnailIndex', selectedThumbnailIndex);
+        // galleryFiles.forEach((file, index) => {
+        //   formData.append(`image-${index}`, file);
+        // });
+        
+        // Simulate server upload delay for demo
+      } else {
+        console.log("Uploading main file:", fileSelected);
+        if (thumbnailFile) {
+          console.log("Uploading custom thumbnail:", thumbnailFile);
+        }
       }
 
       // Simulating server upload delay
@@ -360,6 +439,7 @@ const UploadPageContent = () => {
           <input
             ref={fileInputRef}
             type="file"
+            multiple={uploadType === "photo"}
             accept={uploadType === "photo" ? "image/*" : "video/*"}
             onChange={handleFileChange}
             className="hidden"
@@ -561,6 +641,123 @@ const UploadPageContent = () => {
                     onChange={handleThumbnailChange}
                     className="hidden"
                   />
+                </div>
+              </div>
+            )}
+
+            {uploadType === "photo" && (
+              <div>
+                <div className="mt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-white font-medium">Gallery Images ({galleryFiles.length}/{MAX_GALLERY_FILES})</h3>
+                    {galleryFiles.length > 0 && (
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white py-1.5 px-3 rounded transition-colors flex items-center gap-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Add More
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Gallery Images Grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {galleryFiles.map((file, index) => (
+                      <div 
+                        key={index} 
+                        className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 ${
+                          selectedThumbnailIndex === index 
+                            ? 'border-[#ea4197] scale-[1.03] shadow-md' 
+                            : 'border-transparent hover:border-[#ea419780] hover:scale-[1.02]'
+                        } transition-all duration-150`}
+                        onClick={() => {
+                          // Preview this image and set as thumbnail
+                          setFileSelected(file);
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setFilePreview(reader.result);
+                          };
+                          reader.readAsDataURL(file);
+                          setSelectedThumbnailIndex(index);
+                        }}
+                      >
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Gallery image ${index+1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        
+                        {/* Thumbnail indicator */}
+                        {/* {selectedThumbnailIndex === index && (
+                          <div className="absolute bottom-1 left-1 right-1 bg-[#ea4197] text-white text-[0.65rem] px-1.5 py-0.5 rounded flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Thumbnail
+                          </div>
+                        )} */}
+                        
+                        {/* Remove button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newFiles = [...galleryFiles];
+                            newFiles.splice(index, 1);
+                            setGalleryFiles(newFiles);
+                            
+                            // If we removed the selected thumbnail, select the first image
+                            if (selectedThumbnailIndex === index) {
+                              if (newFiles.length > 0) {
+                                setSelectedThumbnailIndex(0);
+                                setFileSelected(newFiles[0]);
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  setFilePreview(reader.result);
+                                };
+                                reader.readAsDataURL(newFiles[0]);
+                              } else {
+                                setSelectedThumbnailIndex(0);
+                                setFileSelected(null);
+                                setFilePreview(null);
+                              }
+                            } else if (selectedThumbnailIndex > index) {
+                              // Adjust thumbnail index if we removed an image before it
+                              setSelectedThumbnailIndex(selectedThumbnailIndex - 1);
+                            }
+                          }}
+                          className="absolute top-1 right-1 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-1 transition-all"
+                        >
+                          <RiCloseLine className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Add more images button */}
+                    {galleryFiles.length < MAX_GALLERY_FILES && (
+                      <div 
+                        className="aspect-square rounded-md border-2 border-dashed border-[#3a3a3a] flex flex-col items-center justify-center cursor-pointer hover:border-[#ea4197] hover:bg-[#1f1f1f] transition-all"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-[#5a5a5a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span className="text-[0.65rem] text-[#7a7a7a] mt-1 px-1 text-center">Add Images</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Helper text */}
+                  {galleryFiles.length > 0 && (
+                    <p className="mt-3 text-[#a0a0a0] text-xs">
+                      Click on an image to select it as the thumbnail. 
+                      {galleryFiles.length > 1 ? ` Currently using image ${selectedThumbnailIndex + 1} as thumbnail.` : ''}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
