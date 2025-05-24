@@ -309,8 +309,12 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
             toast.success(data.message || 'Login successful!', {
               position: 'bottom-right',
             });
-            closeModal();
-          } else {
+            setTimeout(() => {
+              closeModal();
+              // Navigate to profile page after successful login
+              window.location.href = '/profile';
+            }, 500);
+            } else {
             if (data.message && data.message.toLowerCase().includes('email')) {
               setEmailError(true);
             } else {
@@ -705,6 +709,32 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
         console.error('Password reset error:', error);
       });
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        if (isForgotPassword) {
+          if (forgotPasswordStep === 1) {
+            handleForgotPasswordSubmit();
+          } else if (forgotPasswordStep === 2) {
+            verifyForgotPasswordOtp();
+          } else if (forgotPasswordStep === 3) {
+            handleResetPassword();
+          }
+        } else if (isOtpVerification) {
+          handleEmailAuth();
+        } else {
+          handleEmailAuth();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isForgotPassword, forgotPasswordStep, isOtpVerification, email, password, username, otpValues, newPassword, confirmPassword, isVerifying]);
 
   return (
     <div
@@ -1227,7 +1257,6 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
                     placeholder="Enter username"
                     id="username"
                     value={username}
-                    onClick={() => setUsernameError(false)}
                     onChange={(e) => {
                       // Only allow alphanumeric characters (letters and numbers) and limit to 16 characters
                       const sanitizedValue = e.target.value
@@ -1254,8 +1283,10 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
                   placeholder="Enter your email"
                   id="email"
                   value={email}
-                  onClick={() => setEmailError(false)}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError(false);
+                  }}
                   className={`w-full ${
                     emailError ? "bg-[#440b0b]" : "bg-[#1f1f1f]"
                   } text-white font-inter text-base py-3 px-7 rounded-full focus:outline-none focus:ring-2 focus:ring-[#cccccc] hover:ring-2 hover:ring-[#a2a2a2] focus:border-transparent transition-all ease-out duration-300`}
@@ -1270,8 +1301,10 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
                   }
                   id="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onClick={() => setPasswordError(false)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError(false);
+                  }}
                   className={`w-full ${
                     passwordError ? "bg-[#440b0b]" : "bg-[#1f1f1f]"
                   } text-white font-inter text-base py-3 px-7 rounded-full focus:outline-none focus:ring-2 focus:ring-[#cccccc] hover:ring-2 hover:ring-[#a2a2a2] focus:border-transparent transition-all ease-out duration-300`}

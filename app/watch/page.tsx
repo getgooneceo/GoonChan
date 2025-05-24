@@ -5,7 +5,6 @@ import Image from "next/image";
 import NavBar from "@/components/NavBar";
 import "remixicon/fonts/remixicon.css";
 import VideoGrid from "@/components/VideoGrid";
-import { VideoType } from "@/components/Types";
 import {
   FaThumbsUp,
   FaThumbsDown,
@@ -17,8 +16,54 @@ import {
 } from "react-icons/fa";
 import { FaFlag } from "react-icons/fa6";
 import { Stream } from "@cloudflare/stream-react";
+import config from "@/config.json";
 
-import { videoData } from "../data"; // Adjust path if necessary
+// Define types for video data
+interface VideoUploader {
+  _id: string;
+  username: string;
+  avatar?: string;
+  avatarColor?: string;
+  subscriberCount: number;
+}
+
+interface VideoData {
+  _id: string;
+  id: string; // Add id property for compatibility
+  title: string;
+  description?: string;
+  slug: string;
+  videoUrl: string;
+  thumbnail?: string;
+  duration: string;
+  views: number;
+  likeCount: number;
+  dislikeCount: number;
+  tags?: string[];
+  cloudflareStreamId: string;
+  createdAt: string;
+  uploader: VideoUploader;
+  comments?: CommentData[];
+}
+
+interface CommentData {
+  id: string;
+  username: string;
+  avatar: string;
+  content: string;
+  timeAgo: string;
+  likes: number;
+  replies?: ReplyData[];
+}
+
+interface ReplyData {
+  id: string;
+  username: string;
+  avatar: string;
+  content: string;
+  timeAgo: string;
+  likes: number;
+}
 
 const getRelativeTimeFromDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -73,31 +118,58 @@ const WatchPageLoading = () => {
 // Main content component that uses useSearchParams
 const WatchPageContent = () => {
   const searchParams = useSearchParams();
-  const [user, setUser] = useState(null);
-  const videoId = searchParams.get("v")
-    ? parseInt(searchParams.get("v") as string)
-    : 1;
-  const [video, setVideo] = useState<VideoType | null>(null);
-  const [relatedVideos, setRelatedVideos] = useState<VideoType[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const videoSlug = searchParams.get("v") as string;
+  const [video, setVideo] = useState<VideoData | null>(null);
+  const [comments, setComments] = useState<CommentData[]>([]);
+  const [relatedVideos, setRelatedVideos] = useState<VideoData[]>([]);
   const [activeTab, setActiveTab] = useState<"related" | "recommended">(
     "related"
   );
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
 
   // Add container ref and state for dynamic 16:9 sizing
   const streamContainerRef = useRef<HTMLDivElement>(null);
   const [loadingMessage, setLoadingMessage] = useState("Loading video...");
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const foundVideo = videoData.find((v: VideoType) => v.id === videoId);
-    if (foundVideo) {
-      setVideo(foundVideo);
-      setRelatedVideos(videoData.filter((v) => v.id !== videoId).slice(0, 6));
+    const fetchVideo = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch(`${config.url}/api/video/${videoSlug}`);
+        const data = await response.json();
+        
+        if (data.success && data.video) {
+          // Map the video data to match VideoType interface
+          const mappedVideo: VideoData = {
+            ...data.video,
+            id: data.video._id, // Keep as string since that's what the API returns
+            uploader: data.video.uploader || {},
+            comments: data.video.comments || []
+          };
+          setVideo(mappedVideo);
+          setComments(data.video.comments || []);
+        } else {
+          setError(data.message || 'Video not found');
+        }
+      } catch (error) {
+        console.error('Error fetching video:', error);
+        setError('Failed to load video');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (videoSlug) {
+      fetchVideo();
     }
-  }, [videoId]);
+  }, [videoSlug]);
 
   const handleLike = () => {
     if (isLiked) {
@@ -127,26 +199,46 @@ const WatchPageContent = () => {
     setIsLoading(false);
   };
 
-  if (!video) {
+  if (error) {
     return (
       <div className="bg-[#080808] min-h-screen w-full">
-        <NavBar />
+        <NavBar user={user} setUser={setUser} />
         <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
-          Loading video...
+          <h1 className="text-2xl font-bold mb-4">Video Not Found</h1>
+          <p className="text-white/70 mb-6">{error}</p>
+          <a href="/" className="text-[#ea4197] hover:underline">
+            Return to Home
+          </a>
         </div>
       </div>
     );
   }
 
-  // const videoSource = video.videoUrl
-  //  ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.videoUrl}/iframe`
-  //  : "";
+  if (!video && isLoading) {
+    return <WatchPageLoading />;
+  }
+
+  if (!video) {
+    return (
+      <div className="bg-[#080808] min-h-screen w-full">
+        <NavBar user={user} setUser={setUser} />
+        <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
+          Video not found
+        </div>
+      </div>
+    );
+  }
+
+  // Use the Cloudflare Stream ID to construct the iframe URL
+  const videoSource = video.cloudflareStreamId
+    ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe`
+    : "";
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar user={user} setUser={setUser} />
-      <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8">
-        <div className="w-full  rounded-lg overflow-hidden mb-6 ">
+      <div className="max-w-[79rem] mx-auto px-0 pt-2 pb-8">
+        <div className="w-full px-10 md:px-0 rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">
             {[
               {
@@ -185,55 +277,49 @@ const WatchPageContent = () => {
 
         <div
           ref={streamContainerRef}
-          className="w-full bg-black rounded-lg overflow-hidden mb-4"
+          className="w-full relative aspect-video bg-black rounded-lg overflow-hidden mb-4"
         >
-          <div className="">
-            {isLoading && (
-              <div
-                className="aspect-video w-full h-full flex items-center justify-center bg-black relative"
-                id="video-loading-overlay"
-              >
-                {video.thumbnail && (
-                  <img
-                    src={video.thumbnail}
-                    alt="Loading thumbnail"
-                    className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
-                  />
+          {isLoading && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black"
+              id="video-loading-overlay"
+            >
+              {video.thumbnail && (
+                <img
+                  src={video.thumbnail}
+                  alt="Loading thumbnail"
+                  className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
+                />
+              )}
+              <div className="flex flex-col items-center z-10">
+                {loadingMessage == "Loading video..." && (
+                  <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
                 )}
-                <div className="flex flex-col items-center z-10">
-                  {loadingMessage == "Loading video..." && (
-                    <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
-                  )}
-                  <p className="text-white text-base">{loadingMessage}</p>
-                </div>
+                <p className="text-white text-base">{loadingMessage}</p>
               </div>
-            )}
-            <Stream
+            </div>
+          )}
+{/* <Stream
               controls
               src={video.videoUrl || ""}
               primaryColor="#cfcfcf"
               poster={video.thumbnail || ""}
               preload="metadata"
               onLoadedMetaData={() => handleVideoLoad()}
+              // responsive={false}
               onError={() => setLoadingMessage("Error 404 - Video not found")}
               className={`w-full h-full ${isLoading ? "hidden" : ""}`}
               autoplay={false}
               muted={false}
-            />
-{/* <iframe
-              src={videoSource}
-              // style={"border: none"}
-              className="absolute top-0 left-0 w-full h-full border-none"
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen={true}
-              onLoad={() => {
-                const overlay = document.getElementById(
-                  "video-loading-overlay"
-                );
-                if (overlay) overlay.style.display = "none";
-              }}
-            ></iframe> */}
-          </div>
+            /> */}
+          <iframe
+            src={videoSource}
+            className={`w-full h-full border-none ${isLoading ? "hidden" : ""}`}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+            allowFullScreen={true}
+            onLoad={() => handleVideoLoad()}
+          ></iframe>
         </div>
 
         <div className="mb-4 bg-[#121212] rounded-lg p-4 md:p-6">
@@ -243,11 +329,11 @@ const WatchPageContent = () => {
 
           <div className="text-[#a0a0a0] md:text-sm text-xs flex items-center md:mb-2 mb-3">
             <span className="font-roboto">
-              {formatCount(video.views)} views
+              {formatCount(video.views || 0)} views
             </span>
             <span className="mx-2 opacity-70">|</span>
             <span className="font-roboto">
-              {getRelativeTimeFromDate(video.uploadDate || "")}
+              {getRelativeTimeFromDate(video.createdAt || "")}
             </span>
           </div>
 
@@ -295,18 +381,18 @@ const WatchPageContent = () => {
             <div className="flex items-center gap-3 py-2">
               <div className="relative w-9 h-9 md:w-11 md:h-11 bg-[#2d2d2d] rounded-full overflow-hidden">
                 <Image
-                  src="/logo.webp"
-                  alt={video.uploader}
+                  src={video.uploader?.avatar || "/logo.webp"}
+                  alt={video.uploader?.username || "User"}
                   fill
                   className="object-cover opacity-[97%]"
                 />
               </div>
               <div>
                 <div className="text-[#e6e6e6] font-medium font-inter text-base">
-                  {video.uploader}
+                  {video.uploader?.username || "Unknown User"}
                 </div>
                 <div className="text-[#a0a0a0] font-roboto text-xs">
-                  {formatCount(video.subscriberCount || 0)} subscribers
+                  {formatCount(video.uploader?.subscriberCount || 0)} subscribers
                 </div>
               </div>
 
@@ -361,18 +447,18 @@ const WatchPageContent = () => {
           <div className="md:hidden flex items-center gap-3 bg-[#1a1a1a] p-3 rounded-lg mb-5">
             <div className="relative w-10 h-10 bg-[#2d2d2d] rounded-full overflow-hidden">
               <Image
-                src="/logo.webp"
-                alt={video.uploader}
+                src={video.uploader?.avatar || "/logo.webp"}
+                alt={video.uploader?.username || "User"}
                 fill
                 className="object-cover opacity-[97%]"
               />
             </div>
             <div className="flex-1">
               <div className="text-white font-medium font-inter text-sm">
-                {video.uploader}
+                {video.uploader?.username || "Unknown User"}
               </div>
               <div className="text-[#a0a0a0] font-roboto text-xs">
-                {formatCount(video.subscriberCount || 0)} subscribers
+                {formatCount(video.uploader?.subscriberCount || 0)} subscribers
               </div>
             </div>
             <button className="flex items-center gap-1.5 px-2.5 py-[0.34rem] rounded-lg bg-[#ea4197] text-white text-sm hover:bg-[#d23884] transition-colors">
@@ -405,7 +491,7 @@ const WatchPageContent = () => {
           )}
         </div>
 
-        <div className="flex flex-wrap opacity-90 justify-center mb-4 borderb-b border-[#FFFFFF] gap-4">
+        <div className="flex px-10 flex-wrap opacity-90 justify-center mb-4 borderb-b border-[#FFFFFF] gap-4">
           {[
             {
               href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=610687&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
@@ -440,156 +526,167 @@ const WatchPageContent = () => {
           ))}
         </div>
 
-        <div className="mb-4 border-b border-[#2a2a2a]">
-          <div className="flex gap-1 md:gap-4">
-            <button
-              onClick={() => setActiveTab("related")}
-              className={`px-4 py-2 cursor-pointer transition-colors duration-300 ease-in flex items-center gap-2 ${
-                activeTab === "related"
-                  ? "text-[#ea4197] border-b-2 border-[#ea4197]"
-                  : "text-[#b0b0b0]"
-              }`}
-            >
-              <FaList className="" />
-              <span>Related Videos</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("recommended")}
-              className={`px-4 py-2 cursor-pointer transition-colors duration-300 ease-in flex items-center gap-2 ${
-                activeTab === "recommended"
-                  ? "text-[#ea4197] border-b-2 border-[#ea4197]"
-                  : "text-[#b0b0b0]"
-              }`}
-            >
-              <FaFireAlt className="" />
-              <span>Recommended</span>
-            </button>
-            <button
-              onClick={scrollToComments}
-              className={`px-4 hidden py-2 cursor-pointer transition-colors duration-300 ease-in md:flex items-center text-[#b0b0b0] gap-2`}
-            >
-              <FaCommentAlt className="hidden md:block" />
-              <span>Comments ({video.comments?.length || 0})</span>
-            </button>
-          </div>
-        </div>
+        <div className="px-4 lg:px-0">
 
-        {(activeTab === "related" || activeTab === "recommended") && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {relatedVideos.map((relatedVideo) => (
-              <VideoGrid key={relatedVideo.id} video={relatedVideo} />
-            ))}
-          </div>
-        )}
-
-        <div ref={commentsRef} className="mt-8">
-          <h3 className="text-white text-lg font-roboto font-medium mb-4">
-            Comments ({video.comments?.length || 0})
-          </h3>
-
-          <div className="mb-6 flex gap-3">
-            <div className="relative w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
-              <Image
-                src="/logo.webp"
-                alt={video.uploader}
-                fill
-                className="object-cover opacity-[97%]"
-              />
-            </div>
-            <div className="flex-grow">
-              <input
-                type="text"
-                placeholder="Add a comment..."
-                className="w-full bg-transparent border-b border-[#3a3a3a] text-[#d0d0d0] py-2 focus:outline-none focus:border-[#ea4197]"
-              />
+          <div className="mb-4 border-b border-[#2a2a2a]">
+            <div className="flex gap-1 md:gap-4">
+              <button
+                onClick={() => setActiveTab("related")}
+                className={`px-4 py-2 cursor-pointer transition-colors duration-300 ease-in flex items-center gap-2 ${
+                  activeTab === "related"
+                    ? "text-[#ea4197] border-b-2 border-[#ea4197]"
+                    : "text-[#b0b0b0]"
+                }`}
+              >
+                <FaList className="" />
+                <span>Related Videos</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("recommended")}
+                className={`px-4 py-2 cursor-pointer transition-colors duration-300 ease-in flex items-center gap-2 ${
+                  activeTab === "recommended"
+                    ? "text-[#ea4197] border-b-2 border-[#ea4197]"
+                    : "text-[#b0b0b0]"
+                }`}
+              >
+                <FaFireAlt className="" />
+                <span>Recommended</span>
+              </button>
+              <button
+                onClick={scrollToComments}
+                className={`px-4 hidden py-2 cursor-pointer transition-colors duration-300 ease-in md:flex items-center text-[#b0b0b0] gap-2`}
+              >
+                <FaCommentAlt className="hidden md:block" />
+                <span>Comments ({video.comments?.length || 0})</span>
+              </button>
             </div>
           </div>
 
-          {video.comments?.map((comment) => (
-            <div key={comment.id} className="mb-6">
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
-                  <Image
-                    src={comment.avatar}
-                    alt={comment.username}
-                    width={32}
-                    height={32}
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex-grow">
-                  <div className="flex items-center gap-2 mb-[3px]">
-                    <span className="text-[#f1f1f1] font-pop font-medium text-sm">
-                      {comment.username}
-                    </span>
-                    <span className="text-[#909090] font-pop text-xs">
-                      {comment.timeAgo}
-                    </span>
-                  </div>
-                  <p className="text-[#d0d0d0] font-inter text-sm mb-2">
-                    {comment.content}
-                  </p>
-                  <div className="flex items-center gap-4 text-[#909090] text-xs">
-                    <button className="flex items-center gap-1 cursor-pointer hover:text-[#ea4198ea]">
-                      <i className="ri-thumb-up-fill text-[1rem]"></i>
-                      <span className="font-inter">{comment.likes}</span>
-                    </button>
-                    <button className="flex items-center gap-1 cursor-pointer hover:text-[#ea4198ea]">
-                      <i className="ri-thumb-down-fill text-[1rem]"></i>
-                    </button>
-                    <button className="hover:text-[#ea4198ea] font-inter cursor-pointer">
-                      Reply
-                    </button>
-                  </div>
+          {/* {(activeTab === "related" || activeTab === "recommended") && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {relatedVideos.map((relatedVideo) => {
+                // Map the video data to match VideoType interface
+                const mappedVideo = {
+                  ...relatedVideo,
+                  uploader: relatedVideo.uploader?.username || "Unknown User"
+                };
+                return (
+                  <VideoGrid key={relatedVideo.id} video={mappedVideo} />
+                );
+              })}
+            </div>
+          )} */}
 
-                  {comment.replies && comment.replies.length > 0 && (
-                    <div className="mt-4 pl-4 border-l border-[#2a2a2a]">
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id} className="mb-4">
-                          <div className="flex gap-2">
-                            <div className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden">
-                              <Image
-                                src={reply.avatar}
-                                alt={reply.username}
-                                width={24}
-                                height={24}
-                                className="object-cover"
-                              />
-                            </div>
-                            <div className="flex-grow">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[#f1f1f1] font-pop font-medium text-sm">
-                                  {reply.username}
-                                </span>
-                                <span className="text-[#909090] font-pop text-xs">
-                                  {reply.timeAgo}
-                                </span>
+          <div ref={commentsRef} className="mt-8">
+            <h3 className="text-white text-lg font-roboto font-medium mb-4">
+              Comments ({video.comments?.length || 0})
+            </h3>
+
+            <div className="mb-6 flex gap-3">
+              <div className="relative w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+                <Image
+                  src="/logo.webp"
+                  alt={video.uploader?.username || "User"}
+                  fill
+                  className="object-cover opacity-[97%]"
+                />
+              </div>
+              <div className="flex-grow">
+                <input
+                  type="text"
+                  placeholder="Add a comment..."
+                  className="w-full bg-transparent border-b border-[#3a3a3a] text-[#d0d0d0] py-2 focus:outline-none focus:border-[#ea4197]"
+                />
+              </div>
+            </div>
+
+            {video.comments?.map((comment) => (
+              <div key={comment.id} className="mb-6">
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+                    <Image
+                      src={comment.avatar}
+                      alt={comment.username}
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center gap-2 mb-[3px]">
+                      <span className="text-[#f1f1f1] font-pop font-medium text-sm">
+                        {comment.username}
+                      </span>
+                      <span className="text-[#909090] font-pop text-xs">
+                        {comment.timeAgo}
+                      </span>
+                    </div>
+                    <p className="text-[#d0d0d0] font-inter text-sm mb-2">
+                      {comment.content}
+                    </p>
+                    <div className="flex items-center gap-4 text-[#909090] text-xs">
+                      <button className="flex items-center gap-1 cursor-pointer hover:text-[#ea4198ea]">
+                        <i className="ri-thumb-up-fill text-[1rem]"></i>
+                        <span className="font-inter">{comment.likes}</span>
+                      </button>
+                      <button className="flex items-center gap-1 cursor-pointer hover:text-[#ea4198ea]">
+                        <i className="ri-thumb-down-fill text-[1rem]"></i>
+                      </button>
+                      <button className="hover:text-[#ea4198ea] font-inter cursor-pointer">
+                        Reply
+                      </button>
+                    </div>
+
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="mt-4 pl-4 border-l border-[#2a2a2a]">
+                        {comment.replies.map((reply) => (
+                          <div key={reply.id} className="mb-4">
+                            <div className="flex gap-2">
+                              <div className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden">
+                                <Image
+                                  src={reply.avatar}
+                                  alt={reply.username}
+                                  width={24}
+                                  height={24}
+                                  className="object-cover"
+                                />
                               </div>
-                              <p className="text-[#d0d0d0] font-inter text-sm mb-2">
-                                {reply.content}
-                              </p>
-                              <div className="flex items-center gap-4 text-[#909090] text-xs">
-                                <button className="flex items-center gap-1 hover:text-[#ea4197]">
-                                  <i className="ri-thumb-up-fill text-[1rem]"></i>
-                                  <span className="font-inter">
-                                    {reply.likes}
+                              <div className="flex-grow">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-[#f1f1f1] font-pop font-medium text-sm">
+                                    {reply.username}
                                   </span>
-                                </button>
-                                <button className="flex items-center gap-1 hover:text-[#ea4197]">
-                                  <i className="ri-thumb-down-fill text-[1rem]"></i>
-                                </button>
+                                  <span className="text-[#909090] font-pop text-xs">
+                                    {reply.timeAgo}
+                                  </span>
+                                </div>
+                                <p className="text-[#d0d0d0] font-inter text-sm mb-2">
+                                  {reply.content}
+                                </p>
+                                <div className="flex items-center gap-4 text-[#909090] text-xs">
+                                  <button className="flex items-center gap-1 hover:text-[#ea4197]">
+                                    <i className="ri-thumb-up-fill text-[1rem]"></i>
+                                    <span className="font-inter">
+                                      {reply.likes}
+                                    </span>
+                                  </button>
+                                  <button className="flex items-center gap-1 hover:text-[#ea4197]">
+                                    <i className="ri-thumb-down-fill text-[1rem]"></i>
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   );

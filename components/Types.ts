@@ -17,7 +17,7 @@ export interface CommentType {
  * Video type representing a video in the system
  */
 export interface VideoType {
-  id: number;
+  id: string | number; // Allow both string and number for compatibility
   title: string;
   thumbnail?: string;
   duration: string;

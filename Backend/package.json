@@ -14,10 +14,13 @@
     "@hono/node-server": "^1.14.1",
     "bcrypt": "^6.0.0",
     "dotenv": "^16.5.0",
+    "ffprobe": "^1.1.2",
+    "ffprobe-static": "^3.1.0",
     "hono": "^4.7.9",
     "hono-rate-limiter": "^0.4.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.2",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "sharp": "^0.34.2"
   }
 }

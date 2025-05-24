@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { FiSearch, FiMenu, FiX } from "react-icons/fi";
-import { FaUserAlt, FaRegUser, FaRandom, FaHeart, FaList, FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
+import { FaUserAlt, FaRegUser, FaRandom, FaHeart,  FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
 import { RiVideoUploadFill, RiVideoUploadLine } from "react-icons/ri";
 import { IoSearchSharp } from "react-icons/io5";
+import { FaRegImage } from "react-icons/fa6";
 import AuthModel from './authModel';
 import UploadModal from './UploadModal';
 import Link from "next/link";
@@ -132,12 +133,12 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
 
   const categories = [
     { id: "discover", name: "Discover", icon: <FaCompass /> },
+    { id: "images", name: "Images", icon: <FaRegImage /> },
     { id: "top", name: "Top Videos", icon: <FaTrophy /> },
     // { id: "popular", name: "Popular Now", icon: <FaFire /> },
     { id: "recent", name: "Recently Added", icon: <FaClock /> },
     { id: "liked", name: "Most Liked", icon: <FaHeart /> },
     { id: "random", name: "Random", icon: <FaRandom /> },
-    { id: "categories", name: "Categories", icon: <FaList /> },
     { id: "subscriptions", name: "Subscriptions", icon: <FaUser /> },
   ];
 
@@ -363,10 +364,10 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button 
                 onClick={handleUploadNavigation}
-                className="flex items-center justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+                className="flex items-center cursor-pointer justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
               >
                 <RiVideoUploadFill size={20} />
-                <span className="font-pop cursor-pointer font-semibold hidden sm:ml-2 md:inline">
+                <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
                   Upload
                 </span>
               </button>

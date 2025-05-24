@@ -65,7 +65,7 @@ router.post('/', limiter, async (c) => {
     }
 
     // Find videos uploaded by the user
-    const videos = await Video.find({ uploaderId: user._id })
+    const videos = await Video.find({ uploader: user._id })
       .sort({ createdAt: -1 })
       .limit(20)
     
@@ -93,6 +93,7 @@ router.post('/', limiter, async (c) => {
       totalLikes,
       videos: videos.map(video => ({
         id: video._id,
+        slug: video.slug, // Add the URL-friendly slug
         title: video.title,
         thumbnail: video.thumbnail,
         duration: video.duration,

@@ -2,7 +2,35 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ["images.unsplash.com", "i.pravatar.cc", "source.unsplash.com", "randomuser.me", "unsplash.it"],
+    domains: [
+      "images.unsplash.com", 
+      "i.pravatar.cc", 
+      "source.unsplash.com", 
+      "randomuser.me", 
+      "unsplash.it"
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.cloudflarestream.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'imagedelivery.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudflare.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+    unoptimized: false,
+    dangerouslyAllowSVG: true,
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if

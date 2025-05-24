@@ -26,7 +26,6 @@ const CommentSchema = new mongoose.Schema({
 
 CommentSchema.index({ contentType: 1, contentId: 1 });
 CommentSchema.index({ user: 1 });
-CommentSchema.index({ createdAt: -1 });
 CommentSchema.index({ likes: -1 });
 
 const Comment = mongoose.model('Comment', CommentSchema);

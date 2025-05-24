@@ -10,7 +10,6 @@ const PendingUserSchema = new mongoose.Schema({
 
 PendingUserSchema.index({ email: 1 }, { unique: true });
 PendingUserSchema.index({ username: 1 }, { unique: true });
-PendingUserSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
 
 const PendingUser = mongoose.model('PendingUser', PendingUserSchema);
 

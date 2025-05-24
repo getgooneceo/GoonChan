@@ -311,7 +311,7 @@ export const videoData: VideoType[] = [
     duration: "28:10",
     views: 1500000,
     uploader: "UrbanMyths",
-    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+    videoUrl: "9e930c9d578424cb5a1b163b16a13ac4",
     uploadDate: "January 30, 2025",
     description: "Join me as I explore a magnificent abandoned mansion with a mysterious history dating back to the 1920s. Left untouched for decades, this once-opulent residence reveals fascinating clues about its former inhabitants and the circumstances that led to its abandonment. The exploration includes the main house, servant quarters, and extensive grounds.",
     subscriberCount: 1300000,

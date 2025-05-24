@@ -32,7 +32,7 @@ const ProfileVideoCard = ({ video }) => {
   
   return (
     <Link 
-      href={`/watch?v=${video.id}`}
+      href={`/watch?v=${video.slug}`}
       className="group relative cursor-pointer"
     >
       <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">

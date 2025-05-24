@@ -10,6 +10,7 @@ import {
   RiCloseLine,
 } from "react-icons/ri";
 import Link from "next/link";
+import config from "../../config.json";
 import { Toaster, toast } from "sonner";
 
 const UploadPageLoading = () => {
@@ -42,7 +43,8 @@ const UploadPageContent = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState(null);
-  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   // New state for multi-image gallery
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
@@ -53,6 +55,37 @@ const UploadPageContent = () => {
 
   const pageTitle = uploadType === "photo" ? "Upload Photo" : "Upload Video";
   const TypeIcon = uploadType === "photo" ? RiImageAddLine : RiVideoAddLine;
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/");
+        return;
+      }
+      try {
+        const response = await fetch(`${config.url}/api/check`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+        const data = await response.json();
+        if (!data.success || !data.user) {
+          localStorage.removeItem("token"); 
+          router.push("/");
+        } else {
+          setIsAuthenticated(true); // User is authenticated
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        localStorage.removeItem("token");
+        router.push("/");
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const resetFormData = () => {
     setFilePreview(null);
@@ -80,17 +113,14 @@ const UploadPageContent = () => {
         toast.error("Please select valid image files");
         return;
       }
-      
-      // Check if adding these would exceed the limit
+
       if (galleryFiles.length + validImages.length > MAX_GALLERY_FILES) {
-        toast.info(`You can upload a maximum of ${MAX_GALLERY_FILES} images. Only the first ${MAX_GALLERY_FILES - galleryFiles.length} will be added.`);
+        toast.info(`You can upload a maximum of ${MAX_GALLERY_FILES} images.`);
       }
-      
-      // Add new images, respecting the maximum
+
       const newGallery = [...galleryFiles, ...validImages].slice(0, MAX_GALLERY_FILES);
       setGalleryFiles(newGallery);
-      
-      // Set the first image as selected if none was selected before
+
       if (!fileSelected) {
         setFileSelected(newGallery[0]);
         const reader = new FileReader();
@@ -99,8 +129,7 @@ const UploadPageContent = () => {
         };
         reader.readAsDataURL(newGallery[0]);
       }
-      
-      // Set the first new image as the thumbnail if none exists
+
       if (selectedThumbnailIndex === null && newGallery.length > 0) {
         setSelectedThumbnailIndex(0);
       }
@@ -153,24 +182,21 @@ const UploadPageContent = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      
+
       if (uploadType === "photo") {
         const validImages = files.filter((file) => file.type.startsWith("image/"));
         if (validImages.length === 0) {
           toast.error("Please drop valid image files");
           return;
         }
-        
-        // Check if adding these would exceed the limit
+
         if (galleryFiles.length + validImages.length > MAX_GALLERY_FILES) {
           toast.info(`You can upload a maximum of ${MAX_GALLERY_FILES} images. Only the first ${MAX_GALLERY_FILES - galleryFiles.length} will be added.`);
         }
-        
-        // Add new images, respecting the maximum
+
         const newGallery = [...galleryFiles, ...validImages].slice(0, MAX_GALLERY_FILES);
         setGalleryFiles(newGallery);
-        
-        // Set the first image as selected if none was selected before
+
         if (!fileSelected) {
           setFileSelected(newGallery[0]);
           const reader = new FileReader();
@@ -179,8 +205,7 @@ const UploadPageContent = () => {
           };
           reader.readAsDataURL(newGallery[0]);
         }
-        
-        // Set the first new image as the thumbnail if none exists
+
         if (selectedThumbnailIndex === null && newGallery.length > 0) {
           setSelectedThumbnailIndex(0);
         }
@@ -190,7 +215,7 @@ const UploadPageContent = () => {
           toast.error("Please drop a valid video file");
           return;
         }
-        
+
         setFileSelected(videoFile);
         const reader = new FileReader();
         reader.onload = () => {
@@ -260,86 +285,124 @@ const UploadPageContent = () => {
   };
 
   const handleUpload = async () => {
-    if (uploadType === 'photo') {
+    if (!isAuthenticated) {
+      toast.error("Authentication failed. Please log in again.");
+      router.push("/");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("No token found. Please log in.");
+      router.push("/");
+      return;
+    }
+
+    if (uploadType === "photo") {
       if (galleryFiles.length === 0 || !title || !description) {
         toast.error("Please select at least one image and add a title and description");
         return;
       }
-    } else if (!fileSelected || !title || !description) {
-      toast.error("Please select a file and add a title and description");
+      console.log("Photo gallery upload not yet fully implemented with backend.");
+      toast.info("Photo gallery upload is a placeholder.");
+      setIsUploading(true);
+      setUploadProgress(0);
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 99) {
+            clearInterval(interval);
+            return 100;
+          }
+          return prev + 5;
+        });
+      }, 150);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      clearInterval(interval);
+      setUploadProgress(100);
+      toast.success("Placeholder: Photo gallery processed!", { id: "upload-toast" });
+      setIsUploading(false);
       return;
+    } else if (uploadType === "video") {
+      if (!fileSelected || !title || !description) {
+        toast.error("Please select a video file and add a title and description");
+        return;
+      }
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
 
     toast.loading("Uploading your content...", {
       id: "upload-toast",
+      duration: Infinity,
     });
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 99) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 150);
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("tags", tags);
+    formData.append("token", token);
+
+    if (uploadType === "video") {
+      formData.append("videoFile", fileSelected);
+      if (thumbnailFile) {
+        formData.append("thumbnailFile", thumbnailFile);
+      }
+    }
+
+    let currentProgress = 0;
+    const progressInterval = setInterval(() => {
+      currentProgress += Math.random() * 5 + 2;
+      if (currentProgress < 95) {
+        setUploadProgress(Math.min(currentProgress, 95));
+      } else {
+        clearInterval(progressInterval);
+      }
+    }, 200);
 
     try {
-      if (uploadType === "photo") {
-        console.log(`Uploading gallery of ${galleryFiles.length} images`);
-        console.log(`Using image ${selectedThumbnailIndex + 1} as thumbnail`);
-        
-        // In a real application, you would prepare a FormData object with all gallery files
-        // Example:
-        // const formData = new FormData();
-        // formData.append('title', title);
-        // formData.append('description', description);
-        // formData.append('thumbnailIndex', selectedThumbnailIndex);
-        // galleryFiles.forEach((file, index) => {
-        //   formData.append(`image-${index}`, file);
-        // });
-        
-        // Simulate server upload delay for demo
-      } else {
-        console.log("Uploading main file:", fileSelected);
-        if (thumbnailFile) {
-          console.log("Uploading custom thumbnail:", thumbnailFile);
-        }
+      const response = await fetch(`${config.url}/api/uploadVideo`, {
+        method: "POST",
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error during upload." }));
+        throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
       }
 
-      // Simulating server upload delay
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      clearInterval(interval);
+      const result = await response.json();
       setUploadProgress(100);
 
-      toast.success("Upload successful!", {
-        id: "upload-toast",
-      });
-
-      setTimeout(() => {
-        router.push("/");
-      }, 1000);
+      if (result.success) {
+        toast.success("Upload successful!", {
+          id: "upload-toast",
+          duration: 3000,
+        });
+        setTimeout(() => {
+          router.push("/");
+        }, 1000);
+      } else {
+        throw new Error(result.message || "Upload failed. Please try again.");
+      }
     } catch (error) {
       console.error("Upload failed:", error);
-      clearInterval(interval);
-      setIsUploading(false);
+      clearInterval(progressInterval);
       setUploadProgress(0);
-
-      toast.error("Upload failed: " + error.message, {
+      toast.error(`Upload failed: ${error.message}`, {
         id: "upload-toast",
+        duration: 5000,
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   return (
     <div className="md:py-14 py-7">
       <Toaster theme="dark" position="bottom-right" richColors />
-
-      {/* <NavBar user={user} showCategories={false} /> */}
 
       <div className="mb-8 max-w-[79rem] lg:px-0 px-4 mx-auto">
         <div className="flex items-center justify-between">
@@ -369,7 +432,7 @@ const UploadPageContent = () => {
               relative aspect-video rounded-xl overflow-hidden
               ${
                 !filePreview
-                  ? "border-2 border-dashed border-[#3a3a3a] bg-[#1a1a1a] hover:border-[#ea4197] cursor-pointer transition-colors"
+                  ? "border-2 border-dashed border-[#3a3a3a] bg-[#1a1a1aba] hover:border-[#ea4197] cursor-pointer transition-colors"
                   : ""
               }
               ${
@@ -415,7 +478,7 @@ const UploadPageContent = () => {
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                <TypeIcon className="text-[#5a5a5a] sm:text-6xl text-7xl mb-2" />
+                <TypeIcon className="text-[#929292] sm:text-6xl text-7xl mb-2" />
                 <h3 className="md:text-xl font-semibold text-white mb-1">
                   {uploadType === "photo"
                     ? "Click or drag to upload a photo"
@@ -445,7 +508,7 @@ const UploadPageContent = () => {
             className="hidden"
           />
 
-          <div className="md:mt-6 mt-3.5 p-4 bg-[#1a1a1a] rounded-xl border border-[#2a2a2a]">
+          <div className="md:mt-6 mt-3.5 p-4 bg-[#1a1a1ac2] rounded-xl border border-[#2a2a2a]">
             <h3 className="text-white font-medium mb-3">Switch Upload Type</h3>
             <div className="grid grid-cols-2 gap-3 font-inter font-medium">
               <button
@@ -464,7 +527,7 @@ const UploadPageContent = () => {
                 <RiImageAddLine className="mr-2 text-lg" />
                 Photo
               </button>
-              
+
               <button
                 onClick={() => {
                   if (uploadType !== "video") {
@@ -484,7 +547,7 @@ const UploadPageContent = () => {
             </div>
           </div>
         </div>
-        <div className="bg-[#1a1a1a] md:p-[26px] p-[24px] rounded-xl border border-[#2a2a2a]">
+        <div className="bg-[#1a1a1abb] md:p-[26px] p-[24px] rounded-xl border border-[#2a2a2a]">
           <h2 className="text-xl font-semibold text-white mb-5">
             Upload Details
           </h2>
@@ -665,7 +728,6 @@ const UploadPageContent = () => {
                     )}
                   </div>
                   
-                  {/* Gallery Images Grid */}
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {galleryFiles.map((file, index) => (
                       <div 
@@ -676,7 +738,6 @@ const UploadPageContent = () => {
                             : 'border-transparent hover:border-[#ea419780] hover:scale-[1.02]'
                         } transition-all duration-150`}
                         onClick={() => {
-                          // Preview this image and set as thumbnail
                           setFileSelected(file);
                           const reader = new FileReader();
                           reader.onload = () => {
@@ -692,17 +753,6 @@ const UploadPageContent = () => {
                           className="w-full h-full object-cover"
                         />
                         
-                        {/* Thumbnail indicator */}
-                        {/* {selectedThumbnailIndex === index && (
-                          <div className="absolute bottom-1 left-1 right-1 bg-[#ea4197] text-white text-[0.65rem] px-1.5 py-0.5 rounded flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Thumbnail
-                          </div>
-                        )} */}
-                        
-                        {/* Remove button */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -710,7 +760,6 @@ const UploadPageContent = () => {
                             newFiles.splice(index, 1);
                             setGalleryFiles(newFiles);
                             
-                            // If we removed the selected thumbnail, select the first image
                             if (selectedThumbnailIndex === index) {
                               if (newFiles.length > 0) {
                                 setSelectedThumbnailIndex(0);
@@ -726,7 +775,6 @@ const UploadPageContent = () => {
                                 setFilePreview(null);
                               }
                             } else if (selectedThumbnailIndex > index) {
-                              // Adjust thumbnail index if we removed an image before it
                               setSelectedThumbnailIndex(selectedThumbnailIndex - 1);
                             }
                           }}
@@ -737,7 +785,6 @@ const UploadPageContent = () => {
                       </div>
                     ))}
                     
-                    {/* Add more images button */}
                     {galleryFiles.length < MAX_GALLERY_FILES && (
                       <div 
                         className="aspect-square rounded-md border-2 border-dashed border-[#3a3a3a] flex flex-col items-center justify-center cursor-pointer hover:border-[#ea4197] hover:bg-[#1f1f1f] transition-all"
@@ -751,7 +798,6 @@ const UploadPageContent = () => {
                     )}
                   </div>
                   
-                  {/* Helper text */}
                   {galleryFiles.length > 0 && (
                     <p className="mt-3 text-[#a0a0a0] text-xs">
                       Click on an image to select it as the thumbnail. 
@@ -762,7 +808,6 @@ const UploadPageContent = () => {
               </div>
             )}
 
-            {/* Upload progress */}
             {isUploading && (
               <div>
                 <div className="flex justify-between text-sm text-[#cccccc] mb-2">
@@ -778,7 +823,6 @@ const UploadPageContent = () => {
               </div>
             )}
 
-            {/* Upload button */}
             <button
               onClick={handleUpload}
               disabled={!fileSelected || !title || isUploading || !description}
@@ -801,7 +845,6 @@ const UploadPageContent = () => {
   );
 };
 
-// Main component that wraps the content in a Suspense boundary
 const UploadPage = () => {
   return (
     <Suspense fallback={<UploadPageLoading />}>

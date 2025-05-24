@@ -16,6 +16,8 @@ import resetVerifyRoute from "./routes/resetVerify.js";
 import resetDoneRoute from "./routes/resetDone.js";
 import checkRoute from "./routes/check.js";
 import profileRoute from "./routes/profile.js";
+import uploadVideoRoute from "./routes/uploadVideo.js";
+import videoRoute from "./routes/video.js";
 
 const app = new Hono();
 
@@ -42,6 +44,8 @@ app.route('/api/deleteuser', deleteUserRoute);
 app.route('/api/resetdone', resetDoneRoute);
 app.route('/api/check', checkRoute);
 app.route('/api/profile', profileRoute);
+app.route('/api/uploadVideo', uploadVideoRoute);
+app.route('/api/video', videoRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };
