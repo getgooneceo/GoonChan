@@ -13,8 +13,8 @@ const ImageSchema = new mongoose.Schema({
   uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   uploadDate: { type: Date, default: Date.now },
   views: { type: Number, default: 0 },
-  likeCount: { type: Number, default: 0 },
-  dislikeCount: { type: Number, default: 0 },
+  likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   tags: { type: [String], default: [] }
 }, { timestamps: true });
 

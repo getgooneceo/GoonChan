@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import NavBar from "@/components/NavBar";
 import "remixicon/fonts/remixicon.css";
@@ -15,10 +15,11 @@ import {
   FaFireAlt,
 } from "react-icons/fa";
 import { FaFlag } from "react-icons/fa6";
-import { Stream } from "@cloudflare/stream-react";
+// import { Stream } from "@cloudflare/stream-react";
 import config from "@/config.json";
+import useUserAvatar from '@/hooks/useUserAvatar';
+import AuthModel from "@/components/authModel";
 
-// Define types for video data
 interface VideoUploader {
   _id: string;
   username: string;
@@ -29,7 +30,7 @@ interface VideoUploader {
 
 interface VideoData {
   _id: string;
-  id: string; // Add id property for compatibility
+  id: string;
   title: string;
   description?: string;
   slug: string;
@@ -37,8 +38,8 @@ interface VideoData {
   thumbnail?: string;
   duration: string;
   views: number;
-  likeCount: number;
-  dislikeCount: number;
+  likedBy: string[];
+  dislikedBy: string[];
   tags?: string[];
   cloudflareStreamId: string;
   createdAt: string;
@@ -92,7 +93,6 @@ const getRelativeTimeFromDate = (dateString: string): string => {
   }
 };
 
-// Utility function to format numbers as K/M (e.g., 1K, 1.2M)
 const formatCount = (count: number): string => {
   if (count >= 1000000) {
     return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -115,9 +115,9 @@ const WatchPageLoading = () => {
   );
 };
 
-// Main content component that uses useSearchParams
 const WatchPageContent = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const videoSlug = searchParams.get("v") as string;
   const [video, setVideo] = useState<VideoData | null>(null);
@@ -128,33 +128,65 @@ const WatchPageContent = () => {
   );
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+  const [subscriberCount, setSubscriberCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [likeDislikeCooldown, setLikeDislikeCooldown] = useState(false);
+  const [subscribeCooldown, setSubscribeCooldown] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const [uploaderProfile, setUploaderProfile] = useState<any>(null);
 
-  // Add container ref and state for dynamic 16:9 sizing
   const streamContainerRef = useRef<HTMLDivElement>(null);
   const [loadingMessage, setLoadingMessage] = useState("Loading video...");
+  const { avatarUrl: uploaderAvatarUrl } = useUserAvatar(uploaderProfile) as { avatarUrl: string; isLoading: boolean };
+
+  const isCurrentUserUploader = user && video?.uploader?._id && user._id === video.uploader._id;
 
   useEffect(() => {
     const fetchVideo = async () => {
       try {
         setIsLoading(true);
         setError(null);
+
+        const token = localStorage.getItem('token');
+        const url = token 
+          ? `${config.url}/api/video/${videoSlug}?token=${token}`
+          : `${config.url}/api/video/${videoSlug}`;
         
-        const response = await fetch(`${config.url}/api/video/${videoSlug}`);
+        const response = await fetch(url);
         const data = await response.json();
         
         if (data.success && data.video) {
-          // Map the video data to match VideoType interface
           const mappedVideo: VideoData = {
             ...data.video,
-            id: data.video._id, // Keep as string since that's what the API returns
+            id: data.video._id,
             uploader: data.video.uploader || {},
             comments: data.video.comments || []
           };
           setVideo(mappedVideo);
           setComments(data.video.comments || []);
+
+          setLikeCount(data.video.likeCount || 0);
+          setDislikeCount(data.video.dislikeCount || 0);
+          
+          if (data.video.userInteractionStatus) {
+            setIsLiked(data.video.userInteractionStatus.isLiked);
+            setIsDisliked(data.video.userInteractionStatus.isDisliked);
+          }
+
+          if (data.video.userSubscriptionStatus) {
+            setIsSubscribed(data.video.userSubscriptionStatus.isSubscribed);
+          }
+
+          setSubscriberCount(data.video.uploader?.subscriberCount || 0);
+          
+          if (data.video.uploader?.username) {
+            fetchUploaderProfile(data.video.uploader.username);
+          }
         } else {
           setError(data.message || 'Video not found');
         }
@@ -171,22 +203,149 @@ const WatchPageContent = () => {
     }
   }, [videoSlug]);
 
-  const handleLike = () => {
-    if (isLiked) {
-      setIsLiked(false);
-    } else {
-      setIsLiked(true);
-      setIsDisliked(false);
+  const fetchUploaderProfile = async (username: string) => {
+    try {
+      const response = await fetch(`${config.url}/api/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.user) {
+        setUploaderProfile(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching uploader profile:', error);
     }
   };
 
-  const handleDislike = () => {
-    if (isDisliked) {
+  const handleUploaderClick = () => {
+    if (video?.uploader?.username) {
+      router.push(`/profile?user=${video.uploader.username}`);
+    }
+  };
+
+  const handleLike = async () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!video?._id || likeDislikeCooldown) return;
+
+    setLikeDislikeCooldown(true);
+    setTimeout(() => setLikeDislikeCooldown(false), 300);
+
+    const wasLiked = isLiked;
+    const wasDisliked = isDisliked;
+    
+    if (wasLiked) {
+      setIsLiked(false);
+      setLikeCount(prev => prev - 1);
+    } else {
+      setIsLiked(true);
+      setLikeCount(prev => prev + 1);
+      if (wasDisliked) {
+        setIsDisliked(false);
+        setDislikeCount(prev => prev - 1);
+      }
+    }
+
+    fetch(`${config.url}/api/interactions/toggle-like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        contentId: video._id,
+        contentType: 'video',
+        action: 'like'
+      }),
+    }).catch(error => {
+      console.error('Error liking video:', error);
+    });
+  };
+
+  const handleDislike = async () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!video?._id || likeDislikeCooldown) return;
+
+    setLikeDislikeCooldown(true);
+    setTimeout(() => setLikeDislikeCooldown(false), 300);
+
+    const wasLiked = isLiked;
+    const wasDisliked = isDisliked;
+    
+    if (wasDisliked) {
       setIsDisliked(false);
+      setDislikeCount(prev => prev - 1);
     } else {
       setIsDisliked(true);
-      setIsLiked(false);
+      setDislikeCount(prev => prev + 1);
+      if (wasLiked) {
+        setIsLiked(false);
+        setLikeCount(prev => prev - 1);
+      }
     }
+
+    fetch(`${config.url}/api/interactions/toggle-like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        contentId: video._id,
+        contentType: 'video',
+        action: 'dislike'
+      }),
+    }).catch(error => {
+      console.error('Error disliking video:', error);
+    });
+  };
+
+  const handleSubscribe = async () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!video?.uploader?._id || subscribeCooldown) return;
+
+    setSubscribeCooldown(true);
+    setTimeout(() => setSubscribeCooldown(false), 300);
+
+    const wasSubscribed = isSubscribed;
+    setIsSubscribed(!wasSubscribed);
+    setSubscriberCount(prev => wasSubscribed ? prev - 1 : prev + 1);
+
+    fetch(`${config.url}/api/interactions/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        targetUserId: video.uploader._id
+      }),
+    }).catch(error => {
+      console.error('Error updating subscription:', error);
+    });
   };
 
   const scrollToComments = () => {
@@ -237,6 +396,7 @@ const WatchPageContent = () => {
   return (
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar user={user} setUser={setUser} />
+      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
       <div className="max-w-[79rem] mx-auto px-0 pt-2 pb-8">
         <div className="w-full px-10 md:px-0 rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">
@@ -348,7 +508,7 @@ const WatchPageContent = () => {
             >
               <i className="ri-thumb-up-fill text-[0.95rem]"></i>
               <span className="font-inter">
-                {formatCount(video.likeCount || 0)}
+                {formatCount(likeCount)}
               </span>
             </button>
 
@@ -362,7 +522,7 @@ const WatchPageContent = () => {
             >
               <i className="ri-thumb-down-fill text-[0.95rem] translate-y-[1px]"></i>
               <span className="font-inter">
-                {formatCount(video.dislikeCount || 0)}
+                {formatCount(dislikeCount)}
               </span>
             </button>
 
@@ -378,28 +538,42 @@ const WatchPageContent = () => {
           </div>
 
           <div className="hidden md:flex flex-wrap gap-y-5 mt-2 justify-between items-center">
-            <div className="flex items-center gap-3 py-2">
-              <div className="relative w-9 h-9 md:w-11 md:h-11 bg-[#2d2d2d] rounded-full overflow-hidden">
+            <div className="flex items-center gap-3 py-1">
+              <div 
+                className="relative w-9 h-9 md:w-11.5 md:h-11.5 bg-[#2d2d2d] rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleUploaderClick}
+              >
                 <Image
-                  src={video.uploader?.avatar || "/logo.webp"}
+                  src={uploaderAvatarUrl || video.uploader?.avatar || "/logo.webp"}
                   alt={video.uploader?.username || "User"}
                   fill
                   className="object-cover opacity-[97%]"
                 />
               </div>
-              <div>
-                <div className="text-[#e6e6e6] font-medium font-inter text-base">
+              <div className="cursor-pointer" onClick={handleUploaderClick}>
+                <div className="text-[#e6e6e6] font-medium font-pop text-base tracking-wide hover:text-[#ea4197] transition-colors">
                   {video.uploader?.username || "Unknown User"}
                 </div>
                 <div className="text-[#a0a0a0] font-roboto text-xs">
-                  {formatCount(video.uploader?.subscriberCount || 0)} subscribers
+                  {formatCount(subscriberCount || uploaderProfile?.subscriberCount || video.uploader?.subscriberCount || 0)} subscribers
                 </div>
               </div>
 
               <div className="relative h-9 w-[0.8px] bg-[#323232]"></div>
-              <button className="flex items-center gap-1.5 ml-0.5 px-5 py-1.5 rounded-lg border border-[#999999] bg-[#1e1e1e] cursor-pointer text-white text-sm hover:border-[#c2c2c2] hover:bg-[#242424] transition-colors">
+              <button 
+                onClick={isCurrentUserUploader ? undefined : handleSubscribe}
+                className={`flex items-center gap-1.5 ml-0.5 px-5 py-1.5 rounded-lg border text-sm transition-colors ${
+                  isCurrentUserUploader
+                    ? "border-[#525252] bg-[#2a2a2a] text-[#c0c0c0] cursor-default opacity-70"
+                    : isSubscribed 
+                      ? "border-[#525252] bg-[#2a2a2a] text-[#c0c0c0] cursor-pointer" 
+                      : "border-[#999999] bg-[#1e1e1e] text-white hover:border-[#c2c2c2] hover:bg-[#242424] cursor-pointer"
+                }`}
+              >
                 <FaBell className="text-sm" />
-                <span className="font-inter">Subscribe</span>
+                <span className="font-inter">
+                  {isCurrentUserUploader ? 'Subscribed' : (isSubscribed ? 'Subscribed' : 'Subscribe')}
+                </span>
               </button>
             </div>
 
@@ -414,7 +588,7 @@ const WatchPageContent = () => {
               >
                 <FaThumbsUp size={14} />
                 <span className="font-inter">
-                  {formatCount(video.likeCount || 0)}
+                  {formatCount(likeCount)}
                 </span>
               </button>
 
@@ -428,7 +602,7 @@ const WatchPageContent = () => {
               >
                 <FaThumbsDown size={14} />
                 <span className="font-inter">
-                  {formatCount(video.dislikeCount || 0)}
+                  {formatCount(dislikeCount)}
                 </span>
               </button>
 
@@ -445,25 +619,39 @@ const WatchPageContent = () => {
           </div>
 
           <div className="md:hidden flex items-center gap-3 bg-[#1a1a1a] p-3 rounded-lg mb-5">
-            <div className="relative w-10 h-10 bg-[#2d2d2d] rounded-full overflow-hidden">
+            <div 
+              className="relative w-10 h-10 bg-[#2d2d2d] rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleUploaderClick}
+            >
               <Image
-                src={video.uploader?.avatar || "/logo.webp"}
+                src={uploaderAvatarUrl || video.uploader?.avatar || "/logo.webp"}
                 alt={video.uploader?.username || "User"}
                 fill
                 className="object-cover opacity-[97%]"
               />
             </div>
-            <div className="flex-1">
-              <div className="text-white font-medium font-inter text-sm">
+            <div className="flex-1 cursor-pointer" onClick={handleUploaderClick}>
+              <div className="text-white font-medium font-inter text-sm hover:text-[#ea4197] transition-colors">
                 {video.uploader?.username || "Unknown User"}
               </div>
               <div className="text-[#a0a0a0] font-roboto text-xs">
-                {formatCount(video.uploader?.subscriberCount || 0)} subscribers
+                {formatCount(subscriberCount || uploaderProfile?.subscriberCount || video.uploader?.subscriberCount || 0)} subscribers
               </div>
             </div>
-            <button className="flex items-center gap-1.5 px-2.5 py-[0.34rem] rounded-lg bg-[#ea4197] text-white text-sm hover:bg-[#d23884] transition-colors">
+            <button 
+              onClick={isCurrentUserUploader ? undefined : handleSubscribe}
+              className={`flex items-center gap-1.5 px-2.5 py-[0.34rem] rounded-lg text-sm transition-colors ${
+                isCurrentUserUploader
+                  ? "bg-[#525252] text-[#c0c0c0] cursor-default opacity-70"
+                  : isSubscribed
+                    ? "bg-[#525252] text-[#c0c0c0] hover:bg-[#616161] cursor-pointer"
+                    : "bg-[#ea4197] text-white hover:bg-[#d23884] cursor-pointer"
+              }`}
+            >
               <FaBell className="text-sm" />
-              <span className="font-inter">Subscribe</span>
+              <span className="font-inter">
+                {isCurrentUserUploader ? 'Subscribed' : (isSubscribed ? 'Subscribed' : 'Subscribe')}
+              </span>
             </button>
           </div>
 

@@ -13,11 +13,17 @@ import { useRouter } from "next/navigation";
 import config from "../config.json";
 import useUserAvatar from '../hooks/useUserAvatar';
 
-const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (user: any) => void; showCategories?: boolean;}) => {
+const NavBar = ({user, setUser, showCategories = true, activeCategory, setActiveCategory}: {
+  user?: any; 
+  setUser?: (user: any) => void; 
+  showCategories?: boolean;
+  activeCategory?: string;
+  setActiveCategory?: (category: string) => void;
+}) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [activeCategory, setActiveCategory] = useState("discover");
+  const [localActiveCategory, setLocalActiveCategory] = useState("discover");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +137,22 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
     }
   };
 
+  const handleCategoryNavigation = (categoryId: string) => {
+    if (window.location.pathname === '/') {
+      if (setActiveCategory) {
+        setActiveCategory(categoryId);
+      } else {
+        setLocalActiveCategory(categoryId);
+      }
+    } else {
+      if (categoryId === "discover") {
+        router.push("/");
+      } else {
+        router.push(`/?category=${categoryId}`);
+      }
+    }
+  };
+
   const categories = [
     { id: "discover", name: "Discover", icon: <FaCompass /> },
     { id: "images", name: "Images", icon: <FaRegImage /> },
@@ -141,6 +163,9 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
     { id: "random", name: "Random", icon: <FaRandom /> },
     { id: "subscriptions", name: "Subscriptions", icon: <FaUser /> },
   ];
+
+  const currentActiveCategory = activeCategory || localActiveCategory;
+  // const handleCategoryChange = setActiveCategory || setLocalActiveCategory;
 
   return (
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
@@ -194,13 +219,13 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
                     <button
                       key={category.id}
                       onClick={() => {
-                        setActiveCategory(category.id);
+                        handleCategoryNavigation(category.id);
                         setIsSidebarOpen(false);
                       }}
                       className={`
-                        flex items-center p-3 rounded-lg transition-all duration-200
-                        ${activeCategory === category.id 
-                          ? 'bg-[#ea4197]/10 text-[#ea4197]' 
+                        flex items-center p-3 rounded-lg transition-all duration-300 ease-out transform hover:scale-[1.02]
+                        ${currentActiveCategory === category.id 
+                          ? 'bg-[#ea4197]/15 text-[#ea4197] shadow-lg shadow-[#ea4197]/20' 
                           : 'text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white'}
                       `}
                     >
@@ -402,29 +427,29 @@ const NavBar = ({user, setUser, showCategories = true}: {user?: any; setUser?: (
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
+                    onClick={() => handleCategoryNavigation(category.id)}
                     className={`
-                      flex-1 cursor-pointer transition-all ease-out duration-200 whitespace-nowrap
+                      flex-1 cursor-pointer transition-all ease-out duration-300 whitespace-nowrap transform
                       
                       ${/* Large screens - buttons with background */''}
                       lg:flex lg:flex-row lg:items-center lg:justify-center lg:px-3 lg:py-[0.6rem] lg:rounded-full
-                      lg:hover:scale-[1.02] lg:transform-gpu lg:mx-0.5
-                      ${activeCategory === category.id 
-                        ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_4px_12px_rgba(234,65,151,0.1)]' 
-                        : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white'}
+                      lg:hover:scale-[1.05] lg:transform-gpu lg:mx-0.5
+                      ${currentActiveCategory === category.id 
+                        ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_6px_20px_rgba(234,65,151,0.15)] lg:scale-[1.02]' 
+                        : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white lg:hover:shadow-[0_4px_12px_rgba(255,255,255,0.05)]'}
                       
                       ${/* Medium screens - text with icons, no background */''}
                       md:flex md:flex-row md:items-center md:justify-center md:px-2 md:py-1.5
-                      md:hover:text-white md:mx-0.5
-                      ${activeCategory === category.id 
-                        ? 'md:text-[#ea4197] md:font-medium' 
+                      md:hover:text-white md:mx-0.5 md:hover:scale-[1.02]
+                      ${currentActiveCategory === category.id 
+                        ? 'md:text-[#ea4197] md:font-medium md:scale-[1.02]' 
                         : 'md:text-[#b3b3b3]'}
                       
                       ${/* Small screens - icons above text */''}
                       flex flex-col items-center justify-center px-1 py-1
-                      hover:text-white mx-0.5
-                      ${activeCategory === category.id 
-                        ? 'text-[#ea4197] font-medium' 
+                      hover:text-white mx-0.5 hover:scale-[1.02]
+                      ${currentActiveCategory === category.id 
+                        ? 'text-[#ea4197] font-medium scale-[1.02]' 
                         : 'text-[#b3b3b3]'}
                     `}
                   >

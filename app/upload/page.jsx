@@ -45,12 +45,12 @@ const UploadPageContent = () => {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // New state for multi-image gallery
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
   const MAX_GALLERY_FILES = 12;
 
   const fileInputRef = React.useRef(null);
+  const replaceInputRef = React.useRef(null);
   const thumbnailInputRef = React.useRef(null);
 
   const pageTitle = uploadType === "photo" ? "Upload Photo" : "Upload Video";
@@ -147,6 +147,50 @@ const UploadPageContent = () => {
       };
       reader.readAsDataURL(videoFile);
     }
+  };
+
+  const handleFileReplace = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    if (uploadType === "photo") {
+      const validImages = files.filter((file) => file.type.startsWith("image/"));
+      if (validImages.length === 0) {
+        toast.error("Please select valid image files");
+        return;
+      }
+
+      const newFile = validImages[0];
+      const newGallery = [...galleryFiles];
+      newGallery[selectedThumbnailIndex] = newFile;
+      setGalleryFiles(newGallery);
+
+      setFileSelected(newFile);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(newFile);
+
+      toast.success("Image replaced successfully");
+    } else if (uploadType === "video") {
+      const videoFile = files.find((file) => file.type.startsWith("video/"));
+      if (!videoFile) {
+        toast.error("Please select a valid video file");
+        return;
+      }
+
+      setFileSelected(videoFile);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(videoFile);
+
+      toast.success("Video replaced successfully");
+    }
+
+    e.target.value = '';
   };
 
   const handleThumbnailChange = (e) => {
@@ -303,25 +347,6 @@ const UploadPageContent = () => {
         toast.error("Please select at least one image and add a title and description");
         return;
       }
-      console.log("Photo gallery upload not yet fully implemented with backend.");
-      toast.info("Photo gallery upload is a placeholder.");
-      setIsUploading(true);
-      setUploadProgress(0);
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 99) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + 5;
-        });
-      }, 150);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      clearInterval(interval);
-      setUploadProgress(100);
-      toast.success("Placeholder: Photo gallery processed!", { id: "upload-toast" });
-      setIsUploading(false);
-      return;
     } else if (uploadType === "video") {
       if (!fileSelected || !title || !description) {
         toast.error("Please select a video file and add a title and description");
@@ -348,6 +373,14 @@ const UploadPageContent = () => {
       if (thumbnailFile) {
         formData.append("thumbnailFile", thumbnailFile);
       }
+    } else if (uploadType === "photo") {
+      // Add thumbnail index
+      formData.append("thumbnailIndex", selectedThumbnailIndex.toString());
+      
+      // Add all image files
+      galleryFiles.forEach((file, index) => {
+        formData.append(`imageFile${index}`, file);
+      });
     }
 
     let currentProgress = 0;
@@ -361,7 +394,9 @@ const UploadPageContent = () => {
     }, 200);
 
     try {
-      const response = await fetch(`${config.url}/api/uploadVideo`, {
+      const apiEndpoint = uploadType === "photo" ? "/api/uploadImage" : "/api/uploadVideo";
+      
+      const response = await fetch(`${config.url}${apiEndpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -377,7 +412,7 @@ const UploadPageContent = () => {
       setUploadProgress(100);
 
       if (result.success) {
-        toast.success("Upload successful!", {
+        toast.success(`${uploadType === "photo" ? "Images" : "Video"} uploaded successfully!`, {
           id: "upload-toast",
           duration: 3000,
         });
@@ -468,7 +503,7 @@ const UploadPageContent = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      fileInputRef.current?.click();
+                      replaceInputRef.current?.click();
                     }}
                     className="bg-[#2a2a2a] font-inter hover:bg-[#3a3a3a] text-[#f9f9f9] py-2 px-4 rounded-full transition-colors text-sm"
                   >
@@ -505,6 +540,14 @@ const UploadPageContent = () => {
             multiple={uploadType === "photo"}
             accept={uploadType === "photo" ? "image/*" : "video/*"}
             onChange={handleFileChange}
+            className="hidden"
+          />
+
+          <input
+            ref={replaceInputRef}
+            type="file"
+            accept={uploadType === "photo" ? "image/*" : "video/*"}
+            onChange={handleFileReplace}
             className="hidden"
           />
 

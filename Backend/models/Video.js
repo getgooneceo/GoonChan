@@ -28,13 +28,11 @@ const VideoSchema = new mongoose.Schema({
   views: { type: Number, default: 0 },
   uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   uploadDate: { type: Date, default: Date.now },
-  likeCount: { type: Number, default: 0 },
-  dislikeCount: { type: Number, default: 0 },
+  likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   tags: { type: [String], default: [] },
-  cloudflareStreamId: { type: String, required: true, unique: true, sparse: true }, // ID from Cloudflare Stream
+  cloudflareStreamId: { type: String, required: true, unique: true, sparse: true },
 }, { timestamps: true });
-
-// Remove the pre-save middleware since we'll handle slug generation in the upload route
 
 VideoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 VideoSchema.index({ uploader: 1 });

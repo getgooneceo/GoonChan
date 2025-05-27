@@ -5,8 +5,8 @@ const ReplySchema = new mongoose.Schema({
   username: { type: String, required: true },
   avatar: { type: String, default: 'https://i.pravatar.cc/150?img=1' },
   content: { type: String, required: true },
-  likes: { type: Number, default: 0 },
-  dislikes: { type: Number, default: 0 },
+  likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
@@ -17,8 +17,8 @@ const CommentSchema = new mongoose.Schema({
   username: { type: String, required: true },
   avatar: { type: String, default: 'https://i.pravatar.cc/150?img=1' },
   content: { type: String, required: true },
-  likes: { type: Number, default: 0 },
-  dislikes: { type: Number, default: 0 },
+  likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   replies: [ReplySchema],
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
@@ -26,7 +26,7 @@ const CommentSchema = new mongoose.Schema({
 
 CommentSchema.index({ contentType: 1, contentId: 1 });
 CommentSchema.index({ user: 1 });
-CommentSchema.index({ likes: -1 });
+CommentSchema.index({ likedBy: -1 });
 
 const Comment = mongoose.model('Comment', CommentSchema);
 

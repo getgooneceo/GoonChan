@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import Video from '../models/Video.js'
 import User from '../models/User.js'
+import jwt from 'jsonwebtoken'
 import { rateLimiter } from 'hono-rate-limiter'
 
 const router = new Hono()
@@ -13,9 +14,25 @@ const limiter = rateLimiter({
   keyGenerator: (c) => c.req.header('x-forwarded-for') || c.req.ip,
 })
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const verifyTokenAndGetUser = async (token) => {
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findOne({ email: decoded.email });
+    return user ? user._id : null;
+  } catch (error) {
+    console.error('Token verification failed:', error.message);
+    return null;
+  }
+};
+
 router.get('/:slug', limiter, async (c) => {
   try {
     const { slug } = c.req.param()
+    const { token } = c.req.query()
 
     if (!slug) {
       return c.json({ 
@@ -35,6 +52,31 @@ router.get('/:slug', limiter, async (c) => {
 
     await Video.findByIdAndUpdate(video._id, { $inc: { views: 1 } })
 
+    let userInteractionStatus = null;
+    let userSubscriptionStatus = null;
+    
+    if (token) {
+      const userId = await verifyTokenAndGetUser(token);
+      if (userId) {
+        const isLiked = video.likedBy.includes(userId);
+        const isDisliked = video.dislikedBy.includes(userId);
+        
+        userInteractionStatus = {
+          isLiked,
+          isDisliked
+        };
+
+        const currentUser = await User.findById(userId);
+        if (currentUser && video.uploader._id) {
+          const isSubscribed = currentUser.subscriptions.includes(video.uploader._id);
+          userSubscriptionStatus = {
+            isSubscribed,
+            canSubscribe: userId.toString() !== video.uploader._id.toString()
+          };
+        }
+      }
+    }
+
     const videoResponse = {
       _id: video._id,
       title: video.title,
@@ -44,8 +86,8 @@ router.get('/:slug', limiter, async (c) => {
       thumbnail: video.thumbnail,
       duration: video.duration,
       views: video.views + 1,
-      likeCount: video.likeCount || 0,
-      dislikeCount: video.dislikeCount || 0,
+      likeCount: video.likedBy.length,
+      dislikeCount: video.dislikedBy.length,
       tags: video.tags || [],
       cloudflareStreamId: video.cloudflareStreamId,
       createdAt: video.createdAt,
@@ -55,7 +97,9 @@ router.get('/:slug', limiter, async (c) => {
         avatar: video.uploader.avatar,
         avatarColor: video.uploader.avatarColor,
         subscriberCount: video.uploader.subscriberCount || 0
-      }
+      },
+      ...(userInteractionStatus && { userInteractionStatus }),
+      ...(userSubscriptionStatus && { userSubscriptionStatus })
     }
     
     return c.json({

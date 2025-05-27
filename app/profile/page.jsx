@@ -8,6 +8,7 @@ import { MdFavoriteBorder } from "react-icons/md";
 import { TbUsers } from "react-icons/tb";
 import { FaBell } from "react-icons/fa";
 import NavBar from "@/components/NavBar";
+import ProfileImageGrid from "@/components/ProfileImageGrid";
 import ProfileVideoGrid from "@/components/ProfileVideoGrid";
 import SubscriptionGrid from "@/components/SubscriptionGrid";
 import config from "@/config.json";
@@ -149,9 +150,9 @@ const ProfilePage = () => {
   const categories = [
     { id: "general", label: "General", icon: <RiUser3Line /> },
     { id: "videos", label: "Videos", icon: <RiVideoLine /> },
-    { id: "subscriptions", label: "Subs", icon: <TbUsers /> },
     { id: "images", label: "Images", icon: <RiImageLine /> },
-    { id: "liked", label: "Liked", icon: <MdFavoriteBorder /> },
+    { id: "subscriptions", label: "Subs", icon: <TbUsers /> },
+    // { id: "liked", label: "Liked", icon: <MdFavoriteBorder /> },
   ];
 
   if (isLoading) {
@@ -257,7 +258,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
+      <div className="container mx-auto px-2 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="hidden md:block w-64 shrink-0">
             <div className="bg-[#121212] rounded-xl p-4 sticky top-24">
@@ -533,19 +534,23 @@ const ProfilePage = () => {
                   <h2 className="text-xl font-semibold mb-4 text-white/90">
                     Uploaded Images
                   </h2>
-                  <div className="text-center py-16">
-                    <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
-                      <RiImageLine size={40} className="text-[#ea4197]" />
+                  {profileData.images && profileData.images.length > 0 ? (
+                    <ProfileImageGrid images={profileData.images} />
+                  ) : (
+                    <div className="text-center py-16">
+                      <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
+                        <RiImageLine size={40} className="text-[#ea4197]" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">
+                        No images uploaded yet
+                      </h3>
+                      <p className="text-white/50 max-w-md mx-auto">
+                        {isOwnProfile ?
+                          "Your uploaded images will appear here. Share your best content with the community!" :
+                          "This user hasn't uploaded any images yet."}
+                      </p>
                     </div>
-                    <h3 className="text-lg font-medium mb-2">
-                      No images uploaded yet
-                    </h3>
-                    <p className="text-white/50 max-w-md mx-auto">
-                      {isOwnProfile ?
-                        "Your uploaded images will appear here. Share your best content with the community!" :
-                        "This user hasn't uploaded any images yet."}
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
 

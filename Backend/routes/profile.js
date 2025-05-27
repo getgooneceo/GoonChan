@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import User from '../models/User.js'
 import Video from '../models/Video.js'
+import Image from '../models/Image.js'
 import { rateLimiter } from 'hono-rate-limiter'
 import jwt from 'jsonwebtoken'
 
@@ -21,32 +22,26 @@ router.post('/', limiter, async (c) => {
     let isOwnProfile = false
     let authenticatedUsername = null
 
-    // Verify token if provided
     if (token) {
       try {
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET)
-        
-        // Find authenticated user by email from token
+
         const currentUser = await User.findOne({ email: decodedToken.email })
         if (currentUser) {
           authenticatedUsername = currentUser.username
-          
-          // If no username specified, use the authenticated user's username
+
           if (!usernameToFetch) {
             usernameToFetch = authenticatedUsername
             isOwnProfile = true
           } else {
-            // Check if the requested profile is the user's own profile
             isOwnProfile = authenticatedUsername === usernameToFetch
           }
         }
       } catch (error) {
-        // Invalid token, but continue to fetch public profile if username is provided
         console.error('Token verification error:', error)
       }
     }
 
-    // If no username provided and no authenticated user, return error
     if (!usernameToFetch) {
       return c.json({ 
         success: false, 
@@ -54,7 +49,6 @@ router.post('/', limiter, async (c) => {
       }, 400)
     }
 
-    // Find the user by username
     const user = await User.findOne({ username: usernameToFetch })
     
     if (!user) {
@@ -64,22 +58,24 @@ router.post('/', limiter, async (c) => {
       }, 404)
     }
 
-    // Find videos uploaded by the user
     const videos = await Video.find({ uploader: user._id })
       .sort({ createdAt: -1 })
       .limit(20)
-    
-    // Find users this user has subscribed to
+
+    const images = await Image.find({ uploader: user._id })
+      .sort({ createdAt: -1 })
+      .limit(20)
+
     const subscriptions = await User.find(
       { _id: { $in: user.subscriptions || [] } },
       { username: 1, avatar: 1, avatarColor: 1, subscriberCount: 1 }
     ).limit(10)
-    
-    // Calculate statistics
-    const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0)
-    const totalLikes = videos.reduce((sum, video) => sum + (video.likeCount || 0), 0)
-    
-    // Format the response based on whether it's the user's own profile
+
+    const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0) + 
+                     images.reduce((sum, image) => sum + (image.views || 0), 0)
+    const totalLikes = videos.reduce((sum, video) => sum + (video.likeCount || 0), 0) +
+                      images.reduce((sum, image) => sum + (image.likedBy?.length || 0), 0)
+
     const userResponse = {
       _id: user._id,
       username: user.username,
@@ -88,12 +84,12 @@ router.post('/', limiter, async (c) => {
       avatarColor: user.avatarColor,
       createdAt: user.createdAt,
       subscriberCount: user.subscriberCount || 0,
-      totalUploads: videos.length,
+      totalUploads: videos.length + images.length,
       totalViews,
       totalLikes,
       videos: videos.map(video => ({
         id: video._id,
-        slug: video.slug, // Add the URL-friendly slug
+        slug: video.slug,
         title: video.title,
         thumbnail: video.thumbnail,
         duration: video.duration,
@@ -101,7 +97,22 @@ router.post('/', limiter, async (c) => {
         likeCount: video.likeCount || 0,
         dislikeCount: video.dislikeCount || 0,
         createdAt: video.createdAt,
-        uploader: user.username
+        uploader: user.username,
+        type: 'video'
+      })),
+      images: images.map(image => ({
+        id: image._id,
+        slug: image.slug,
+        title: image.title,
+        thumbnail: image.imageUrls[image.thumbnailIndex || 0],
+        imageUrls: image.imageUrls,
+        thumbnailIndex: image.thumbnailIndex || 0,
+        views: image.views || 0,
+        likeCount: image.likedBy?.length || 0,
+        dislikeCount: image.dislikedBy?.length || 0,
+        createdAt: image.createdAt,
+        uploader: user.username,
+        type: 'image'
       })),
       subscriptions: subscriptions.map(sub => ({
         id: sub._id,
@@ -111,8 +122,7 @@ router.post('/', limiter, async (c) => {
         subscriberCount: sub.subscriberCount || 0
       }))
     }
-    
-    // Only include email if viewing own profile
+
     if (isOwnProfile) {
       userResponse.email = user.email
     }

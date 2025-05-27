@@ -120,7 +120,6 @@ router.post('/', async (c) => {
 
     let videoUploadResult;
     let finalThumbnailUrl;
-    let actualVideoDuration = 0;
 
     const videoFormData = new FormDataNode();
     const videoBuffer = await videoFile.arrayBuffer();
@@ -152,62 +151,57 @@ router.post('/', async (c) => {
     const cloudflareStreamId = videoUploadResult.uid;
     let defaultStreamThumbnail = videoUploadResult.thumbnail;
 
-    try {
-      const processedVideoData = await waitForVideoProcessing(cloudflareStreamId);
-      actualVideoDuration = processedVideoData.duration;
-      defaultStreamThumbnail = processedVideoData.thumbnail || defaultStreamThumbnail;
-    } catch (error) {
-      console.warn(`Could not get processed video details for ${cloudflareStreamId} after polling, will use initial data or defaults. Error: ${error.message}`);
-      actualVideoDuration = videoUploadResult.duration > 0 ? videoUploadResult.duration : 0;
-    }
 
+    const thumbnailUploadPromise = (async () => {
+      if (customThumbnailFile instanceof File && customThumbnailFile.size > 0) {
+        const imageFormData = new FormDataNode();
+        const imageBuffer = await customThumbnailFile.arrayBuffer();
 
-    if (customThumbnailFile instanceof File && customThumbnailFile.size > 0) {
-      const imageFormData = new FormDataNode();
-      const imageBuffer = await customThumbnailFile.arrayBuffer();
+        try {
+          const webpBuffer = await sharp(Buffer.from(imageBuffer))
+            .webp()
+            .toBuffer();
 
-      try {
-        const webpBuffer = await sharp(Buffer.from(imageBuffer))
-          .webp()
-          .toBuffer();
+          const originalFileName = customThumbnailFile.name;
+          const webpFileName = originalFileName.substring(0, originalFileName.lastIndexOf('.')) + '.webp';
+          imageFormData.append('file', webpBuffer, webpFileName);
 
-        const originalFileName = customThumbnailFile.name;
-        const webpFileName = originalFileName.substring(0, originalFileName.lastIndexOf('.')) + '.webp';
-        imageFormData.append('file', webpBuffer, webpFileName);
+          const directUploadForm = new FormDataNode();
+          directUploadForm.append('requireSignedURLs', 'false');
 
-        const directUploadForm = new FormDataNode();
-        directUploadForm.append('requireSignedURLs', 'false');
+          const directUploadResponse = await axios.post(
+            `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v2/direct_upload`,
+            directUploadForm,
+            {
+              headers: {
+                ...directUploadForm.getHeaders(),
+                'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+              },
+            }
+          );
 
-        const directUploadResponse = await axios.post(
-          `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/images/v2/direct_upload`,
-          directUploadForm,
-          {
-            headers: {
-              ...directUploadForm.getHeaders(),
-              'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-            },
+          const { uploadURL, id: imageId } = directUploadResponse.data.result;
+          if (!uploadURL || !imageId) {
+            console.error('Cloudflare image direct upload response missing data:', directUploadResponse.data);
+            throw new Error('Failed to get Cloudflare image direct upload URL.');
           }
-        );
 
-        const { uploadURL, id: imageId } = directUploadResponse.data.result;
-        if (!uploadURL || !imageId) {
-          console.error('Cloudflare image direct upload response missing data:', directUploadResponse.data);
-          throw new Error('Failed to get Cloudflare image direct upload URL.');
+          const thumbHeadersForAxios = imageFormData.getHeaders();
+          await axios.post(uploadURL, imageFormData, {
+            headers: thumbHeadersForAxios,
+          });
+
+          return `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_HASH}/${imageId}/public`;
+        } catch (error) {
+          console.error('Error uploading custom thumbnail to Cloudflare:', error.response ? JSON.stringify(error.response.data) : error.message);
+          return defaultStreamThumbnail;
         }
-
-        const thumbHeadersForAxios = imageFormData.getHeaders();
-        await axios.post(uploadURL, imageFormData, {
-          headers: thumbHeadersForAxios,
-        });
-
-        finalThumbnailUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_HASH}/${imageId}/public`;
-      } catch (error) {
-        console.error('Error uploading custom thumbnail to Cloudflare:', error.response ? JSON.stringify(error.response.data) : error.message);
-        finalThumbnailUrl = defaultStreamThumbnail;
+      } else {
+        return defaultStreamThumbnail;
       }
-    } else {
-      finalThumbnailUrl = defaultStreamThumbnail;
-    }
+    })();
+
+    finalThumbnailUrl = await thumbnailUploadPromise;
 
     const slug = await generateUniqueSlug(title.trim());
 
@@ -217,7 +211,7 @@ router.post('/', async (c) => {
       slug: slug,
       videoUrl: `https://customer-${CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${cloudflareStreamId}/iframe`,
       thumbnail: finalThumbnailUrl,
-      duration: Math.round(actualVideoDuration),
+      duration: -1,
       uploader: user._id,
       tags: tagsString && typeof tagsString === 'string' ? tagsString.split(' ').map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
       cloudflareStreamId: cloudflareStreamId,
@@ -225,6 +219,21 @@ router.post('/', async (c) => {
 
     const newVideo = new Video(videoData);
     await newVideo.save();
+
+    (async () => {
+      try {
+        const processedVideoData = await waitForVideoProcessing(cloudflareStreamId);
+
+        await Video.findByIdAndUpdate(newVideo._id, {
+          duration: Math.round(processedVideoData.duration),
+          thumbnail: processedVideoData.thumbnail || finalThumbnailUrl
+        });
+        
+        // console.log(`Successfully updated video ${cloudflareStreamId} with duration: ${processedVideoData.duration}s`);
+      } catch (error) {
+        console.warn(`Could not update processed video details for ${cloudflareStreamId} in background. Error: ${error.message}`);
+      }
+    })();
 
     return c.json({
       success: true,
