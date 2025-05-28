@@ -20,6 +20,8 @@ import uploadVideoRoute from "./routes/uploadVideo.js";
 import uploadImageRoute from "./routes/uploadImage.js";
 import videoRoute from "./routes/video.js";
 import imageRoute from "./routes/image.js";
+import contentRoute from "./routes/content.js";
+import interactionsRoute from "./routes/interactions.js";
 
 const app = new Hono();
 
@@ -50,6 +52,8 @@ app.route('/api/uploadVideo', uploadVideoRoute);
 app.route('/api/uploadImage', uploadImageRoute);
 app.route('/api/video', videoRoute);
 app.route('/api/image', imageRoute);
+app.route('/api/content', contentRoute);
+app.route('/api/interactions', interactionsRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

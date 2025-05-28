@@ -14,6 +14,11 @@ import SubscriptionGrid from "@/components/SubscriptionGrid";
 import config from "@/config.json";
 import useUserAvatar from "@/hooks/useUserAvatar";
 
+const calculateLikePercentage = (likeCount = 0, dislikeCount = 0) => {
+  if (likeCount === 0 && dislikeCount === 0) return 0;
+  return Math.round((likeCount / (likeCount + dislikeCount)) * 100);
+};
+
 const ProfilePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,8 +121,22 @@ const ProfilePage = () => {
         const data = await response.json();
 
         if (data.success && data.user) {
-          // setUser(data.authedUser || null);
-          setProfileData(data.user);
+          // Calculate percentages for videos and images
+          const videosWithPercentage = data.user.videos?.map(video => ({
+            ...video,
+            likePercentage: calculateLikePercentage(video.likeCount, video.dislikeCount)
+          })) || [];
+
+          const imagesWithPercentage = data.user.images?.map(image => ({
+            ...image,
+            likePercentage: calculateLikePercentage(image.likeCount, image.dislikeCount)
+          })) || [];
+
+          setProfileData({
+            ...data.user,
+            videos: videosWithPercentage,
+            images: imagesWithPercentage
+          });
           setIsOwnProfile(data.isOwnProfile);
           setBio(data.user.bio || "");
 

@@ -34,6 +34,16 @@ const VideoSchema = new mongoose.Schema({
   cloudflareStreamId: { type: String, required: true, unique: true, sparse: true },
 }, { timestamps: true });
 
+VideoSchema.virtual('comments', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'contentId',
+  match: { contentType: 'video' }
+});
+
+VideoSchema.set('toJSON', { virtuals: true });
+VideoSchema.set('toObject', { virtuals: true });
+
 VideoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 VideoSchema.index({ uploader: 1 });
 VideoSchema.index({ views: -1 });
@@ -41,6 +51,5 @@ VideoSchema.index({ uploadDate: -1 });
 
 const Video = mongoose.model('Video', VideoSchema);
 
-// Export the slug generation functions for use in routes
 export { generateSlug, generateRandomSuffix };
 export default Video;

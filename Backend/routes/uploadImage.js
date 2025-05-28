@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import axios from 'axios';
 import FormDataNode from 'form-data';
-import Image from '../models/Image.js';
+import Image, { generateSlug, generateRandomSuffix } from '../models/Image.js';
 import User from '../models/User.js';
 import { config } from "dotenv";
 import jwt from 'jsonwebtoken';
@@ -28,11 +28,26 @@ const verifyTokenAndGetUserId = (token) => {
   }
 };
 
+const generateUniqueSlug = async (title) => {
+  const baseSlug = generateSlug(title);
+  const randomSuffix = generateRandomSuffix();
+  let slug = `${baseSlug}-${randomSuffix}`;
+
+  let counter = 1;
+  while (await Image.findOne({ slug: slug })) {
+    slug = `${baseSlug}-${randomSuffix}${counter}`;
+    counter++;
+  }
+
+  return slug;
+};
+
 const uploadImageToCloudflare = async (imageFile) => {
   try {
     const imageBuffer = await imageFile.arrayBuffer();
 
-    const webpBuffer = await sharp(Buffer.from(imageBuffer))
+    let webpBuffer;
+    webpBuffer = await sharp(Buffer.from(imageBuffer))
       .webp({ quality: 85 })
       .toBuffer();
 
@@ -122,19 +137,47 @@ router.post('/', async (c) => {
       return c.json({ success: false, message: 'Invalid thumbnail index.' }, 400);
     }
 
-    const uploadPromises = imageFiles.map(file => uploadImageToCloudflare(file));
+    const uploadPromises = imageFiles.map((file, index) => 
+      uploadImageToCloudflare(file).catch(error => {
+        error.fileName = file.name;
+        error.fileIndex = index;
+        throw error;
+      })
+    );
     
     let imageUrls;
     try {
       imageUrls = await Promise.all(uploadPromises);
     } catch (error) {
       console.error('Error uploading images to Cloudflare:', error.message);
-      return c.json({ success: false, message: 'Failed to upload images to Cloudflare.' }, 500);
+      
+      const fileInfo = error.fileName ? ` (File: "${error.fileName}", Position: ${(error.fileIndex || 0) + 1})` : '';
+      
+      if (error.message.includes('HEIF') || error.message.includes('heif')) {
+        return c.json({ 
+          success: false, 
+          message: `HEIF/HEIC format is not supported${fileInfo}. Please convert your images to JPG, PNG, or WebP format before uploading.`,
+        }, 400);
+      }
+      
+      if (error.message.includes('format') || error.message.includes('unsupported')) {
+        return c.json({ 
+          success: false, 
+          message: `${error.message}${fileInfo}`,
+        }, 400);
+      }
+      
+      return c.json({ 
+        success: false, 
+        message: `Failed to upload images${fileInfo}. Please check your image formats and try again.`,
+      }, 500);
     }
+    const slug = await generateUniqueSlug(title.trim());
 
     const imageData = {
       title: title.trim(),
       description: description.trim(),
+      slug: slug,
       imageUrls: imageUrls,
       thumbnailIndex: thumbnailIndex,
       uploader: user._id,

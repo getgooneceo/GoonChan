@@ -94,8 +94,8 @@ router.post('/', limiter, async (c) => {
         thumbnail: video.thumbnail,
         duration: video.duration,
         views: video.views || 0,
-        likeCount: video.likeCount || 0,
-        dislikeCount: video.dislikeCount || 0,
+        likeCount: video.likedBy?.length || 0,
+        dislikeCount: video.dislikedBy?.length || 0,
         createdAt: video.createdAt,
         uploader: user.username,
         type: 'video'

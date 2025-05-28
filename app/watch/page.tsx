@@ -45,6 +45,9 @@ interface VideoData {
   createdAt: string;
   uploader: VideoUploader;
   comments?: CommentData[];
+  contentType?: string; // 'video' or 'image'
+  imageUrls?: string[];
+  thumbnailIndex?: number;
 }
 
 interface CommentData {
@@ -154,45 +157,57 @@ const WatchPageContent = () => {
 
         const token = localStorage.getItem('token');
         const url = token 
-          ? `${config.url}/api/video/${videoSlug}?token=${token}`
-          : `${config.url}/api/video/${videoSlug}`;
+          ? `${config.url}/api/content/${videoSlug}?token=${token}`
+          : `${config.url}/api/content/${videoSlug}`;
         
         const response = await fetch(url);
         const data = await response.json();
         
-        if (data.success && data.video) {
-          const mappedVideo: VideoData = {
-            ...data.video,
-            id: data.video._id,
-            uploader: data.video.uploader || {},
-            comments: data.video.comments || []
+        if (data.success && data.content) {
+          const contentType = data.type;
+
+          const mappedContent: VideoData = {
+            ...data.content,
+            id: data.content._id,
+            uploader: data.content.uploader || {},
+            comments: data.content.comments || [],
+            videoUrl: contentType === 'image' ? '' : data.content.videoUrl,
+            thumbnail: contentType === 'image' ? 
+              (data.content.imageUrls && data.content.imageUrls[data.content.thumbnailIndex || 0]) : 
+              data.content.thumbnail,
+            duration: contentType === 'image' ? '0:00' : data.content.duration,
+            cloudflareStreamId: contentType === 'image' ? '' : data.content.cloudflareStreamId,
+            contentType: contentType,
+            imageUrls: contentType === 'image' ? data.content.imageUrls : undefined,
+            thumbnailIndex: contentType === 'image' ? data.content.thumbnailIndex : undefined
           };
-          setVideo(mappedVideo);
-          setComments(data.video.comments || []);
-
-          setLikeCount(data.video.likeCount || 0);
-          setDislikeCount(data.video.dislikeCount || 0);
           
-          if (data.video.userInteractionStatus) {
-            setIsLiked(data.video.userInteractionStatus.isLiked);
-            setIsDisliked(data.video.userInteractionStatus.isDisliked);
+          setVideo(mappedContent);
+          setComments(data.content.comments || []);
+
+          setLikeCount(data.content.likeCount || 0);
+          setDislikeCount(data.content.dislikeCount || 0);
+          
+          if (data.content.userInteractionStatus) {
+            setIsLiked(data.content.userInteractionStatus.isLiked);
+            setIsDisliked(data.content.userInteractionStatus.isDisliked);
           }
 
-          if (data.video.userSubscriptionStatus) {
-            setIsSubscribed(data.video.userSubscriptionStatus.isSubscribed);
+          if (data.content.userSubscriptionStatus) {
+            setIsSubscribed(data.content.userSubscriptionStatus.isSubscribed);
           }
 
-          setSubscriberCount(data.video.uploader?.subscriberCount || 0);
+          setSubscriberCount(data.content.uploader?.subscriberCount || 0);
           
-          if (data.video.uploader?.username) {
-            fetchUploaderProfile(data.video.uploader.username);
+          if (data.content.uploader?.username) {
+            fetchUploaderProfile(data.content.uploader.username);
           }
         } else {
-          setError(data.message || 'Video not found');
+          setError(data.message || 'Content not found');
         }
       } catch (error) {
-        console.error('Error fetching video:', error);
-        setError('Failed to load video');
+        console.error('Error fetching content:', error);
+        setError('Failed to load content');
       } finally {
         setIsLoading(false);
       }
