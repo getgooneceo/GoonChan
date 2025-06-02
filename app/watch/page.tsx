@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import NavBar from "@/components/NavBar";
 import "remixicon/fonts/remixicon.css";
-import VideoGrid from "@/components/VideoGrid";
+// import VideoGrid from "@/components/VideoGrid";
 import {
   FaThumbsUp,
   FaThumbsDown,
@@ -143,11 +143,54 @@ const WatchPageContent = () => {
   const commentsRef = useRef<HTMLDivElement>(null);
   const [uploaderProfile, setUploaderProfile] = useState<any>(null);
 
+  // Image viewing state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentThumbnailPage, setCurrentThumbnailPage] = useState(0);
+
   const streamContainerRef = useRef<HTMLDivElement>(null);
   const [loadingMessage, setLoadingMessage] = useState("Loading video...");
   const { avatarUrl: uploaderAvatarUrl } = useUserAvatar(uploaderProfile) as { avatarUrl: string; isLoading: boolean };
 
   const isCurrentUserUploader = user && video?.uploader?._id && user._id === video.uploader._id;
+
+  // Thumbnail pagination
+  const THUMBNAILS_PER_PAGE_DESKTOP = 6; // 3x2 grid
+  const THUMBNAILS_PER_PAGE_MOBILE = 6; // 3x2 grid
+  const getThumbnailsPerPage = () => {
+    return window.innerWidth >= 1024 ? THUMBNAILS_PER_PAGE_DESKTOP : THUMBNAILS_PER_PAGE_MOBILE;
+  };
+
+  const getTotalPages = (imageUrls: string[]) => {
+    const thumbnailsPerPage = getThumbnailsPerPage();
+    return Math.ceil(imageUrls.length / thumbnailsPerPage);
+  };
+
+  const getCurrentPageThumbnails = (imageUrls: string[]) => {
+    const thumbnailsPerPage = getThumbnailsPerPage();
+    const startIndex = currentThumbnailPage * thumbnailsPerPage;
+    return imageUrls.slice(startIndex, startIndex + thumbnailsPerPage);
+  };
+
+  // Reset thumbnail page when image changes or on component mount
+  useEffect(() => {
+    if (video?.imageUrls) {
+      const thumbnailsPerPage = getThumbnailsPerPage();
+      const pageWithCurrentImage = Math.floor(currentImageIndex / thumbnailsPerPage);
+      setCurrentThumbnailPage(pageWithCurrentImage);
+    }
+  }, [currentImageIndex, video?.imageUrls]);
+
+  // Handle thumbnail navigation
+  const handlePreviousPage = () => {
+    setCurrentThumbnailPage(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    if (video?.imageUrls) {
+      const totalPages = getTotalPages(video.imageUrls);
+      setCurrentThumbnailPage(prev => Math.min(totalPages - 1, prev + 1));
+    }
+  };
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -185,6 +228,9 @@ const WatchPageContent = () => {
           setVideo(mappedContent);
           setComments(data.content.comments || []);
 
+          // Reset image index for new content
+          setCurrentImageIndex(data.content.thumbnailIndex || 0);
+
           setLikeCount(data.content.likeCount || 0);
           setDislikeCount(data.content.dislikeCount || 0);
           
@@ -217,6 +263,28 @@ const WatchPageContent = () => {
       fetchVideo();
     }
   }, [videoSlug]);
+
+  // Keyboard navigation for image viewer
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (video?.contentType === 'image' && video.imageUrls && video.imageUrls.length > 1) {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          setCurrentImageIndex(prev => 
+            prev === 0 ? video.imageUrls!.length - 1 : prev - 1
+          );
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          setCurrentImageIndex(prev => 
+            prev === video.imageUrls!.length - 1 ? 0 : prev + 1
+          );
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [video?.contentType, video?.imageUrls]);
 
   const fetchUploaderProfile = async (username: string) => {
     try {
@@ -280,11 +348,11 @@ const WatchPageContent = () => {
       body: JSON.stringify({
         token,
         contentId: video._id,
-        contentType: 'video',
+        contentType: video.contentType === 'image' ? 'image' : 'video',
         action: 'like'
       }),
     }).catch(error => {
-      console.error('Error liking video:', error);
+      console.error('Error liking content:', error);
     });
   };
 
@@ -324,11 +392,11 @@ const WatchPageContent = () => {
       body: JSON.stringify({
         token,
         contentId: video._id,
-        contentType: 'video',
+        contentType: video.contentType === 'image' ? 'image' : 'video',
         action: 'dislike'
       }),
     }).catch(error => {
-      console.error('Error disliking video:', error);
+      console.error('Error disliking content:', error);
     });
   };
 
@@ -412,7 +480,7 @@ const WatchPageContent = () => {
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar user={user} setUser={setUser} />
       {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
-      <div className="max-w-[79rem] mx-auto px-0 pt-2 pb-8">
+      <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
         <div className="w-full px-10 md:px-0 rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">
             {[
@@ -450,30 +518,144 @@ const WatchPageContent = () => {
           </div>
         </div>
 
-        <div
-          ref={streamContainerRef}
-          className="w-full relative aspect-video bg-black rounded-lg overflow-hidden mb-4"
-        >
-          {isLoading && (
-            <div
-              className="absolute inset-0 flex items-center justify-center bg-black"
-              id="video-loading-overlay"
-            >
-              {video.thumbnail && (
-                <img
-                  src={video.thumbnail}
-                  alt="Loading thumbnail"
-                  className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
-                />
+        {video.contentType === 'image' && (
+          <div className="w-full overflow-hidden mb-4">
+            <div className="w-full h-full relative flex flex-col lg:flex-row">
+              {video.imageUrls && video.imageUrls.length > 0 ? (
+                <>
+                  <div className="flex-1 px-2 relative w-full h-auto lg:h-full">
+                    <Image
+                      src={video.imageUrls[currentImageIndex]}
+                      alt={`${video.title} - Image ${currentImageIndex + 1}`}
+                      width={0}
+                      height={0}
+                      sizes="100vw"
+                      className="w-full h-auto lg:h-full lg:max-h-[35rem] object-contain lg:object-contain"
+                      priority
+                    />
+
+                    {video.imageUrls.length > 1 && (
+                      <div className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1.5 rounded-full text-xs font-roboto font-medium z-10">
+                        {currentImageIndex + 1} / {video.imageUrls.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {video.imageUrls.length > 1 && (
+                    <div className="lg:w-[24rem] w-full">
+                      <div className="] bg-[#0a0a0a] rounded-lg p-3 lg:p-4 h-auto">
+                        {/* Thumbnail Grid - Responsive */}
+                        <div className="grid grid-cols-3 gap-2 lg:gap-3 mb-3 lg:mb-4">
+                          {getCurrentPageThumbnails(video.imageUrls).map((imageUrl, index) => {
+                            const actualIndex = currentThumbnailPage * getThumbnailsPerPage() + index;
+                            return (
+                              <button
+                                key={actualIndex}
+                                onClick={() => setCurrentImageIndex(actualIndex)}
+                                className={`relative aspect-[4/3] cursor-pointer lg:aspect-[4/3] overflow-hidden border-2 transition-all duration-200 group ${
+                                  currentImageIndex === actualIndex
+                                    ? 'border-[#ea4198a3]'
+                                    : 'border-none'
+                                }`}
+                              >
+                                <Image
+                                  src={imageUrl}
+                                  alt={`Thumbnail ${actualIndex + 1}`}
+                                  fill
+                                  className="object-cover group-hover:brightness-105 brightness-95 transition-all duration-200"
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Pagination Controls - Responsive */}
+                        {getTotalPages(video.imageUrls) > 1 && (
+                          <div className="flex items-center justify-between mb-2 lg:mb-0">
+                            <button
+                              onClick={handlePreviousPage}
+                              disabled={currentThumbnailPage === 0}
+                              className={`flex items-center gap-1 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+                                currentThumbnailPage === 0
+                                  ? 'text-[#f0f0f0a0] font-pop cursor-not-allowed border bg-[#ffffff0e] border-[#acacac]'
+                                  : 'text-[#eeeeee] font-pop cursor-pointer active:scale-[1.015] border bg-[#ffffff0e] border-[#d3d3d3]'
+                              }`}
+                            >
+                              <i className="ri-arrow-left-s-line font-medium text-sm lg:text-base"></i>
+                              Prev
+                            </button>
+
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: getTotalPages(video.imageUrls) }, (_, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setCurrentThumbnailPage(i)}
+                                  className={`w-1.5 h-1.5 lg:w-1.5 lg:h-1.5 rounded-full transition-all ${
+                                    i === currentThumbnailPage
+                                      ? 'bg-[#ea4197]'
+                                      : 'bg-[#7a7a7a]'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+
+                            <button
+                              onClick={handleNextPage}
+                              disabled={currentThumbnailPage === getTotalPages(video.imageUrls) - 1}
+                              className={`flex items-center gap-1 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+                                currentThumbnailPage === getTotalPages(video.imageUrls) - 1
+                                  ? 'text-[#f0f0f0a0] font-pop cursor-not-allowed border bg-[#ffffff0e] border-[#acacac]'
+                                  : 'text-[#eeeeee] font-pop cursor-pointer active:scale-[1.015] border bg-[#ffffff0e] border-[#d3d3d3]'
+                              }`}
+                            >
+                              Next
+                              <i className="ri-arrow-right-s-line text-sm lg:text-base"></i>
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="text-center font-pop mt-2 lg:mt-3 text-white text-xs lg:text-sm">
+                          Showing {currentThumbnailPage * getThumbnailsPerPage() + 1}-{Math.min((currentThumbnailPage + 1) * getThumbnailsPerPage(), video.imageUrls.length)} images of {video.imageUrls.length}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <p>No images available</p>
+                </div>
               )}
-              <div className="flex flex-col items-center z-10">
-                {loadingMessage == "Loading video..." && (
-                  <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
-                )}
-                <p className="text-white text-base">{loadingMessage}</p>
-              </div>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Video Player Container - Completely separate */}
+        {video.contentType !== 'image' && (
+          <div
+            ref={streamContainerRef}
+            className="w-full relative bg-black rounded-lg overflow-hidden mb-4 aspect-video"
+          >
+            {isLoading && (
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black"
+                id="video-loading-overlay"
+              >
+                {video.thumbnail && (
+                  <img
+                    src={video.thumbnail}
+                    alt="Loading thumbnail"
+                    className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
+                  />
+                )}
+                <div className="flex flex-col items-center z-10">
+                  {loadingMessage == "Loading video..." && (
+                    <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
+                  )}
+                  <p className="text-white text-base">{loadingMessage}</p>
+                </div>
+              </div>
+            )}
 {/* <Stream
               controls
               src={video.videoUrl || ""}
@@ -487,15 +669,16 @@ const WatchPageContent = () => {
               autoplay={false}
               muted={false}
             /> */}
-          <iframe
-            src={videoSource}
-            className={`w-full h-full border-none ${isLoading ? "hidden" : ""}`}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-            allowFullScreen={true}
-            onLoad={() => handleVideoLoad()}
-          ></iframe>
-        </div>
+            <iframe
+              src={videoSource}
+              className={`w-full h-full border-none ${isLoading ? "hidden" : ""}`}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+              allowFullScreen={true}
+              onLoad={() => handleVideoLoad()}
+            ></iframe>
+          </div>
+        )}
 
         <div className="mb-4 bg-[#121212] rounded-lg p-4 md:p-6">
           <h1 className="text-[#ebebeb] font-roboto mb-1 md:mb-0 text-xl leading-tight md:leading-normal  md:text-2xl font-bold">

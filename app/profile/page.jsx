@@ -11,6 +11,7 @@ import NavBar from "@/components/NavBar";
 import ProfileImageGrid from "@/components/ProfileImageGrid";
 import ProfileVideoGrid from "@/components/ProfileVideoGrid";
 import SubscriptionGrid from "@/components/SubscriptionGrid";
+// import { Toaster, toast } from "sonner";
 import config from "@/config.json";
 import useUserAvatar from "@/hooks/useUserAvatar";
 
@@ -73,12 +74,40 @@ const ProfilePage = () => {
     
     setIsEditingBio(false);
     try {
-      // Update bio API call would go here
-      console.log("Saving bio:", bio);
-      // Then refresh profile data
-      setUpdateData(!updateData);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+
+      const response = await fetch(`${config.url}/api/updateBio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          token,
+          bio: bio.trim()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileData(prev => ({
+          ...prev,
+          bio: data.bio
+        }));
+        // toast('Bio updated successfully!');
+      } else {
+        console.error('Failed to update bio:', data.message);
+        // toast.error(data.message || 'Failed to update bio');
+        setBio(profileData.bio || "");
+      }
     } catch (error) {
-      console.error("Failed to update bio:", error);
+      console.error('Failed to update bio:', error);
+      // toast.error('Failed to update bio');
+      setBio(profileData.bio || "");
     }
   };
 
@@ -121,7 +150,6 @@ const ProfilePage = () => {
         const data = await response.json();
 
         if (data.success && data.user) {
-          // Calculate percentages for videos and images
           const videosWithPercentage = data.user.videos?.map(video => ({
             ...video,
             likePercentage: calculateLikePercentage(video.likeCount, video.dislikeCount)
@@ -179,6 +207,7 @@ const ProfilePage = () => {
       // skelly
       <div className="min-h-screen bg-[#080808] text-white">
         <NavBar user={user} setUser={setUser} />
+        {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="hidden md:block w-64 shrink-0">
@@ -529,7 +558,18 @@ const ProfilePage = () => {
                     Uploaded Videos
                   </h2>
                   {profileData.videos && profileData.videos.length > 0 ? (
-                    <ProfileVideoGrid videos={profileData.videos} />
+                    <ProfileVideoGrid 
+                      videos={profileData.videos} 
+                      isOwnProfile={isOwnProfile}
+                      onVideoDelete={(deletedVideoId) => {
+                        setProfileData(prev => ({
+                          ...prev,
+                          videos: prev.videos.filter(video => 
+                            (video._id || video.id) !== deletedVideoId
+                          )
+                        }));
+                      }}
+                    />
                   ) : (
                     <div className="text-center py-16">
                       <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
@@ -554,7 +594,18 @@ const ProfilePage = () => {
                     Uploaded Images
                   </h2>
                   {profileData.images && profileData.images.length > 0 ? (
-                    <ProfileImageGrid images={profileData.images} />
+                    <ProfileImageGrid 
+                      images={profileData.images} 
+                      isOwnProfile={isOwnProfile}
+                      onImageDelete={(deletedImageId) => {
+                        setProfileData(prev => ({
+                          ...prev,
+                          images: prev.images.filter(image => 
+                            (image._id || image.id) !== deletedImageId
+                          )
+                        }));
+                      }}
+                    />
                   ) : (
                     <div className="text-center py-16">
                       <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">

@@ -32,7 +32,54 @@ const VideoSchema = new mongoose.Schema({
   dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   tags: { type: [String], default: [] },
   cloudflareStreamId: { type: String, required: true, unique: true, sparse: true },
+  hotness: { type: Number, default: 0, index: true },
 }, { timestamps: true });
+
+VideoSchema.methods.calculateHotness = function() {
+  const upvotes = this.likedBy.length;
+  const downvotes = this.dislikedBy.length;
+  const netScore = upvotes - downvotes;
+  const views = this.views;
+
+  const adjustedScore = netScore + (views * 0.01);
+  
+  const order = Math.log10(Math.max(Math.abs(adjustedScore), 1));
+  const sign = adjustedScore > 0 ? 1 : (adjustedScore < 0 ? -1 : 0);
+  
+  const uploadTime = Math.floor(this.uploadDate.getTime() / 1000);
+  const currentTime = Math.floor(Date.now() / 1000);
+  const timeDiff = currentTime - uploadTime;
+  
+  return sign * order + (timeDiff / 45000);
+};
+
+VideoSchema.pre('save', function(next) {
+  if (this.isModified('likedBy') || this.isModified('dislikedBy') || this.isModified('views') || this.isNew) {
+    this.hotness = this.calculateHotness();
+  }
+  next();
+});
+
+VideoSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+
+  if (update && !Array.isArray(update)) {
+    if (update.$push?.likedBy || update.$pull?.likedBy || 
+        update.$push?.dislikedBy || update.$pull?.dislikedBy ||
+        update.$addToSet?.likedBy || update.$addToSet?.dislikedBy) {
+
+      this.setUpdate({ ...update, $set: { ...update.$set, needsHotnessUpdate: true } });
+    }
+  }
+  next();
+});
+
+VideoSchema.post('findOneAndUpdate', async function(doc) {
+  if (doc && doc.needsHotnessUpdate) {
+    doc.hotness = doc.calculateHotness();
+    await doc.save();
+  }
+});
 
 VideoSchema.virtual('comments', {
   ref: 'Comment',
@@ -48,6 +95,7 @@ VideoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 VideoSchema.index({ uploader: 1 });
 VideoSchema.index({ views: -1 });
 VideoSchema.index({ uploadDate: -1 });
+VideoSchema.index({ hotness: -1 });
 
 const Video = mongoose.model('Video', VideoSchema);
 

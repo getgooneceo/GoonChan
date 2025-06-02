@@ -29,7 +29,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
   return (
     <div className="">
       <Link 
-        href={`/watch?v=${video.id}`}
+        href={`/watch?v=${video.slug || video.id}`}
         className="block group cursor-pointer"
       >
         <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
@@ -57,10 +57,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
 
       <div className="flex items-center mt-1 text-[#b1b1b1] text-xs">
         <Link 
-          href={`/profile?user=${encodeURIComponent(video.uploader)}`} 
+          href={`/profile?user=${encodeURIComponent(typeof video.uploader === 'string' ? video.uploader : video.uploader.username)}`} 
           className="hover:text-[#ea4197] transition-colors duration-200"
         >
-          {video.uploader}
+          {typeof video.uploader === 'string' ? video.uploader : video.uploader.username}
         </Link>
         <span className="mx-1.5">•</span>
         <span>{formatCount(video.views)} views</span>

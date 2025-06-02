@@ -22,6 +22,10 @@ import videoRoute from "./routes/video.js";
 import imageRoute from "./routes/image.js";
 import contentRoute from "./routes/content.js";
 import interactionsRoute from "./routes/interactions.js";
+import updateBioRoute from "./routes/updateBio.js";
+import discoverRoute from "./routes/discover.js";
+import discoverImagesRoute from "./routes/discoverImages.js";
+import deleteContentRoute from "./routes/deleteContent.js";
 
 const app = new Hono();
 
@@ -54,6 +58,10 @@ app.route('/api/video', videoRoute);
 app.route('/api/image', imageRoute);
 app.route('/api/content', contentRoute);
 app.route('/api/interactions', interactionsRoute);
+app.route('/api/updateBio', updateBioRoute);
+app.route('/api/discover', discoverRoute);
+app.route('/api/discoverImages', discoverImagesRoute);
+app.route('/api/delete', deleteContentRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

@@ -14,15 +14,30 @@ export interface CommentType {
 }
 
 /**
+ * Uploader type representing the user who uploaded content
+ */
+export interface UploaderType {
+  _id: string;
+  username: string;
+  avatar?: string;
+  avatarColor?: string;
+  subscriberCount?: number;
+}
+
+/**
  * Video type representing a video in the system
  */
 export interface VideoType {
   id: string | number; // Allow both string and number for compatibility
+  _id?: string; // MongoDB ObjectId
+  slug?: string; // Add slug field for SEO-friendly URLs
   title: string;
   thumbnail?: string;
+  imageUrls?: string[]; // Array of image URLs for image posts
+  thumbnailIndex?: number; // Index of the thumbnail image in imageUrls array
   duration: string;
   views: number;
-  uploader: string;
+  uploader: string | UploaderType; // Support both string and object formats
   videoUrl?: string;
   uploadDate?: string;
   description?: string;
