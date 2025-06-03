@@ -44,6 +44,7 @@ const UploadPageContent = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(null);
 
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
@@ -55,6 +56,26 @@ const UploadPageContent = () => {
 
   const pageTitle = uploadType === "photo" ? "Upload Photo" : "Upload Video";
   const TypeIcon = uploadType === "photo" ? RiImageAddLine : RiVideoAddLine;
+
+  const getVideoDuration = (file) => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        const duration = Math.round(video.duration);
+        resolve(duration);
+      };
+      
+      video.onerror = () => {
+        window.URL.revokeObjectURL(video.src);
+        reject(new Error('Error loading video metadata'));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -76,7 +97,7 @@ const UploadPageContent = () => {
           localStorage.removeItem("token"); 
           router.push("/");
         } else {
-          setIsAuthenticated(true); // User is authenticated
+          setIsAuthenticated(true);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -103,7 +124,7 @@ const UploadPageContent = () => {
     resetFormData();
   }, [uploadType]);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
@@ -141,6 +162,15 @@ const UploadPageContent = () => {
       }
       setFileSelected(videoFile);
 
+      try {
+        const duration = await getVideoDuration(videoFile);
+        setVideoDuration(duration);
+        console.log(`Video duration: ${duration} seconds`);
+      } catch (error) {
+        console.warn("Could not extract video duration:", error);
+        setVideoDuration(null);
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         setFilePreview(reader.result);
@@ -149,7 +179,7 @@ const UploadPageContent = () => {
     }
   };
 
-  const handleFileReplace = (e) => {
+  const handleFileReplace = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
@@ -181,6 +211,16 @@ const UploadPageContent = () => {
       }
 
       setFileSelected(videoFile);
+
+      try {
+        const duration = await getVideoDuration(videoFile);
+        setVideoDuration(duration);
+        console.log(`Video duration: ${duration} seconds`);
+      } catch (error) {
+        console.warn("Could not extract video duration:", error);
+        setVideoDuration(null);
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         setFilePreview(reader.result);
@@ -220,7 +260,7 @@ const UploadPageContent = () => {
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -261,6 +301,16 @@ const UploadPageContent = () => {
         }
 
         setFileSelected(videoFile);
+
+        try {
+          const duration = await getVideoDuration(videoFile);
+          setVideoDuration(duration);
+          console.log(`Video duration: ${duration} seconds`);
+        } catch (error) {
+          console.warn("Could not extract video duration:", error);
+          setVideoDuration(null);
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
           setFilePreview(reader.result);
@@ -370,14 +420,15 @@ const UploadPageContent = () => {
 
     if (uploadType === "video") {
       formData.append("videoFile", fileSelected);
+      if (videoDuration !== null) {
+        formData.append("duration", videoDuration.toString());
+      }
       if (thumbnailFile) {
         formData.append("thumbnailFile", thumbnailFile);
       }
     } else if (uploadType === "photo") {
-      // Add thumbnail index
       formData.append("thumbnailIndex", selectedThumbnailIndex.toString());
       
-      // Add all image files
       galleryFiles.forEach((file, index) => {
         formData.append(`imageFile${index}`, file);
       });

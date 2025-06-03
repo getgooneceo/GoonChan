@@ -84,7 +84,6 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     };
   }, []);
 
-  // Close sidebar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node) && isSidebarOpen) {
@@ -110,7 +109,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   }, [isSidebarOpen]);
 
   const handleProfileNavigation = () => {
-    if (isAuthChecking) return; // Block navigation while authentication is checking
+    if (isAuthChecking) return;
     
     if (user) {
       router.push("/profile");
@@ -120,7 +119,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   };
 
   const handleUploadNavigation = () => {
-    if (isAuthChecking) return; // Block navigation while authentication is checking
+    if (isAuthChecking) return;
     
     if (user) {
       setShowUploadModal(true);
@@ -138,17 +137,17 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   };
 
   const handleCategoryNavigation = (categoryId: string) => {
+    if (categoryId === "discover") {
+      router.push("/");
+    } else {
+      router.push(`/?category=${categoryId}`);
+    }
+
     if (window.location.pathname === '/') {
       if (setActiveCategory) {
         setActiveCategory(categoryId);
       } else {
         setLocalActiveCategory(categoryId);
-      }
-    } else {
-      if (categoryId === "discover") {
-        router.push("/");
-      } else {
-        router.push(`/?category=${categoryId}`);
       }
     }
   };
@@ -165,12 +164,10 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   ];
 
   const currentActiveCategory = activeCategory || localActiveCategory;
-  // const handleCategoryChange = setActiveCategory || setLocalActiveCategory;
 
   return (
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
 
-      {/* Modals */}
       {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
       {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
       
@@ -225,7 +222,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                       className={`
                         flex items-center p-3 rounded-lg transition-all duration-300 ease-out transform hover:scale-[1.02]
                         ${currentActiveCategory === category.id 
-                          ? 'bg-[#ea4197]/15 text-[#ea4197] shadow-lg shadow-[#ea4197]/20' 
+                          ? 'bg-[#ea4197]/15 text-[#ea4197] shadow-lg' 
                           : 'text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white'}
                       `}
                     >
@@ -291,13 +288,13 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 className="text-[#c2c2c2] cursor-pointer"
                 onClick={handleUploadNavigation}
               />
-              {user && avatarUrl ? (
+              {user && (user.avatar || avatarUrl) ? (
                 <div className="cursor-pointer" onClick={handleProfileNavigation}>
                   <Image
-                    src={avatarUrl}
+                    src={user.avatar || avatarUrl}
                     alt={user.username || "User Avatar"}
-                    width={20}
-                    height={20}
+                    width={25}
+                    height={25}
                     className="rounded-full object-cover"
                   />
                 </div>
@@ -328,7 +325,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               {searchValue && (
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent the container's onClick from firing
+                    e.stopPropagation(); 
                     setSearchValue("");
                     focusSearchInput(true);
                   }}
@@ -401,10 +398,10 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 className="cursor-pointer" 
                 onClick={handleProfileNavigation}
               >
-                <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && avatarUrl ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
-                  {user && avatarUrl ? (
+                <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && (user.avatar || avatarUrl) ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
+                  {user && (user.avatar || avatarUrl) ? (
                     <Image
-                      src={avatarUrl}
+                      src={user.avatar || avatarUrl}
                       alt={user.username || "User Avatar"}
                       width={41}
                       height={41}
@@ -422,7 +419,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
           </div>
 
           {!isMobile && showCategories && (
-            <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide hidden md:block">
+            <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide hidden md:block [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="flex items-center justify-between w-full gap-1">
                 {categories.map((category) => (
                   <button
@@ -435,8 +432,8 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                       lg:flex lg:flex-row lg:items-center lg:justify-center lg:px-3 lg:py-[0.6rem] lg:rounded-full
                       lg:hover:scale-[1.05] lg:transform-gpu lg:mx-0.5
                       ${currentActiveCategory === category.id 
-                        ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_6px_20px_rgba(234,65,151,0.15)] lg:scale-[1.02]' 
-                        : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white lg:hover:shadow-[0_4px_12px_rgba(255,255,255,0.05)]'}
+                        ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_6px_20px_rgba(234,65,151,0.01)] lg:scale-[1.02]' 
+                        : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white lg:hover:shadow-[0_4px_12px_rgba(255,255,255,0.01)]'}
                       
                       ${/* Medium screens - text with icons, no background */''}
                       md:flex md:flex-row md:items-center md:justify-center md:px-2 md:py-1.5

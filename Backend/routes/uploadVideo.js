@@ -42,45 +42,64 @@ const generateUniqueSlug = async (title) => {
   return slug;
 };
 
-const waitForVideoProcessing = async (streamId, maxAttempts = 30, delayMs = 2000) => {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+const checkVideoProcessingStatus = async (cloudflareStreamId, videoId) => {
+  const maxAttempts = 600;
+  let attempts = 0;
+  
+  const checkStatus = async () => {
     try {
+      attempts++;
+      console.log(`Checking processing status for video ${videoId}, attempt ${attempts}/${maxAttempts}`);
+      
       const response = await axios.get(
-        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${streamId}`,
+        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${cloudflareStreamId}`,
         {
           headers: {
             'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
           },
         }
       );
-
-      const videoDetails = response.data.result;
-
-      if (videoDetails.status && videoDetails.status.state === 'ready' && videoDetails.duration && videoDetails.duration > 0) {
-        return {
-          duration: videoDetails.duration,
-          thumbnail: videoDetails.thumbnail,
-          status: videoDetails.status
-        };
-      } else if (videoDetails.status && (videoDetails.status.state === 'error' || videoDetails.status.state === 'queued' && videoDetails.status.errorReasonCode)) {
-         console.error(`Video processing failed or errored for ${streamId}: ${videoDetails.status.errorReasonText || 'Unknown error'}`);
-         throw new Error(`Video processing failed for ${streamId}. Status: ${videoDetails.status.state}, Reason: ${videoDetails.status.errorReasonText}`);
+      
+      const videoStatus = response.data.result?.status;
+      console.log(`Video ${videoId} status: ${videoStatus}`);
+      
+      if (videoStatus?.state === 'ready') {
+        await Video.findByIdAndUpdate(videoId, {
+          isProcessing: false
+        });
+        // console.log(`Video ${videoId} processing completed successfully`);
+        return;
+      } else if (videoStatus?.state === 'error') {
+        console.error(`Video ${videoId} processing failed`);
+        await Video.findByIdAndUpdate(videoId, {
+          isProcessing: false
+        });
+        return;
       }
 
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      if (attempts < maxAttempts) {
+        setTimeout(checkStatus, 10000);
+      } else {
+        console.error(`Video ${videoId} processing check timed out after ${maxAttempts} attempts`);
+        await Video.findByIdAndUpdate(videoId, {
+          isProcessing: false
+        });
+      }
     } catch (error) {
-      if (attempt === maxAttempts - 1) {
-        console.error(`Final attempt failed for ${streamId}:`, error.message);
-        throw error;
-      }
-      console.warn(`Attempt ${attempt + 1} to get video details for ${streamId} failed, retrying:`, error.message);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  console.error(`Video processing timeout for ${streamId} after ${maxAttempts} attempts.`);
-  throw new Error('Video processing timeout - duration not available');
-};
+      console.error(`Error checking video ${videoId} status:`, error.message);
 
+      if (attempts >= maxAttempts) {
+        await Video.findByIdAndUpdate(videoId, {
+          isProcessing: false
+        });
+      } else {
+        setTimeout(checkStatus, 30000);
+      }
+    }
+  };
+
+  setTimeout(checkStatus, 30000);
+};
 
 router.post('/', async (c) => {
   try {
@@ -107,6 +126,7 @@ router.post('/', async (c) => {
     const tagsString = formData.get('tags');
     const videoFile = formData.get('videoFile');
     const customThumbnailFile = formData.get('thumbnailFile');
+    const clientDuration = formData.get('duration');
 
     if (!(videoFile instanceof File) || videoFile.size === 0) {
       return c.json({ success: false, message: 'Video file is required and must be a valid file.' }, 400);
@@ -151,6 +171,23 @@ router.post('/', async (c) => {
     const cloudflareStreamId = videoUploadResult.uid;
     let defaultStreamThumbnail = videoUploadResult.thumbnail;
 
+    const randomThumbnailTimestamp = 0.1 + (Math.random() * 0.8);
+    
+    try {
+      await axios.post(
+        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${cloudflareStreamId}`,
+        { thumbnailTimestampPct: randomThumbnailTimestamp },
+        {
+          headers: {
+            'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      // console.log(`Set random thumbnail timestamp to ${(randomThumbnailTimestamp * 100).toFixed(1)}% for video ${cloudflareStreamId}`);
+    } catch (error) {
+      console.error('Error setting random thumbnail timestamp:', error.response ? JSON.stringify(error.response.data) : error.message);
+    }
 
     const thumbnailUploadPromise = (async () => {
       if (customThumbnailFile instanceof File && customThumbnailFile.size > 0) {
@@ -211,34 +248,27 @@ router.post('/', async (c) => {
       slug: slug,
       videoUrl: `https://customer-${CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${cloudflareStreamId}/iframe`,
       thumbnail: finalThumbnailUrl,
-      duration: -1,
+      duration: clientDuration ? Math.round(Number(clientDuration)) : -1,
       uploader: user._id,
       tags: tagsString && typeof tagsString === 'string' ? tagsString.split(' ').map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
       cloudflareStreamId: cloudflareStreamId,
+      isProcessing: true
     };
 
     const newVideo = new Video(videoData);
     await newVideo.save();
 
-    (async () => {
-      try {
-        const processedVideoData = await waitForVideoProcessing(cloudflareStreamId);
-
-        await Video.findByIdAndUpdate(newVideo._id, {
-          duration: Math.round(processedVideoData.duration),
-          thumbnail: processedVideoData.thumbnail || finalThumbnailUrl
-        });
-        
-        // console.log(`Successfully updated video ${cloudflareStreamId} with duration: ${processedVideoData.duration}s`);
-      } catch (error) {
-        console.warn(`Could not update processed video details for ${cloudflareStreamId} in background. Error: ${error.message}`);
-      }
-    })();
+    checkVideoProcessingStatus(cloudflareStreamId, newVideo._id).catch(error => {
+      console.error('Error in background processing check:', error);
+    });
 
     return c.json({
       success: true,
-      message: 'Video uploaded successfully!',
-      video: newVideo,
+      message: 'Video uploaded successfully and is being processed!',
+      video: {
+        ...newVideo.toObject(),
+        isProcessing: true
+      },
     }, 201);
 
   } catch (error) {

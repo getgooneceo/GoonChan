@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FaEye, FaUser } from "react-icons/fa";
 import { FaRegImage } from "react-icons/fa6";
 import { VideoType, UploaderType } from "./Types";
@@ -20,6 +21,13 @@ const ImageCard = ({
   columnIndex: number; 
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const router = useRouter();
+
+  const handleUsernameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const username = typeof video.uploader === 'object' ? video.uploader.username : video.uploader;
+    router.push(`/profile?user=${username}`);
+  };
 
   const formatViews = (views: number) => {
     if (views >= 1000000) {
@@ -87,7 +95,7 @@ const ImageCard = ({
             }}
           />
 
-          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
             <div className="absolute inset-0 p-2 flex flex-col justify-between">
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-1.5 bg-black/80 rounded-full px-2 py-1">
@@ -105,9 +113,14 @@ const ImageCard = ({
                   {trimTitle(video.title)}
                 </h3>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5">
+                  <div 
+                    onClick={handleUsernameClick}
+                    className="flex items-center space-x-1.5 cursor-pointer"
+                  >
                     <FaUser className="text-[#e0e0e0] text-[8px] sm:text-xs" />
-                    <span className="text-[#e0e0e0] text-[9px] sm:text-xs font-medium">{trimUsername(video.uploader)}</span>
+                    <span className="text-[#e0e0e0] text-[9px] sm:text-xs font-medium hover:text-[#ea4197] transition-colors duration-200">
+                      {trimUsername(video.uploader)}
+                    </span>
                   </div>
                   <span className="text-[#e0e0e0] text-[9px] sm:text-xs">{video.uploadDate}</span>
                 </div>

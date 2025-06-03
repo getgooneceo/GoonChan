@@ -4,16 +4,17 @@ import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FiUpload, FiEdit2, FiLogOut } from "react-icons/fi";
 import { RiVideoLine, RiImageLine, RiUser3Line } from "react-icons/ri";
+import { Toaster, toast } from "sonner";
 import { MdFavoriteBorder } from "react-icons/md";
 import { TbUsers } from "react-icons/tb";
 import { FaBell } from "react-icons/fa";
-import NavBar from "@/components/NavBar";
-import ProfileImageGrid from "@/components/ProfileImageGrid";
-import ProfileVideoGrid from "@/components/ProfileVideoGrid";
-import SubscriptionGrid from "@/components/SubscriptionGrid";
+import NavBar from "../../components/NavBar";
+import ProfileImageGrid from "../../components/ProfileImageGrid";
+import ProfileVideoGrid from "../../components/ProfileVideoGrid";
+import SubscriptionGrid from "../../components/SubscriptionGrid";
 // import { Toaster, toast } from "sonner";
-import config from "@/config.json";
-import useUserAvatar from "@/hooks/useUserAvatar";
+import config from "../../config.json";
+import useUserAvatar from "../../hooks/useUserAvatar";
 
 const calculateLikePercentage = (likeCount = 0, dislikeCount = 0) => {
   if (likeCount === 0 && dislikeCount === 0) return 0;
@@ -60,12 +61,71 @@ const ProfilePage = () => {
     }, 35);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file && isOwnProfile) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid file type. Please upload JPG, PNG, WebP, or GIF images only.');
+        console.error('Invalid file type');
+        return;
+      }
+
+      const maxSize = 10 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        toast.error('File size too large. Maximum size is 10MB.');
+        console.error('File size too large');
+        return;
+      }
+
       const imageUrl = URL.createObjectURL(file);
-      // Upload image to server logic would go here
-      console.log("File selected:", file);
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found');
+          return;
+        }
+
+        setProfileData(prev => ({
+          ...prev,
+          avatar: imageUrl
+        }));
+
+        const formData = new FormData();
+        formData.append('token', token);
+        formData.append('avatar', file);
+
+        const response = await fetch(`${config.url}/api/updateAvatar`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setProfileData(prev => ({
+            ...prev,
+            avatar: data.avatar
+          }));
+          toast.success('Profile picture updated successfully!');
+          console.log('Avatar updated successfully');
+        } else {
+          console.error('Failed to update avatar:', data.message);
+          toast.error(data.message || 'Failed to update profile picture');
+          setProfileData(prev => ({
+            ...prev,
+            avatar: profileData.avatar
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to update avatar:', error);
+        toast.error('Failed to update profile picture');
+        setProfileData(prev => ({
+          ...prev,
+          avatar: profileData.avatar
+        }));
+      }
     }
   };
 
@@ -207,7 +267,7 @@ const ProfilePage = () => {
       // skelly
       <div className="min-h-screen bg-[#080808] text-white">
         <NavBar user={user} setUser={setUser} />
-        {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
+        <Toaster theme="dark" position="bottom-right" richColors />
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="hidden md:block w-64 shrink-0">
@@ -288,7 +348,6 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#080808] text-white">
       <NavBar user={user} setUser={setUser} />
 
-      {/* Full-width bottom navigation for mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
         <div className="flex justify-between items-center">
           {categories.map((category) => (
@@ -343,11 +402,9 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Main content area */}
           <div className="flex-1">
             <div className="relative bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-1 md:gap-6 relative">
-                {/* Profile Picture with upload button overlay */}
                 <div
                   className={`relative ${isOwnProfile ? 'cursor-pointer' : ''}`}
                   onMouseEnter={() => isOwnProfile && setIsHoveringPfp(true)}

@@ -99,7 +99,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
                 e.stopPropagation();
                 setShowDeleteConfirm(true);
               }}
-              className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 transform hover:scale-110"
+              className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 z-10 transform hover:scale-110"
               title="Delete image"
             >
               <FiTrash2 size={14} />
@@ -121,17 +121,16 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
             {image.title}
           </h3>
 
-          <div className="flex items-center mt-1 text-[#b1b1b1] text-xs">
+          <div className="flex items-center mt-1 text-[#b1b1b1] text-[0.65rem] whitespace-nowrap sm:text-[0.75rem]">
             <span>{formatDate(image.uploadDate || image.createdAt)}</span>
-            <span className="mx-1.5">•</span>
+            <span className="mx-1">•</span>
             <span>{formatCount(image.views || 0)} views</span>
-            <span className="mx-1.5">•</span>
+            <span className="mx-1">•</span>
             <span className="text-[#ea4197]">{likePercentage}%</span>
           </div>
         </div>
       </Link>
 
-      {/* Enhanced delete confirmation popup */}
       {showDeleteConfirm && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
@@ -139,7 +138,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
         >
           <div className="bg-[#1a1a1a] rounded-xl p-6 max-w-sm w-full border border-[#333] shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-600/20 rounded-full flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <FiTrash2 className="text-red-400" size={18} />
               </div>
               <h3 className="text-lg font-semibold text-white">Delete Image</h3>

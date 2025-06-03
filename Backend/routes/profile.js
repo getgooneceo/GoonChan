@@ -98,7 +98,8 @@ router.post('/', limiter, async (c) => {
         dislikeCount: video.dislikedBy?.length || 0,
         createdAt: video.createdAt,
         uploader: user.username,
-        type: 'video'
+        type: 'video',
+        isProcessing: video.isProcessing || false
       })),
       images: images.map(image => ({
         id: image._id,

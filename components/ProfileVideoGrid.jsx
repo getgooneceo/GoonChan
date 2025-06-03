@@ -50,12 +50,8 @@ const formatDuration = (seconds) => {
 const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const likePercentage = calculateLikePercentage(
-    video.likeCount,
-    video.dislikeCount
-  );
-  const isProcessing = video.duration === -1;
+  const likePercentage = calculateLikePercentage(video.likeCount, video.dislikeCount);
+  const isProcessing = video.isProcessing || false;
 
   const handleDelete = async () => {
     if (!isOwnProfile) return;
@@ -122,13 +118,19 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
     <>
       <VideoCard className="group relative cursor-pointer">
         <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
-          <Image
-            src={video.thumbnail || ""}
-            alt={video.title || ""}
-            width={640}
-            height={360}
-            className="object-cover w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
-          />
+          {isProcessing ? (
+            <div className="w-full h-full bg-[#1a1a1a] animate-pulse flex items-center justify-center">
+              <div className="text-white/80 font-roboto text-sm font-medium">Processing...</div>
+            </div>
+          ) : (
+            <Image
+              src={video.thumbnail || ""}
+              alt={video.title || ""}
+              width={640}
+              height={360}
+              className="object-cover w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
+            />
+          )}
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
 
@@ -139,7 +141,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
                 e.stopPropagation();
                 setShowDeleteConfirm(true);
               }}
-              className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 transform hover:scale-110"
+              className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 z-10 transform hover:scale-110"
               title="Delete video"
             >
               <FiTrash2 size={14} />
@@ -166,7 +168,6 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
         </div>
       </VideoCard>
 
-      {/* Enhanced delete confirmation popup */}
       {showDeleteConfirm && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
@@ -174,7 +175,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
         >
           <div className="bg-[#1a1a1a] rounded-xl p-6 max-w-sm w-full border border-[#333] shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-600/20 rounded-full flex items-center justify-center">
+              <div className=" flex items-center justify-center">
                 <FiTrash2 className="text-red-400" size={18} />
               </div>
               <h3 className="text-lg font-semibold text-white">Delete Video</h3>
@@ -187,14 +188,14 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 px-4 bg-[#333] hover:bg-[#444] text-white rounded-lg transition-all duration-200 font-medium"
+                className="flex-1 py-2.5 px-4 cursor-pointer bg-[#333] hover:bg-[#444] text-white rounded-lg transition-all duration-200 font-medium"
                 disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 py-2.5 px-4 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 disabled={isDeleting}
               >
                 {isDeleting ? (

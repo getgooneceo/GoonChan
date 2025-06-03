@@ -51,9 +51,11 @@ ImageSchema.methods.calculateHotness = function() {
   
   const uploadTime = Math.floor(this.uploadDate.getTime() / 1000);
   const currentTime = Math.floor(Date.now() / 1000);
-  const timeDiff = currentTime - uploadTime;
-  
-  return sign * order + (timeDiff / 45000);
+  const timeDiff = currentTime - uploadTime; // timeDiff is in seconds
+
+  const logarithmicTimeDecay = Math.log10(timeDiff + 1) / 55; 
+  console.log(`Calculating hotness for image ${this._id}: upvotes=${upvotes}, downvotes=${downvotes}, views=${views}, adjustedScore=${adjustedScore}, order=${order}, sign=${sign}, timeDiff=${timeDiff}, hotness=${sign * order - logarithmicTimeDecay}`);
+  return sign * order - logarithmicTimeDecay;
 };
 
 ImageSchema.pre('save', function(next) {
@@ -63,24 +65,14 @@ ImageSchema.pre('save', function(next) {
   next();
 });
 
-ImageSchema.pre('findOneAndUpdate', function(next) {
-  const update = this.getUpdate();
-
-  if (update && !Array.isArray(update)) {
-    if (update.$push?.likedBy || update.$pull?.likedBy || 
-        update.$push?.dislikedBy || update.$pull?.dislikedBy ||
-        update.$addToSet?.likedBy || update.$addToSet?.dislikedBy) {
-
-      this.setUpdate({ ...update, $set: { ...update.$set, needsHotnessUpdate: true } });
-    }
-  }
-  next();
-});
-
 ImageSchema.post('findOneAndUpdate', async function(doc) {
-  if (doc && doc.needsHotnessUpdate) {
-    doc.hotness = doc.calculateHotness();
-    await doc.save();
+  if (doc) {
+    await doc.populate('likedBy dislikedBy');
+    const updatedDoc = await this.model.findById(doc._id);
+    if (updatedDoc) {
+      updatedDoc.hotness = updatedDoc.calculateHotness();
+      await updatedDoc.save();
+    }
   }
 });
 

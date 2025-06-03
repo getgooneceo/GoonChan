@@ -228,7 +228,6 @@ const WatchPageContent = () => {
           setVideo(mappedContent);
           setComments(data.content.comments || []);
 
-          // Reset image index for new content
           setCurrentImageIndex(data.content.thumbnailIndex || 0);
 
           setLikeCount(data.content.likeCount || 0);
@@ -249,7 +248,7 @@ const WatchPageContent = () => {
             fetchUploaderProfile(data.content.uploader.username);
           }
         } else {
-          setError(data.message || 'Content not found');
+          setError('the content you are looking for is not found');
         }
       } catch (error) {
         console.error('Error fetching content:', error);
@@ -264,7 +263,6 @@ const WatchPageContent = () => {
     }
   }, [videoSlug]);
 
-  // Keyboard navigation for image viewer
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (video?.contentType === 'image' && video.imageUrls && video.imageUrls.length > 1) {
@@ -445,9 +443,10 @@ const WatchPageContent = () => {
     return (
       <div className="bg-[#080808] min-h-screen w-full">
         <NavBar user={user} setUser={setUser} />
-        <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
-          <h1 className="text-2xl font-bold mb-4">Video Not Found</h1>
-          <p className="text-white/70 mb-6">{error}</p>
+        <div className="max-w-[79rem] mx-auto px-4 pt-14 pb-8 text-white text-center py-20">
+          <div className="flex justify-center text-center items-center mb-2 text-white/60">
+            {error}
+          </div>
           <a href="/" className="text-[#ea4197] hover:underline">
             Return to Home
           </a>
@@ -465,7 +464,10 @@ const WatchPageContent = () => {
       <div className="bg-[#080808] min-h-screen w-full">
         <NavBar user={user} setUser={setUser} />
         <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
-          Video not found
+          <p className="text-[#a0a0a0] text-lg mb-6">Content not found</p>
+          <a href="/" className="text-[#ea4197] hover:underline">
+            Return to Home
+          </a>
         </div>
       </div>
     );
@@ -630,7 +632,6 @@ const WatchPageContent = () => {
           </div>
         )}
 
-        {/* Video Player Container - Completely separate */}
         {video.contentType !== 'image' && (
           <div
             ref={streamContainerRef}
@@ -671,7 +672,7 @@ const WatchPageContent = () => {
             /> */}
             <iframe
               src={videoSource}
-              className={`w-full h-full border-none ${isLoading ? "hidden" : ""}`}
+              className={`w-full h-full ${isLoading ? "hidden" : ""}`}
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
               allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
               allowFullScreen={true}

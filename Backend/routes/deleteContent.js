@@ -54,15 +54,22 @@ const deleteVideoFromCloudflare = async (cloudflareStreamId) => {
       }
     );
 
-    if (response.data.success) {
+    if (response.data && response.data.success) {
       console.log(`Successfully deleted video from Cloudflare Stream: ${cloudflareStreamId}`);
       return true;
     } else {
-      console.error(`Failed to delete video from Cloudflare Stream: ${cloudflareStreamId}`, response.data.errors);
+      const errorDetails = response.data?.errors ? JSON.stringify(response.data.errors) : 'No error details provided';
+      console.error(`Failed to delete video from Cloudflare Stream: ${cloudflareStreamId}`, errorDetails);
       return false;
     }
   } catch (error) {
-    console.error(`Error deleting video from Cloudflare Stream (${cloudflareStreamId}):`, error.response?.data || error.message);
+    if (error.response?.status === 404) {
+      console.log(`Video already deleted or doesn't exist in Cloudflare Stream: ${cloudflareStreamId}`);
+      return true;
+    }
+    
+    const errorDetails = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    console.error(`Error deleting video from Cloudflare Stream (${cloudflareStreamId}):`, errorDetails);
     return false;
   }
 };
@@ -92,15 +99,23 @@ const deleteImageFromCloudflare = async (imageUrl) => {
       }
     );
 
-    if (response.data.success) {
+    if (response.data && response.data.success) {
       console.log(`Successfully deleted image from Cloudflare Images: ${imageId}`);
       return true;
     } else {
-      console.error(`Failed to delete image from Cloudflare Images: ${imageId}`, response.data.errors);
+      const errorDetails = response.data?.errors ? JSON.stringify(response.data.errors) : 'No error details provided';
+      console.error(`Failed to delete image from Cloudflare Images: ${imageId}`, errorDetails);
       return false;
     }
   } catch (error) {
-    console.error(`Error deleting image from Cloudflare Images (${imageUrl}):`, error.response?.data || error.message);
+    // Check if it's a 404 error (image already deleted or doesn't exist)
+    if (error.response?.status === 404) {
+      console.log(`Image already deleted or doesn't exist in Cloudflare Images: ${imageUrl}`);
+      return true; // Consider it successful since the image is already gone
+    }
+    
+    const errorDetails = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    console.error(`Error deleting image from Cloudflare Images (${imageUrl}):`, errorDetails);
     return false;
   }
 };
