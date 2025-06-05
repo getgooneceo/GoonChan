@@ -66,7 +66,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             alt={video.title || ''}
             width={640}
             height={360}
-            className="object-cover w-full h-full group-hover:scale-[1.01] transition-transform duration-300 ease-in-out"
+            className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
           />
           
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
@@ -110,10 +110,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           </Link>
 
           <div className="mt-[1.5px]">
-            <div className="flex items-center flex-wrap gap-1.5 text-xs">
+            <div className="flex items-center font-pop flex-wrap gap-1.5 text-xs">
               <Link 
                 href={`/profile?user=${encodeURIComponent(uploaderObj.username)}`} 
-                className="text-[#aaa] hover:text-[#ea4197] transition-colors duration-200"
+                className="text-[#aaa] hover:text-[#ea4197] font-pop transition-colors duration-200"
               >
                 {uploaderObj.username}
               </Link>

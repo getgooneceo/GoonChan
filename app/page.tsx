@@ -14,7 +14,15 @@ export default function Home() {
   const [videoData, setVideoData] = useState<any[]>([]);
   const [imageData, setImageData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [viewedVideoIds, setViewedVideoIds] = useState<Set<string>>(new Set());
+  const [viewedImageIds, setViewedImageIds] = useState<Set<string>>(new Set());
+  const [currentVideoPage, setCurrentVideoPage] = useState(1);
+  const [currentImagePage, setCurrentImagePage] = useState(1);
+  const [videoPagination, setVideoPagination] = useState<any>(null);
+  const [imagePagination, setImagePagination] = useState<any>(null);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -35,9 +43,22 @@ export default function Home() {
     }
   }, [activeCategory]);
 
-  const fetchVideosForCategory = async (category: string) => {
+  useEffect(() => {
+    setViewedVideoIds(new Set());
+    setViewedImageIds(new Set());
+    setCurrentVideoPage(1);
+    setCurrentImagePage(1);
+    setVideoPagination(null);
+    setImagePagination(null);
+  }, [activeCategory]);
+
+  const fetchVideosForCategory = async (category: string, page: number = 1, excludeIds: string[] = []) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       const sortMapping: { [key: string]: string } = {
@@ -53,8 +74,11 @@ export default function Home() {
       const url = new URL(`${config.url}/api/discover`);
       
       url.searchParams.append('limit', '12');
-      url.searchParams.append('page', '1');
+      url.searchParams.append('page', page.toString());
       url.searchParams.append('sort', sortParam);
+      if (excludeIds.length > 0) {
+        url.searchParams.append('excludeIds', excludeIds.join(','));
+      }
 
       if (category === 'subscriptions') {
         const token = localStorage.getItem('token');
@@ -73,46 +97,111 @@ export default function Home() {
         }
         
         if (data.videos) {
-          setVideoData(data.videos);
+          if (page === 1) {
+            setVideoData(data.videos);
+            setViewedVideoIds(new Set(data.videos.map((video: any) => video._id)));
+          } else {
+            setVideoData(prev => [...prev, ...data.videos]);
+            setViewedVideoIds(prev => {
+              const newSet = new Set(prev);
+              data.videos.forEach((video: any) => newSet.add(video._id));
+              return newSet;
+            });
+          }
+          setCurrentVideoPage(page);
+          setVideoPagination(data.pagination || null);
         } else {
-          setVideoData([]);
+          if (page === 1) {
+            setVideoData([]);
+          }
         }
       } else {
         setError(data.message || 'Failed to fetch videos');
-        setVideoData([]);
+        if (page === 1) {
+          setVideoData([]);
+        }
       }
     } catch (error) {
       console.error(`Error fetching ${category} videos:`, error);
-      setVideoData([]);
+      if (page === 1) {
+        setVideoData([]);
+      }
     } finally {
-      setLoading(false);
+      if (page === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
   };
 
-  const fetchDiscoverImages = async () => {
+  const fetchDiscoverImages = async (page: number = 1, excludeIds: string[] = []) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       const url = new URL(`${config.url}/api/discoverImages`);
       
       url.searchParams.append('limit', '12');
-      url.searchParams.append('page', '1');
+      url.searchParams.append('page', page.toString());
+
+      if (excludeIds.length > 0) {
+        url.searchParams.append('excludeIds', excludeIds.join(','));
+      }
 
       const response = await fetch(url.toString());
       const data = await response.json();
 
       if (data.success && data.images) {
-        setImageData(data.images);
+        if (page === 1) {
+          setImageData(data.images);
+          setViewedImageIds(new Set(data.images.map((image: any) => image._id)));
+        } else {
+          setImageData(prev => [...prev, ...data.images]);
+          setViewedImageIds(prev => {
+            const newSet = new Set(prev);
+            data.images.forEach((image: any) => newSet.add(image._id));
+            return newSet;
+          });
+        }
+        setCurrentImagePage(page);
+        setImagePagination(data.pagination || null);
       } else {
         setError(data.message || 'Failed to fetch images');
-        setImageData([]);
+        if (page === 1) {
+          setImageData([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching discover images:', error);
-      setImageData([]);
+      if (page === 1) {
+        setImageData([]);
+      }
     } finally {
-      setLoading(false);
+      if (page === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  };
+  const loadMoreVideos = () => {
+    if (videoPagination && videoPagination.hasNextPage && !loading && !loadingMore) {
+      const nextPage = currentVideoPage + 1;
+      const excludeIds = Array.from(viewedVideoIds);
+      fetchVideosForCategory(activeCategory, nextPage, excludeIds);
+    }
+  };
+
+  const loadMoreImages = () => {
+    if (imagePagination && imagePagination.hasNextPage && !loading && !loadingMore) {
+      const nextPage = currentImagePage + 1;
+      const excludeIds = Array.from(viewedImageIds);
+      fetchDiscoverImages(nextPage, excludeIds);
     }
   };
 
@@ -130,56 +219,61 @@ export default function Home() {
     }, 150);
   };
 
+  const renderVideoSkeletons = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+      {Array.from({ length: 12 }, (_, index) => (
+        <div key={`skeleton-${index}`} className="animate-pulse">
+          <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-2">
+            <div className="w-full h-full bg-[#252525] rounded-lg"></div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="h-4 bg-[#1a1a1a] rounded w-full"></div>
+            <div className="h-4 bg-[#1a1a1a] rounded w-3/4"></div>
+          </div>
+
+          <div className="flex items-center mt-2 space-x-2">
+            <div className="h-3 bg-[#1a1a1a] rounded w-20"></div>
+            <div className="h-3 bg-[#1a1a1a] rounded w-16"></div>
+            <div className="h-3 bg-[#1a1a1a] rounded w-12"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderImageSkeletons = () => (
+    <div className="flex gap-2.5 sm:gap-4">
+      {Array.from({ length: typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2) : 4 }, (_, columnIndex) => (
+        <div key={`skeleton-column-${columnIndex}`} className="flex-1 space-y-3 sm:space-y-4">
+          {Array.from({ length: 3 }, (_, cardIndex) => (
+            <div key={`skeleton-${columnIndex}-${cardIndex}`} className="break-inside-avoid">
+              <div className="bg-[#1a1a1a] rounded-xl overflow-hidden animate-pulse">
+                <div 
+                  className="w-full bg-[#252525]"
+                  style={{
+                    height: `${200 + Math.random() * 100}px`
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
   const renderContent = () => {
-    if (loading) {
+    // Only show initial loading skeletons when there's no existing data
+    if (loading && videoData.length === 0 && imageData.length === 0) {
       return (
         <div className="w-full">
-          {activeCategory === "images" ? (
-            <div className="flex gap-2.5 sm:gap-4">
-              {Array.from({ length: window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2 }, (_, columnIndex) => (
-                <div key={columnIndex} className="flex-1 space-y-3 sm:space-y-4">
-                  {Array.from({ length: 3 }, (_, cardIndex) => (
-                    <div key={cardIndex} className="break-inside-avoid">
-                      <div className="bg-[#1a1a1a] rounded-xl overflow-hidden animate-pulse">
-                        <div 
-                          className="w-full bg-[#252525]"
-                          style={{
-                            height: `${200 + Math.random() * 100}px`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-              {Array.from({ length: 12 }, (_, index) => (
-                <div key={index} className="animate-pulse">
-                  <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-2">
-                    <div className="w-full h-full bg-[#252525] rounded-lg"></div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="h-4 bg-[#1a1a1a] rounded w-full"></div>
-                    <div className="h-4 bg-[#1a1a1a] rounded w-3/4"></div>
-                  </div>
-
-                  <div className="flex items-center mt-2 space-x-2">
-                    <div className="h-3 bg-[#1a1a1a] rounded w-20"></div>
-                    <div className="h-3 bg-[#1a1a1a] rounded w-16"></div>
-                    <div className="h-3 bg-[#1a1a1a] rounded w-12"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {activeCategory === "images" ? renderImageSkeletons() : renderVideoSkeletons()}
         </div>
       );
     }
     
-    if (error) {
+    if (error && videoData.length === 0 && imageData.length === 0) {
       return (
         <div className="flex flex-col justify-center items-center py-16 text-center">
           <div className="text-red-400 mb-4">⚠️ {error}</div>
@@ -195,21 +289,41 @@ export default function Home() {
 
     switch (activeCategory) {
       case "images":
-        if (imageData.length === 0) {
+        if (imageData.length === 0 && !loading) {
           return (
             <div className="flex justify-center text-center items-center py-16 text-white/60">
               No images found
             </div>
           );
         }
-        return <ImageGrid videos={imageData} />;
+        return (
+          <>
+            <ImageGrid videos={imageData} />
+            {loadingMore && (
+              <div className="mt-6">
+                {renderImageSkeletons()}
+              </div>
+            )}
+            {imagePagination && imagePagination.hasNextPage && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMoreImages}
+                  disabled={loading || loadingMore}
+                  className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  {loadingMore ? 'Loading...' : 'Load More Images'}
+                </button>
+              </div>
+            )}
+          </>
+        );
         
       case "discover":
       case "top":
       case "recent":
       case "liked":
       case "subscriptions":
-        if (videoData.length === 0) {
+        if (videoData.length === 0 && !loading) {
           let emptyMessage = "No videos found";
           if (activeCategory === "subscriptions") {
             emptyMessage = "No videos from your subscriptions. Subscribe to creators to see their content here!";
@@ -229,11 +343,29 @@ export default function Home() {
         }
 
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-            {videoData.map((video) => (
-              <VideoCard key={video._id} video={video} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+              {videoData.map((video) => (
+                <VideoCard key={video._id} video={video} />
+              ))}
+            </div>
+            {loadingMore && (
+              <div className="mt-6">
+                {renderVideoSkeletons()}
+              </div>
+            )}
+            {videoPagination && videoPagination.hasNextPage && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMoreVideos}
+                  disabled={loading || loadingMore}
+                  className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  {loadingMore ? 'Loading...' : 'Load More Videos'}
+                </button>
+              </div>
+            )}
+          </>
         );
         
       case "random":

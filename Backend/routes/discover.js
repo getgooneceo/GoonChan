@@ -38,16 +38,28 @@ const verifyTokenAndGetUser = async (token) => {
 
 router.get('/', limiter, async (c) => {
   try {
-    const { limit = 12, page = 1, sort = 'hot', token } = c.req.query()
+    const { limit = 12, page = 1, sort = 'hot', token, excludeIds } = c.req.query()
     
     const limitNum = parseInt(limit) || 12;
     const pageNum = parseInt(page) || 1;
     const skip = (pageNum - 1) * limitNum;
+    
+    // Filter out modified IDs and keep only original MongoDB ObjectIds
+    const excludedIds = excludeIds 
+      ? excludeIds.split(',')
+          .filter(id => id.trim())
+          .filter(id => !id.includes('_copy_')) // Remove modified IDs
+          .map(id => id.split('_copy_')[0]) // Extract original ID if somehow it got through
+      : [];
 
-    // Handle random case - redirect to a random video
     if (sort === 'random') {
       try {
-        const totalVideos = await Video.countDocuments({});
+        let matchCriteria = {};
+        if (excludedIds.length > 0) {
+          matchCriteria = { _id: { $nin: excludedIds } };
+        }
+
+        const totalVideos = await Video.countDocuments(matchCriteria);
         if (totalVideos === 0) {
           return c.json({
             success: false,
@@ -56,7 +68,7 @@ router.get('/', limiter, async (c) => {
         }
 
         const randomSkip = Math.floor(Math.random() * totalVideos);
-        const randomVideo = await Video.findOne({}).skip(randomSkip).lean();
+        const randomVideo = await Video.findOne(matchCriteria).skip(randomSkip).lean();
         
         if (!randomVideo) {
           return c.json({
@@ -82,6 +94,9 @@ router.get('/', limiter, async (c) => {
 
     let sortCriteria = {};
     let matchCriteria = { isProcessing: false };
+    if (excludedIds.length > 0) {
+      matchCriteria._id = { $nin: excludedIds };
+    }
 
     switch (sort) {
       case 'top':
@@ -111,7 +126,7 @@ router.get('/', limiter, async (c) => {
           const recentMatchCriteria = {
             ...matchCriteria,
             createdAt: { $gte: sevenDaysAgo },
-            _id: { $nin: hotVideoIds } 
+            _id: { $nin: [...excludedIds, ...hotVideoIds] } 
           };
 
           const recentVideoCount = await Video.countDocuments(recentMatchCriteria);
@@ -165,7 +180,7 @@ router.get('/', limiter, async (c) => {
             }
           }));
 
-          const totalVideos = await Video.countDocuments(matchCriteria);
+          const totalVideos = await Video.countDocuments({ isProcessing: false });
           const totalPages = Math.ceil(totalVideos / limitNum);
           const hasNextPage = pageNum < totalPages;
           const hasPrevPage = pageNum > 1;
@@ -221,6 +236,9 @@ router.get('/', limiter, async (c) => {
           uploader: { $in: user.subscriptions },
           isProcessing: false
         };
+        if (excludedIds.length > 0) {
+          matchCriteria._id = { $nin: excludedIds };
+        }
         sortCriteria = { createdAt: -1 };
         break;
     }

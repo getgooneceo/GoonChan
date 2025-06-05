@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
       "i.pravatar.cc", 
       "source.unsplash.com", 
       "randomuser.me", 
-      "unsplash.it"
+      "unsplash.it",
+      "picsum.photos"
     ],
     remotePatterns: [
       {

@@ -27,6 +27,7 @@ import updateAvatarRoute from "./routes/updateAvatar.js";
 import discoverRoute from "./routes/discover.js";
 import discoverImagesRoute from "./routes/discoverImages.js";
 import deleteContentRoute from "./routes/deleteContent.js";
+import searchRoute from "./routes/search.js";
 
 const app = new Hono();
 
@@ -64,6 +65,7 @@ app.route('/api/updateAvatar', updateAvatarRoute);
 app.route('/api/discover', discoverRoute);
 app.route('/api/discoverImages', discoverImagesRoute);
 app.route('/api/delete', deleteContentRoute);
+app.route('/api/search', searchRoute);
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

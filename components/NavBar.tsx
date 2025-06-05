@@ -128,6 +128,19 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     }
   };
 
+  const handleSearchSubmit = () => {
+    if (searchValue.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+      setSearchValue("");
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
   const focusSearchInput = (isMobileView: boolean) => {
     if (isMobileView) {
       mobileSearchInputRef.current?.focus();
@@ -321,6 +334,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 onChange={(e) => setSearchValue(e.target.value)}
                 placeholder="Search GoonChan..."
                 className="flex-1 text-[1rem] bg-transparent ml-2 text-[#c0c0c0] placeholder-[#808080] focus:outline-none truncate [&::-webkit-search-cancel-button]:appearance-none"
+                onKeyDown={handleSearchKeyPress}
               />
               {searchValue && (
                 <button
@@ -367,6 +381,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                   onChange={(e) => setSearchValue(e.target.value)}
                   placeholder="Search GoonChan..."
                   className="flex-1 text-[1rem] bg-transparent ml-2 sm:ml-3 text-[#c0c0c0] placeholder-[#808080] focus:outline-none truncate [&::-webkit-search-cancel-button]:appearance-none"
+                  onKeyDown={handleSearchKeyPress}
                 />
                 {searchValue && (
                   <button

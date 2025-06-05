@@ -51,7 +51,7 @@ VideoSchema.methods.calculateHotness = function() {
   const currentTime = Math.floor(Date.now() / 1000);
   const timeDiff = currentTime - uploadTime; // timeDiff is in seconds
   
-  const logarithmicTimeDecay = Math.log10(timeDiff + 1) / 55;
+  const logarithmicTimeDecay = Math.log10(timeDiff + 1) / 8;
   console.log(`Calculating hotness for video ${this._id}: upvotes=${upvotes}, downvotes=${downvotes}, views=${views}, adjustedScore=${adjustedScore}, order=${order}, sign=${sign}, timeDiff=${timeDiff}, hotness=${sign * order - logarithmicTimeDecay}`);
   return sign * order - logarithmicTimeDecay;
 };
