@@ -28,6 +28,9 @@ import discoverRoute from "./routes/discover.js";
 import discoverImagesRoute from "./routes/discoverImages.js";
 import deleteContentRoute from "./routes/deleteContent.js";
 import searchRoute from "./routes/search.js";
+import relatedRoute from "./routes/related.js";
+import recommendedRoute from "./routes/recommended.js";
+import commentsRoute from "./routes/comments.js";
 
 const app = new Hono();
 
@@ -66,6 +69,10 @@ app.route('/api/discover', discoverRoute);
 app.route('/api/discoverImages', discoverImagesRoute);
 app.route('/api/delete', deleteContentRoute);
 app.route('/api/search', searchRoute);
+app.route('/api/related', relatedRoute);
+app.route('/api/recommended', recommendedRoute);
+app.route('/api/comments', commentsRoute);
+
 console.log(`Server running at http://localhost:${port}`);
 
 export { server };

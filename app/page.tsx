@@ -209,14 +209,25 @@ export default function Home() {
     if (newCategory === activeCategory) return;
     
     setIsTransitioning(true);
+    setLoading(true);
+    setVideoData([]);
+    setImageData([]);
+    setError(null);
+    
+    setViewedVideoIds(new Set());
+    setViewedImageIds(new Set());
+    setCurrentVideoPage(1);
+    setCurrentImagePage(1);
+    setVideoPagination(null);
+    setImagePagination(null);
 
     setTimeout(() => {
       setActiveCategory(newCategory);
       setContentKey(prev => prev + 1);
       setTimeout(() => {
         setIsTransitioning(false);
-      }, 50);
-    }, 150);
+      }, 25);
+    }, 30);
   };
 
   const renderVideoSkeletons = () => (
@@ -264,8 +275,14 @@ export default function Home() {
   );
 
   const renderContent = () => {
-    // Only show initial loading skeletons when there's no existing data
-    if (loading && videoData.length === 0 && imageData.length === 0) {
+    if (isTransitioning) {
+      return <div className="w-full h-64"></div>;
+    }
+
+    const isCurrentlyLoading = loading;
+    const currentData = activeCategory === "images" ? imageData : videoData;
+    
+    if (isCurrentlyLoading && currentData.length === 0) {
       return (
         <div className="w-full">
           {activeCategory === "images" ? renderImageSkeletons() : renderVideoSkeletons()}
@@ -273,7 +290,7 @@ export default function Home() {
       );
     }
     
-    if (error && videoData.length === 0 && imageData.length === 0) {
+    if (error && currentData.length === 0 && !isCurrentlyLoading) {
       return (
         <div className="flex flex-col justify-center items-center py-16 text-center">
           <div className="text-red-400 mb-4">⚠️ {error}</div>
@@ -289,7 +306,7 @@ export default function Home() {
 
     switch (activeCategory) {
       case "images":
-        if (imageData.length === 0 && !loading) {
+        if (imageData.length === 0 && !isCurrentlyLoading && !error) {
           return (
             <div className="flex justify-center text-center items-center py-16 text-white/60">
               No images found
@@ -323,7 +340,7 @@ export default function Home() {
       case "recent":
       case "liked":
       case "subscriptions":
-        if (videoData.length === 0 && !loading) {
+        if (videoData.length === 0 && !isCurrentlyLoading && !error) {
           let emptyMessage = "No videos found";
           if (activeCategory === "subscriptions") {
             emptyMessage = "No videos from your subscriptions. Subscribe to creators to see their content here!";
