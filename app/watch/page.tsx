@@ -1553,42 +1553,6 @@ const WatchPageContent = () => {
       )}
 
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
-        {/* <div className="w-full px-10 md:px-0 rounded-lg overflow-hidden mb-6 ">
-          <div className="flex flex-wrap justify-center gap-4">
-            {[
-              {
-                href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=610687&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-                imgSrc:
-                  "https://www.imglnkx.com/8780/010481D_JRKM_18_ALL_EN_64_L.gif",
-              },
-              {
-                href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=612046&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-                imgSrc:
-                  "https://www.imglnkx.com/8780/JM-379_DESIGN-20876_v2_300100.gif",
-              },
-              {
-                href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=604929&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-                imgSrc:
-                  "https://www.imglnkx.com/8780/DESIGN_20045_BANNNEON_300100.gif",
-              },
-            ].map((ad, index) => (
-              <div
-                key={index}
-                className={`w-full ${index >= 1 ? "hidden sm:block" : ""} ${
-                  index >= 2 ? "sm:hidden lg:block" : ""
-                } sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]`}
-              >
-                <a href={ad.href} className="block w-full">
-                  <img
-                    src={ad.imgSrc}
-                    className="w-full h-auto max-h-32 object-contain mx-auto"
-                    alt={`Advertisement ${index + 1}`}
-                  />
-                </a>
-              </div>
-            ))}
-          </div>
-        </div> */}
 
         <div className="w-full px-4 lg:px-0 mb-3">
           <div className="w-full h-28 border-2 border-dashed border-[#3a3a3a] rounded-xl bg-[#0f0f0f]/50 flex items-center justify-center transition-all duration-300 hover:border-[#4a4a4a] hover:bg-[#111]/60">
@@ -1983,41 +1947,6 @@ const WatchPageContent = () => {
             </div>
           )}
         </div>
-
-        {/* <div className="flex px-10 flex-wrap opacity-90 justify-center mb-4 borderb-b border-[#FFFFFF] gap-4">
-          {[
-            {
-              href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=610687&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-              imgSrc:
-                "https://www.imglnkx.com/8780/010481D_JRKM_18_ALL_EN_64_L.gif",
-            },
-            {
-              href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=612046&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-              imgSrc:
-                "https://www.imglnkx.com/8780/JM-379_DESIGN-20876_v2_300100.gif",
-            },
-            {
-              href: "https://t.mbslr2.com/324742/8780/0?bo=2779,2778,2777,2776,2775&file_id=604929&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002",
-              imgSrc:
-                "https://www.imglnkx.com/8780/DESIGN_20045_BANNNEON_300100.gif",
-            },
-          ].map((ad, index) => (
-            <div
-              key={index}
-              className={`w-full ${index >= 1 ? "hidden sm:block" : ""} ${
-                index >= 2 ? "sm:hidden lg:block" : ""
-              } sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]`}
-            >
-              <a href={ad.href} className="block w-full">
-                <img
-                  src={ad.imgSrc}
-                  className="w-full h-auto max-h-32 object-contain mx-auto"
-                  alt={`Advertisement ${index + 1}`}
-                />
-              </a>
-            </div>
-          ))}
-        </div> */}
 
         <div className="w-full px-4 lg:px-0 mb-5">
           <div className="w-full h-28 border-2 border-dashed border-[#3a3a3a] rounded-xl bg-[#0f0f0f]/50 flex items-center justify-center transition-all duration-300 hover:border-[#4a4a4a] hover:bg-[#111]/60">

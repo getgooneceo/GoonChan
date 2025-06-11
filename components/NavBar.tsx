@@ -279,7 +279,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 className="text-[#c2c2c2] cursor-pointer hover:text-white transition-colors duration-200" 
                 onClick={() => setIsSidebarOpen(true)}
               />
-              <IoSearchSharp size={24} className="text-[#c2c2c2] font-bold cursor-pointer hover:text-white transition-colors duration-200" />
+              <IoSearchSharp 
+                size={24} 
+                className="text-[#c2c2c2] font-bold cursor-pointer hover:text-white transition-colors duration-200" 
+                onClick={() => focusSearchInput(true)}
+              />
             </div>
 
             <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center cursor-pointer">
