@@ -1590,6 +1590,15 @@ const WatchPageContent = () => {
           </div>
         </div> */}
 
+        <div className="w-full px-4 lg:px-0 mb-3">
+          <div className="w-full h-28 border-2 border-dashed border-[#3a3a3a] rounded-xl bg-[#0f0f0f]/50 flex items-center justify-center transition-all duration-300 hover:border-[#4a4a4a] hover:bg-[#111]/60">
+            <div className="text-center">
+              <div className="text-[#666] text-lg font-medium mb-1">Advertisement Space</div>
+              <div className="text-[#888] text-sm">banner ads will appear here</div>
+            </div>
+          </div>
+        </div>
+
         {/* commented temporarily */}
 
         {video.contentType === 'image' && (
@@ -2009,6 +2018,15 @@ const WatchPageContent = () => {
             </div>
           ))}
         </div> */}
+
+        <div className="w-full px-4 lg:px-0 mb-5">
+          <div className="w-full h-28 border-2 border-dashed border-[#3a3a3a] rounded-xl bg-[#0f0f0f]/50 flex items-center justify-center transition-all duration-300 hover:border-[#4a4a4a] hover:bg-[#111]/60">
+            <div className="text-center">
+              <div className="text-[#666] text-lg font-medium mb-1">Advertisement Space</div>
+              <div className="text-[#888] text-sm">banner ads will appear here</div>
+            </div>
+          </div>
+        </div>
 
         {/* commented temporarily */}
 
