@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import { FaFlag } from "react-icons/fa6";
 // import { Stream } from "@cloudflare/stream-react";
+import { Toaster, toast } from "sonner";
 import config from "@/config.json";
 import useUserAvatar from '@/hooks/useUserAvatar';
 import AuthModel from "@/components/authModel";
@@ -733,18 +734,30 @@ const WatchPageContent = () => {
     setIsSubscribed(!wasSubscribed);
     setSubscriberCount(prev => wasSubscribed ? prev - 1 : prev + 1);
 
-    fetch(`${config.url}/api/interactions/subscribe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token,
-        targetUserId: video.uploader._id
-      }),
-    }).catch(error => {
+    try {
+      const response = await fetch(`${config.url}/api/interactions/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          targetUserId: video.uploader._id
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        setIsSubscribed(wasSubscribed);
+        setSubscriberCount(prev => wasSubscribed ? prev + 1 : prev - 1);
+        console.error('Subscription failed:', data.message);
+      }
+    } catch (error) {
+      setIsSubscribed(wasSubscribed);
+      setSubscriberCount(prev => wasSubscribed ? prev + 1 : prev - 1);
       console.error('Error updating subscription:', error);
-    });
+    }
   };
 
   const scrollToComments = () => {
@@ -769,7 +782,6 @@ const WatchPageContent = () => {
     }
   };
 
-  // Fetch comments
   const fetchComments = async (page: number = 1, sort: string = 'recent', reset: boolean = false) => {
     if (!video?._id) return;
     
@@ -850,7 +862,6 @@ const WatchPageContent = () => {
     }
   };
 
-  // Post reply
   const handlePostReply = async (commentId: string) => {
     const content = replyText[commentId];
     if (!content?.trim() || isPostingReply[commentId]) return;
@@ -1121,14 +1132,6 @@ const WatchPageContent = () => {
     fetchComments(1, newSort, true);
   };
 
-  const getUserAvatar = (avatarUrl?: string, avatarColor?: string, username?: string) => {
-    if (avatarUrl) return avatarUrl;
-    if (avatarColor) {
-      return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(avatarColor)}"/><text x="50" y="50" text-anchor="middle" dy="0.35em" font-family="Arial" font-size="40" fill="white">${username?.[0]?.toUpperCase() || '?'}</text></svg>`;
-    }
-    return "/logo.webp";
-  };
-
   const handleCommentUserClick = (username: string) => {
     router.push(`/profile?user=${username}`);
   };
@@ -1150,6 +1153,133 @@ const WatchPageContent = () => {
 
   const { avatarUrl: userAvatarUrl } = useUserAvatar(user) as { avatarUrl: string; isLoading: boolean };
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [modalActive, setModalActive] = useState(false);
+  const [reportCategory, setReportCategory] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const openReportModal = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+    setShowReportModal(true);
+    setTimeout(() => {
+      setModalActive(true);
+    }, 20);
+  };
+
+  const closeReportModal = () => {
+    setModalActive(false);
+    setTimeout(() => {
+      setShowReportModal(false);
+      setReportCategory('');
+      setReportDetails('');
+    }, 300);
+  };
+
+  const handleShare = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      toast.success('Link copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast.error('Failed to copy link');
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportCategory) {
+      toast.error('Please select a report category');
+      return;
+    }
+
+    if (!video) {
+      toast.error('Content not found');
+      return;
+    }
+    setIsSubmittingReport(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.url}/api/reports`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          contentId: video._id,
+          contentType: video.contentType === 'image' ? 'image' : 'video',
+          category: reportCategory,
+          details: reportDetails,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        closeReportModal();
+        toast.success('Report submitted successfully');
+      } else {
+        toast.error(data.message || 'Failed to submit report');
+      }
+    } catch (error) {
+      console.error('Report submission error:', error);
+      toast.error('Failed to submit report');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleDeleteContent = async () => {
+    if (!video) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const contentType = video.contentType === 'image' ? 'image' : 'video';
+      const response = await fetch(`${config.url}/api/delete/${contentType}/${video._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Content deleted successfully');
+        router.push('/');
+      } else {
+        toast.error(data.message || 'Failed to delete content');
+      }
+    } catch (error) {
+      console.error('Delete content error:', error);
+      toast.error('Failed to delete content');
+    }
+  };
+
+  const reportCategories = [
+    { id: 'illegal', label: 'Illegal or prohibited content', icon: 'ri-error-warning-line' },
+    { id: 'nonconsensual', label: 'Non-consensual content', icon: 'ri-shield-user-line' },
+    { id: 'underage', label: 'Suspected underage content', icon: 'ri-user-unfollow-line' },
+    { id: 'copyright', label: 'Copyright infringement', icon: 'ri-copyright-line' },
+    { id: 'other', label: 'Other issue', icon: 'ri-more-line' },
+  ];
+  
   if (error) {
     return (
       <div className="bg-[#080808] min-h-screen w-full">
@@ -1248,7 +1378,7 @@ const WatchPageContent = () => {
           <div className="flex justify-center mt-6">
             <button
               onClick={loadMoreRelated}
-              className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] text-white rounded-lg transition-colors duration-200 font-medium"
+              className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
             >
               Load More Videos
             </button>
@@ -1297,7 +1427,7 @@ const WatchPageContent = () => {
           <div className="flex justify-center mt-6">
             <button
               onClick={loadMoreRecommended}
-              className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] text-white rounded-lg transition-colors duration-200 font-medium"
+              className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
             >
               Load More Videos
             </button>
@@ -1310,7 +1440,118 @@ const WatchPageContent = () => {
   return (
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar user={user} setUser={setUser} />
+      <Toaster theme="dark" position="bottom-right" richColors />      
       {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
+      {showReportModal && (
+        <div 
+          className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out ${
+            modalActive ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeReportModal();
+            }
+          }}
+        >
+          <div className={`bg-[#1a1a1a] rounded-2xl shadow-2xl border border-[#333] max-w-md w-full max-h-[90vh] overflow-hidden transition-all duration-300 ease-in-out ${
+            modalActive 
+              ? 'opacity-100 scale-100 translate-y-0' 
+              : 'opacity-0 scale-95 translate-y-4'
+          }`}>
+            <div className="flex items-center justify-between p-6 border-b border-[#2a2a2a]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#ea4197]/10 flex items-center justify-center">
+                  <FaFlag className="text-[#ea4197] text-lg" />
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Report Content</h3>
+                  <p className="text-[#a0a0a0] text-sm">Help us understand the issue</p>
+                </div>
+              </div>
+              <button
+                onClick={closeReportModal}
+                className="text-[#a0a0a0] scale-[1.15] hover:text-[#bebebe] cursor-pointer transition-all hover:scale-[1.35] duration-200 rounded-lg"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              <div>
+                <h4 className="text-white font-medium mb-3">What's the issue?</h4>
+                <div className="space-y-2">
+                  {reportCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setReportCategory(category.id)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ease-in-out cursor-pointer text-left ${
+                        reportCategory === category.id
+                          ? 'border-[#ea4197] bg-[#ea4197]/5 text-white'
+                          : 'border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-[#222] text-[#d0d0d0]'
+                      }`}
+                    >
+                      <i className={`${category.icon} text-lg transition-colors duration-200 ${
+                        reportCategory === category.id ? 'text-[#ea4197]' : 'text-[#888]'
+                      }`}></i>
+                      <span className={`font-medium ${reportCategory === category.id ? "text-[#ea55a2]" : ""}`}>{category.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-white font-medium mb-3">
+                  Additional details 
+                  <span className="text-[#888] font-normal text-sm ml-2">(optional)</span>
+                </h4>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Provide more context about the issue..."
+                  className="w-full bg-[#111] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 focus:outline-none focus:border-[#ea4197] focus:ring-1 focus:ring-[#ea4197]/30 resize-none transition-all duration-200 placeholder-[#666] hover:border-[#3a3a3a]"
+                  rows={4}
+                  maxLength={500}
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-[#666] text-xs">
+                    Help us understand the problem better
+                  </span>
+                  <span className="text-[#666] text-xs">
+                    {reportDetails.length}/500
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-[#2a2a2a] bg-[#161616]">
+              <button
+                onClick={closeReportModal}
+                className="px-4 py-2 text-[#a0a0a0] cursor-pointer hover:text-white hover:bg-[#2a2a2a] rounded-lg transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReportSubmit}
+                disabled={!reportCategory || isSubmittingReport}
+                className="px-6 py-2 bg-[#de1c80f2] cursor-pointer hover:bg-[#de1c80] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 font-medium flex items-center gap-2"
+              >
+                {isSubmittingReport ? (
+                  <>
+                    <i className="ri-loader-4-line animate-spin"></i>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <FaFlag className="text-sm" />
+                    Submit Report
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
         {/* <div className="w-full px-10 md:px-0 rounded-lg overflow-hidden mb-6 ">
           <div className="flex flex-wrap justify-center gap-4">
@@ -1556,15 +1797,30 @@ const WatchPageContent = () => {
               </span>
             </button>
 
-            <button className="flex items-center border-[#3a3a3a] justify-center gap-2 px-3 py-[0.45rem] rounded-full bg-[#1f1f1f] text-[#c0c0c0] hover:border-[#525252] transition-all text-xs font-medium cursor-pointer">
+            <button 
+              onClick={handleShare}
+              className="flex items-center justify-center gap-[0.4rem] px-3 py-[0.45rem] rounded-full bg-[#1f1f1f] text-[#c0c0c0] transition-all text-xs font-medium cursor-pointer"
+            >
               <FaShare size={13} />
-              <span className="sm:inline font-inter">Share</span>
+              <span className="font-inter">Share</span>
             </button>
 
-            <button className="flex items-center border-[#3a3a3a] justify-center gap-2 px-3 py-[0.45rem] rounded-full bg-[#1f1f1f] text-[#c0c0c0] hover:border-[#525252] transition-all text-xs font-medium cursor-pointer">
+            <button 
+              onClick={openReportModal}
+              className="flex items-center justify-center gap-[0.4rem] px-3 py-[0.45rem] rounded-full bg-[#1f1f1f] text-[#c0c0c0] transition-all text-xs font-medium cursor-pointer"
+            >
               <FaFlag size={11} />
-              <span className="sm:inline hidden font-inter">Report</span>
+              <span className="font-inter">Report</span>
             </button>
+
+            {user?.isAdmin && (
+              <button 
+                onClick={handleDeleteContent}
+                className="flex items-center justify-center gap-[0.4rem] px-3 py-[0.45rem] rounded-full bg-[#1f1f1f] text-[#c0c0c0] transition-all text-xs font-medium cursor-pointer"
+              >
+                <i className="ri-delete-bin-line text-xs" />
+              </button>
+            )}
           </div>
 
           <div className="hidden md:flex flex-wrap gap-y-5 mt-2 justify-between items-center">
@@ -1574,7 +1830,7 @@ const WatchPageContent = () => {
                 onClick={handleUploaderClick}
               >
                 <Image
-                  src={ video.uploader?.avatar || uploaderAvatarUrl || "/logo.webp"}
+                  src={video.uploader?.avatar || uploaderAvatarUrl || "/logo.webp"}
                   alt={video.uploader?.username || "User"}
                   fill
                   className="object-cover opacity-[97%]"
@@ -1592,7 +1848,7 @@ const WatchPageContent = () => {
               <div className="relative h-9 w-[0.8px] bg-[#323232]"></div>
               <button 
                 onClick={isCurrentUserUploader ? undefined : handleSubscribe}
-                className={`flex items-center gap-1.5 ml-0.5 px-5 py-1.5 rounded-lg border text-sm transition-colors ${
+                               className={`flex items-center gap-1.5 ml-0.5 px-5 py-1.5 rounded-lg border text-sm transition-colors ${
                   isCurrentUserUploader
                     ? "border-[#525252] bg-[#2a2a2a] text-[#c0c0c0] cursor-default opacity-70"
                     : isSubscribed 
@@ -1623,6 +1879,7 @@ const WatchPageContent = () => {
               </button>
 
               <button
+               
                 onClick={handleDislike}
                 className={`flex items-center border text-[#c0c0c0] border-[#3a3a3a] bg-[#1f1f1f] gap-2 px-3.5 py-2 rounded-lg ${
                   isDisliked
@@ -1630,21 +1887,30 @@ const WatchPageContent = () => {
                     : "hover:border-[#525252]"
                 } transition-all text-sm font-medium cursor-pointer`}
               >
-                <FaThumbsDown size={14} />
+                               <FaThumbsDown size={14} />
                 <span className="font-inter">
                   {formatCount(dislikeCount)}
                 </span>
               </button>
 
-              <button className="flex items-center border border-[#3a3a3a] gap-2 px-3.5 py-2 rounded-lg bg-[#1f1f1f] text-[#c0c0c0] hover:border-[#525252] transition-all text-sm font-medium cursor-pointer">
+              <button onClick={handleShare} className="flex items-center border border-[#3a3a3a] bg-[#1f1f1f] gap-2 px-3.5 py-2 rounded-lg text-[#c0c0c0] hover:border-[#525252] transition-all text-sm font-medium cursor-pointer">
                 <FaShare size={14} />
                 <span className="font-inter">Share</span>
               </button>
 
-              <button className="flex items-center border border-[#3a3a3a] gap-2 px-3.5 py-2 rounded-lg bg-[#1f1f1f] text-[#c0c0c0] hover:border-[#525252] transition-all text-sm font-medium cursor-pointer">
+              <button onClick={openReportModal} className="flex items-center border border-[#3a3a3a] bg-[#1f1f1f] gap-2 px-3.5 py-2 rounded-lg text-[#c0c0c0] hover:border-[#525252] transition-all text-sm font-medium cursor-pointer">
                 <FaFlag size={13} />
                 <span className="font-inter">Report</span>
               </button>
+
+              {user?.isAdmin && (
+                <button
+                  onClick={handleDeleteContent}
+                  className="flex items-center border border-[#3a3a3a] bg-[#1f1f1f] gap-2 px-3.5 py-2 rounded-lg text-[#c0c0c0] hover:border-[#525252] transition-all text-sm font-medium cursor-pointer"
+                >
+                  <i className="ri-delete-bin-line text-sm"></i>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1654,7 +1920,7 @@ const WatchPageContent = () => {
               onClick={handleUploaderClick}
             >
               <Image
-                src={uploaderAvatarUrl || video.uploader?.avatar || "/logo.webp"}
+                src={video.uploader?.avatar || uploaderAvatarUrl || "/logo.webp"}
                 alt={video.uploader?.username || "User"}
                 fill
                 className="object-cover opacity-[97%]"
@@ -1670,12 +1936,12 @@ const WatchPageContent = () => {
             </div>
             <button 
               onClick={isCurrentUserUploader ? undefined : handleSubscribe}
-              className={`flex items-center gap-1.5 px-2.5 py-[0.34rem] rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-1.5 px-4 py-[6.8px] rounded-full border text-sm transition-colors ${
                 isCurrentUserUploader
-                  ? "bg-[#525252] text-[#c0c0c0] cursor-default opacity-70"
-                  : isSubscribed
-                    ? "bg-[#525252] text-[#c0c0c0] hover:bg-[#616161] cursor-pointer"
-                    : "bg-[#ea4197] text-white hover:bg-[#d23884] cursor-pointer"
+                  ? "border-[#525252] bg-[#2a2a2a] text-[#c0c0c0] cursor-default opacity-70"
+                  : isSubscribed 
+                    ? "border-[#525252] bg-[#2a2a2a] text-[#c0c0c0] cursor-pointer" 
+                    : "border-[#999999] bg-[#1e1e1e] text-white hover:border-[#c2c2c2] hover:bg-[#242424] cursor-pointer"
               }`}
             >
               <FaBell className="text-sm" />
@@ -1783,22 +2049,36 @@ const WatchPageContent = () => {
                 </div>
               </div>
 
-              <div className="mb-8">
-                {activeTab === "related" && renderRelatedContent()}
-                {activeTab === "recommended" && renderRecommendedContent()}
+              <div className="mb-8 relative overflow-hidden">
+                <div 
+                  className={`transition-all duration-500 ease-in-out ${
+                    activeTab === "related" 
+                      ? "transform translate-x-0 opacity-100" 
+                      : "transform -translate-x-full opacity-0 absolute top-0 left-0 w-full"
+                  }`}
+                >
+                  {renderRelatedContent()}
+                </div>
+                
+                <div 
+                  className={`transition-all duration-500 ease-in-out ${
+                    activeTab === "recommended" 
+                      ? "transform translate-x-0 opacity-100" 
+                      : "transform translate-x-full opacity-0 absolute top-0 left-0 w-full"
+                  }`}
+                >
+                  {renderRecommendedContent()}
+                </div>
               </div>
             </>
           )}
 
-          {/* Comments Section */}
           <div ref={commentsRef} className="mt-8">
-            {/* Comments Header */}
             <div className="flex items-center justify-between mb-6 px-1 lg:px-0">
               <h3 className="text-white text-lg font-roboto font-medium">
                 Comments ({totalComments.toLocaleString()})
               </h3>
-              
-              {/* Sort Options */}
+
               <div className="flex items-center gap-2">
                 <select 
                   value={commentSort}
@@ -1812,11 +2092,10 @@ const WatchPageContent = () => {
               </div>
             </div>
 
-            {/* Add Comment */}
             <div className="mb-8 flex gap-3 px-1 lg:px-0">
               <div className="relative w-10 h-10 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]">
                 <Image
-                  src={user ? getUserAvatar(userAvatarUrl, user.avatarColor, user.username) : "/logo.webp"}
+                  src={user ? (user.avatar || userAvatarUrl || "/logo.webp") : "/logo.webp"}
                   alt={user?.username || "User"}
                   fill
                   className="object-cover"
@@ -1833,6 +2112,20 @@ const WatchPageContent = () => {
                     }}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (user && newComment.trim() && !isPostingComment) {
+                          handlePostComment();
+                          setTimeout(() => {
+                            const textarea = e.target as HTMLTextAreaElement;
+                            if (textarea) {
+                              textarea.style.height = '40px';
+                            }
+                          }, 100);
+                        }
+                      }
+                    }}
                     placeholder={user ? "Add a comment..." : "Sign in to comment"}
                     disabled={!user}
                     className="w-full bg-transparent border-b-2 border-[#3a3a3a] text-[#e0e0e0] py-3 px-1 focus:outline-none focus:border-[#ea4197] resize-none transition-all duration-200 placeholder-[#888] disabled:opacity-50 min-h-[48px] hover:border-[#4a4a4a]"
@@ -1853,7 +2146,7 @@ const WatchPageContent = () => {
                             textarea.style.height = '50px';
                           }
                         }}
-                        className="px-4 py-2 text-[#a0a0a0] hover:text-white transition-all duration-200 text-sm rounded-lg hover:bg-[#2a2a2a]/30"
+                        className="px-4 py-2 text-[#a0a0a0] hover:text-white hover:bg-[#2a2a2a] rounded-lg transition-all duration-200"
                       >
                         Cancel
                       </button>
@@ -1868,7 +2161,7 @@ const WatchPageContent = () => {
                           }, 100);
                         }}
                         disabled={isPostingComment || !newComment.trim()}
-                        className="px-5 py-2 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] text-white rounded-full transition-all duration-200 text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
+                        className="px-5 py-2 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-full transition-all duration-200 text-sm font-medium cursor-pointer"
                       >
                         {isPostingComment ? (
                           <i className="ri-loader-4-line animate-spin"></i>
@@ -1885,7 +2178,6 @@ const WatchPageContent = () => {
             {/* Comments List */}
             <div className="space-y-3 px-1 lg:px-0">
               {commentsLoading && comments.length === 0 ? (
-                // Loading skeleton
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="animate-pulse flex gap-2.5 bg-[#111]/30 rounded-lg p-3 border border-[#2a2a2a]/40">
                     <div className="w-8 h-8 bg-[#2a2a2a] rounded-full"></div>
@@ -1904,14 +2196,13 @@ const WatchPageContent = () => {
               ) : (
                 comments.map((comment) => (
                   <div key={comment._id} className="group">
-                    {/* Main Comment */}
                     <div className="flex gap-2.5 bg-[#0f0f0f]/50 rounded-lg p-3 border border-[#2a2a2a]/30 hover:border-[#3a3a3a]/50 transition-all duration-300 hover:bg-[#111]/40">
                       <div 
                         className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]/50 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => handleCommentUserClick(comment.username)}
                       >
                         <Image
-                          src={getUserAvatar(comment.avatar, comment.avatarColor, comment.username)}
+                          src={comment.avatar || `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(comment.avatarColor || '#000000')}"/><text x="50" y="50" text-anchor="middle" dy="0.35em" font-family="Arial" font-size="40" fill="white">${comment.username?.[0]?.toUpperCase() || '?'}</text></svg>`}
                           alt={comment.username}
                           width={32}
                           height={32}
@@ -1931,23 +2222,21 @@ const WatchPageContent = () => {
                           <span className="text-[#999] text-xs flex-shrink-0">
                             {getRelativeTimeFromDate(comment.createdAt)}
                           </span>
-                          {user?._id === comment.user && (
+                          {(user?._id === comment.user || user?.isAdmin) && (
                             <button
                               onClick={() => handleCommentAction('delete', comment._id)}
-                              className="opacity-0 group-hover:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
+                              className="md:opacity-0 group-hover:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
                               title="Delete comment"
                             >
                               <i className="ri-delete-bin-line text-xs"></i>
                             </button>
                           )}
                         </div>
-                        
-                        {/* Comment Content */}
-                        <p className="text-[#e0e0e0] text-sm mb-1 whitespace-pre-wrap break-words leading-relaxed">
+
+                        <p className="text-[#e0e0e0] text-sm mb-2 whitespace-pre-wrap break-words leading-relaxed">
                           {comment.content}
                         </p>
-                        
-                        {/* Comment Actions */}
+
                         <div className="flex items-center gap-[0.01rem]">
                           <button
                             onClick={() => handleCommentAction('like', comment._id)}
@@ -1999,7 +2288,7 @@ const WatchPageContent = () => {
                           <div className="mt-3 flex gap-2 bg-[#0a0a0a]/40 rounded-lg p-2.5 border border-[#2a2a2a]/40 animate-in slide-in-from-top-2 duration-200">
                             <div className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]">
                               <Image
-                                src={user ? getUserAvatar(userAvatarUrl, user.avatarColor, user.username) : "/logo.webp"}
+                                src={user ? (user.avatar || userAvatarUrl || "/logo.webp") : "/logo.webp"}
                                 alt={user?.username || "User"}
                                 width={24}
                                 height={24}
@@ -2010,6 +2299,14 @@ const WatchPageContent = () => {
                               <textarea
                                 value={replyText[comment._id] || ''}
                                 onChange={(e) => setReplyText(prev => ({ ...prev, [comment._id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (user && replyText[comment._id]?.trim() && !isPostingReply[comment._id]) {
+                                      handlePostReply(comment._id);
+                                    }
+                                  }
+                                }}
                                 placeholder="Add a reply..."
                                 className="w-full bg-[#1a1a1a] border border-[#3a3a3a] text-[#e0e0e0] rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#ea4197] focus:ring-1 focus:ring-[#ea4197]/30 resize-none transition-all duration-200 hover:border-[#4a4a4a]"
                                 rows={2}
@@ -2027,7 +2324,7 @@ const WatchPageContent = () => {
                                 <button
                                   onClick={() => handlePostReply(comment._id)}
                                   disabled={ isPostingReply[comment._id] || !replyText[comment._id]?.trim()}
-                                  className="px-3 py-1 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] text-white rounded transition-all duration-200 text-sm font-medium disabled:cursor-not-allowed cursor-pointer"
+                                  className="px-3 py-1 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded transition-all duration-200 text-sm font-medium cursor-pointer"
                                 >
                                   {isPostingReply[comment._id] ? (
                                     <i className="ri-loader-4-line animate-spin"></i>
@@ -2043,13 +2340,13 @@ const WatchPageContent = () => {
                         {expandedReplies.has(comment._id) && comment.replies && comment.replies.length > 0 && (
                           <div className="mt-3 pl-3 border-l-2 border-[#ea4197]/30 space-y-2 animate-in slide-in-from-top-2 duration-300">
                             {comment.replies.map((reply) => (
-                              <div key={reply._id} className="flex gap-2 group/reply bg-[#0a0a0a]/30 rounded-lg p-2.5 border border-[#2a2a2a]/20 hover:border-[#3a3a3a]/40 transition-all duration-200 hover:bg-[#0f0f0f]/40">
+                              <div key={reply._id} className="flex gap-2 group/reply bg-[#0a0a0a]/30 rounded-lg p-2.5 border border-[#2a2a2a]/20 hover:border-[#3a3a3a]/40 transition-all duration-200 hover:bg-[#111]/40">
                                 <div 
                                   className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]/40 cursor-pointer hover:opacity-80 transition-opacity"
                                   onClick={() => handleCommentUserClick(reply.username)}
                                 >
                                   <Image
-                                    src={getUserAvatar(reply.avatar, reply.avatarColor, reply.username)}
+                                    src={reply.avatar || `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(reply.avatarColor || '#000000')}"/><text x="50" y="50" text-anchor="middle" dy="0.35em" font-family="Arial" font-size="40" fill="white">${reply.username?.[0]?.toUpperCase() || '?'}</text></svg>`}
                                     alt={reply.username}
                                     width={24}
                                     height={24}
@@ -2068,10 +2365,10 @@ const WatchPageContent = () => {
                                     <span className="text-[#999] whitespace-nowrap text-xs flex-shrink-0">
                                       {getRelativeTimeFromDate(reply.createdAt)}
                                     </span>
-                                    {user?._id === reply.user && (
+                                    {(user?._id === reply.user || user?.isAdmin) && (
                                       <button
                                         onClick={() => handleCommentAction('delete', comment._id, reply._id)}
-                                        className="opacity-0 group-hover/reply:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
+                                        className="md:opacity-0 group-hover/reply:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
                                         title="Delete reply"
                                       >
                                         <i className="ri-delete-bin-line text-xs"></i>
@@ -2153,8 +2450,8 @@ const WatchPageContent = () => {
           </div>
         </div>
       </div>    
-  </div>      
-);
+    </div>      
+  );
 };
 
 const WatchPage = () => {

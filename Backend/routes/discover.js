@@ -3,6 +3,7 @@ import Video from '../models/Video.js'
 import User from '../models/User.js'
 import jwt from 'jsonwebtoken'
 import { rateLimiter } from 'hono-rate-limiter'
+import mongoose from 'mongoose'
 
 const router = new Hono()
 
@@ -15,6 +16,32 @@ const limiter = rateLimiter({
   legacyHeaders: false,
   keyGenerator: (c) => c.req.header('x-forwarded-for') || c.req.ip,
 })
+
+const VIDEO_PROJECTION = {
+  _id: 1,
+  title: 1,
+  description: 1,
+  slug: 1,
+  thumbnail: 1,
+  duration: 1,
+  views: 1,
+  likeCount: { $size: { $ifNull: ['$likedBy', []] } },
+  dislikeCount: { $size: { $ifNull: ['$dislikedBy', []] } },
+  tags: 1,
+  createdAt: 1,
+  hotness: 1,
+  uploader: 1
+}
+
+const USER_LOOKUP_STAGE = {
+  $lookup: {
+    from: 'users',
+    localField: 'uploader',
+    foreignField: '_id',
+    as: 'uploader',
+    pipeline: [{ $project: { username: 1, avatar: 1, avatarColor: 1, subscriberCount: 1 } }]
+  }
+}
 
 const verifyTokenAndGetUser = async (token) => {
   if (!token) {
@@ -36,273 +63,271 @@ const verifyTokenAndGetUser = async (token) => {
   }
 };
 
+const createPaginationResponse = (totalCount, pageNum, limitNum) => {
+  const totalPages = Math.ceil(totalCount / limitNum);
+  return {
+    currentPage: pageNum,
+    totalPages,
+    totalVideos: totalCount,
+    hasNextPage: pageNum < totalPages,
+    hasPrevPage: pageNum > 1,
+    limit: limitNum
+  };
+};
+
 router.get('/', limiter, async (c) => {
   try {
-    const { limit = 12, page = 1, sort = 'hot', token, excludeIds } = c.req.query()
+    const { limit = 20, page = 1, sort = 'hot', token, excludeIds: excludeIdsQuery } = c.req.query();
     
-    const limitNum = parseInt(limit) || 12;
+    const limitNum = parseInt(limit) || 20;
     const pageNum = parseInt(page) || 1;
     const skip = (pageNum - 1) * limitNum;
-    
-    // Filter out modified IDs and keep only original MongoDB ObjectIds
-    const excludedIds = excludeIds 
-      ? excludeIds.split(',')
-          .filter(id => id.trim())
-          .filter(id => !id.includes('_copy_')) // Remove modified IDs
-          .map(id => id.split('_copy_')[0]) // Extract original ID if somehow it got through
+
+    const parsedExcludeIds = excludeIdsQuery 
+      ? excludeIdsQuery.split(',')
+          .filter(id => id.trim() && !id.includes('_copy_'))
+          .map(id => {
+            const cleanId = id.split('_copy_')[0];
+            try {
+              return new mongoose.Types.ObjectId(cleanId);
+            } catch (error) {
+              console.warn(`Invalid ObjectId in excludeIds: ${cleanId}`);
+              return null;
+            }
+          })
+          .filter(Boolean)
       : [];
+      
+    const baseCriteria = { isProcessing: false };
 
     if (sort === 'random') {
-      try {
-        let matchCriteria = {};
-        if (excludedIds.length > 0) {
-          matchCriteria = { _id: { $nin: excludedIds } };
-        }
+      let randomMatchCriteria = { ...baseCriteria };
+      if (parsedExcludeIds.length > 0) {
+        randomMatchCriteria._id = { $nin: parsedExcludeIds };
+      }
+      const randomPipeline = [
+        { $match: randomMatchCriteria },
+        { $sample: { size: 1 } },
+        USER_LOOKUP_STAGE,
+        { $unwind: '$uploader' },
+        { $project: VIDEO_PROJECTION }
+      ];
 
-        const totalVideos = await Video.countDocuments(matchCriteria);
-        if (totalVideos === 0) {
-          return c.json({
-            success: false,
-            message: 'No videos available for random selection'
-          }, 404);
-        }
+      const randomVideos = await Video.aggregate(randomPipeline);
 
-        const randomSkip = Math.floor(Math.random() * totalVideos);
-        const randomVideo = await Video.findOne(matchCriteria).skip(randomSkip).lean();
-        
-        if (!randomVideo) {
-          return c.json({
-            success: false,
-            message: 'Failed to find random video'
-          }, 404);
-        }
-
-        return c.json({
-          success: true,
-          redirect: true,
-          videoSlug: randomVideo.slug,
-          message: 'Random video selected'
-        }, 200);
-      } catch (error) {
-        console.error('Random video selection error:', error);
+      if (!randomVideos || randomVideos.length === 0) {
         return c.json({
           success: false,
-          message: 'Failed to select random video'
-        }, 500);
-      }
-    }
-
-    let sortCriteria = {};
-    let matchCriteria = { isProcessing: false };
-    if (excludedIds.length > 0) {
-      matchCriteria._id = { $nin: excludedIds };
-    }
-
-    switch (sort) {
-      case 'top':
-        sortCriteria = { views: -1 };
-        break;
-      case 'recent':
-        sortCriteria = { createdAt: -1 };
-        break;
-      case 'hot':
-      default:
-        const randomRecentCount = Math.round(limitNum * 0.15);
-        const hotVideosCount = limitNum - randomRecentCount;
-
-        try {
-          const hotVideos = await Video.find(matchCriteria)
-            .populate('uploader', 'username avatar avatarColor subscriberCount')
-            .sort({ hotness: -1 })
-            .limit(hotVideosCount)
-            .skip(skip)
-            .lean();
-
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-          const hotVideoIds = hotVideos.map(video => video._id.toString());
-          
-          const recentMatchCriteria = {
-            ...matchCriteria,
-            createdAt: { $gte: sevenDaysAgo },
-            _id: { $nin: [...excludedIds, ...hotVideoIds] } 
-          };
-
-          const recentVideoCount = await Video.countDocuments(recentMatchCriteria);
-          
-          let randomRecentVideos = [];
-          if (recentVideoCount > 0 && randomRecentCount > 0) {
-            const randomSkips = new Set();
-            const maxSkip = Math.max(0, recentVideoCount - randomRecentCount);
-            
-            while (randomSkips.size < Math.min(randomRecentCount, recentVideoCount)) {
-              randomSkips.add(Math.floor(Math.random() * (maxSkip + 1)));
-            }
-
-            const randomSkipArray = Array.from(randomSkips);
-            const randomVideoPromises = randomSkipArray.map(skipValue =>
-              Video.findOne(recentMatchCriteria)
-                .populate('uploader', 'username avatar avatarColor subscriberCount')
-                .skip(skipValue)
-                .lean()
-            );
-
-            randomRecentVideos = (await Promise.all(randomVideoPromises)).filter(video => video !== null);
-          }
-
-          const combinedVideos = [...hotVideos, ...randomRecentVideos];
-
-          for (let i = combinedVideos.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [combinedVideos[i], combinedVideos[j]] = [combinedVideos[j], combinedVideos[i]];
-          }
-
-          const formattedVideos = combinedVideos.map(video => ({
-            _id: video._id,
-            title: video.title,
-            description: video.description,
-            slug: video.slug,
-            thumbnail: video.thumbnail,
-            duration: video.duration,
-            views: video.views,
-            likeCount: video.likedBy?.length || 0,
-            dislikeCount: video.dislikedBy?.length || 0,
-            tags: video.tags || [],
-            createdAt: video.createdAt,
-            hotness: video.hotness,
-            uploader: {
-              _id: video.uploader._id,
-              username: video.uploader.username,
-              avatar: video.uploader.avatar,
-              avatarColor: video.uploader.avatarColor,
-              subscriberCount: video.uploader.subscriberCount || 0
-            }
-          }));
-
-          const totalVideos = await Video.countDocuments({ isProcessing: false });
-          const totalPages = Math.ceil(totalVideos / limitNum);
-          const hasNextPage = pageNum < totalPages;
-          const hasPrevPage = pageNum > 1;
-
-          return c.json({
-            success: true,
-            videos: formattedVideos,
-            sort: sort,
-            pagination: {
-              currentPage: pageNum,
-              totalPages,
-              totalVideos,
-              hasNextPage,
-              hasPrevPage,
-              limit: limitNum
-            }
-          }, 200);
-
-        } catch (error) {
-          console.error('Hot videos with random recent error:', error);
-          sortCriteria = { hotness: -1 };
-        }
-        break;
-      case 'subscriptions':
-        const { user, userId } = await verifyTokenAndGetUser(token);
-        
-        if (!user) {
-          return c.json({
-            success: false,
-            message: 'Authentication required to view subscriptions',
-            requiresAuth: true
-          }, 401);
-        }
-
-        if (!user.subscriptions || user.subscriptions.length === 0) {
-          return c.json({
-            success: true,
-            videos: [],
-            message: "You haven't subscribed to anyone yet. Subscribe to creators to see their content here!",
-            isEmpty: true,
-            pagination: {
-              currentPage: pageNum,
-              totalPages: 0,
-              totalVideos: 0,
-              hasNextPage: false,
-              hasPrevPage: false,
-              limit: limitNum
-            }
-          }, 200);
-        }
-
-        matchCriteria = { 
-          uploader: { $in: user.subscriptions },
-          isProcessing: false
-        };
-        if (excludedIds.length > 0) {
-          matchCriteria._id = { $nin: excludedIds };
-        }
-        sortCriteria = { createdAt: -1 };
-        break;
-    }
-
-    const videos = await Video.find(matchCriteria)
-      .populate('uploader', 'username avatar avatarColor subscriberCount')
-      .sort(sortCriteria)
-      .limit(limitNum)
-      .skip(skip)
-      .lean();
-
-    if (!videos || videos.length === 0) {
-      let message = 'No videos found';
-      if (sort === 'subscriptions') {
-        message = "No recent videos from your subscriptions. Your subscribed creators haven't posted anything yet.";
+          message: 'No videos available for random selection'
+        }, 404);
       }
 
       return c.json({
         success: true,
-        videos: [],
-        message: message,
-        isEmpty: true
+        redirect: true,
+        videoSlug: randomVideos[0].slug,
+        message: 'Random video selected'
       }, 200);
     }
 
-    const formattedVideos = videos.map(video => ({
-      _id: video._id,
-      title: video.title,
-      description: video.description,
-      slug: video.slug,
-      thumbnail: video.thumbnail,
-      duration: video.duration,
-      views: video.views,
-      likeCount: video.likedBy?.length || 0,
-      dislikeCount: video.dislikedBy?.length || 0,
-      tags: video.tags || [],
-      createdAt: video.createdAt,
-      hotness: video.hotness,
-      uploader: {
-        _id: video.uploader._id,
-        username: video.uploader.username,
-        avatar: video.uploader.avatar,
-        avatarColor: video.uploader.avatarColor,
-        subscriberCount: video.uploader.subscriberCount || 0
+    if (sort === 'subscriptions') {
+      const { user } = await verifyTokenAndGetUser(token);
+      
+      if (!user) {
+        return c.json({
+          success: false,
+          message: 'Authentication required to view subscriptions',
+          requiresAuth: true
+        }, 401);
       }
-    }));
 
-    const totalVideos = await Video.countDocuments(matchCriteria);
-    const totalPages = Math.ceil(totalVideos / limitNum);
-    const hasNextPage = pageNum < totalPages;
-    const hasPrevPage = pageNum > 1;
+      if (!user.subscriptions || user.subscriptions.length === 0) {
+        return c.json({
+          success: true,
+          videos: [],
+          message: "You haven't subscribed to anyone yet. Subscribe to creators to see their content here!",
+          isEmpty: true,
+          pagination: createPaginationResponse(0, pageNum, limitNum)
+        }, 200);
+      }
+
+      let subscriptionsQueryCriteria = { ...baseCriteria, uploader: { $in: user.subscriptions } };
+      let subscriptionsCountCriteria = { ...baseCriteria, uploader: { $in: user.subscriptions } };
+      
+      const subscriptionPipeline = [
+        { $match: subscriptionsQueryCriteria },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limitNum },
+        USER_LOOKUP_STAGE,
+        { $unwind: '$uploader' },
+        { $project: VIDEO_PROJECTION }
+      ];
+      
+      const [videos, totalCount] = await Promise.all([
+        Video.aggregate(subscriptionPipeline),
+        Video.countDocuments(subscriptionsCountCriteria)
+      ]);
+
+      if (!videos || videos.length === 0) {
+        return c.json({
+          success: true,
+          videos: [],
+          message: "No recent videos from your subscriptions. Your subscribed creators haven't posted anything yet.",
+          isEmpty: true,
+          pagination: createPaginationResponse(totalCount, pageNum, limitNum)
+        }, 200);
+      }
+
+      return c.json({
+        success: true,
+        videos: videos,
+        sort: sort,
+        pagination: createPaginationResponse(totalCount, pageNum, limitNum)
+      }, 200);
+    }
+
+    if (sort === 'hot') {
+      let hotMatchCriteria = { ...baseCriteria };
+      if (parsedExcludeIds.length > 0) {
+        hotMatchCriteria._id = { $nin: parsedExcludeIds };
+      }
+      
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const hotPoolSize = limitNum * 5;
+      const recentPoolSize = limitNum * 3;
+      
+      const hotPipeline = [
+        { $match: hotMatchCriteria },
+        { $facet: {
+          hot: [
+            { $sort: { hotness: -1 } },
+            { $limit: hotPoolSize },
+            { $sample: { size: Math.ceil(limitNum * 0.8) } }
+          ],
+          recent: [
+            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            { $sort: { createdAt: -1 } },
+            { $limit: recentPoolSize },
+            { $sample: { size: Math.ceil(limitNum * 0.6) } }
+          ]
+        }},
+        { $project: {
+          hot: 1, 
+          hotIds: { $map: { input: '$hot', as: 'video', in: '$$video._id' } },
+          recent: 1
+        }},
+        { $project: {
+          hot: 1,
+          recentFiltered: {
+            $filter: {
+              input: '$recent',
+              as: 'video',
+              cond: { $not: { $in: ['$$video._id', '$hotIds'] } }
+            }
+          }
+        }},
+        { $project: {
+          combined: { 
+            $concatArrays: [
+              '$hot', 
+              { $slice: ['$recentFiltered', Math.ceil(limitNum * 0.2)] }
+            ]
+          }
+        }},
+        { $unwind: '$combined' },
+        { $replaceRoot: { newRoot: '$combined' } },
+        { $addFields: { randomSort: { $rand: {} } } },
+        { $sort: { randomSort: 1 } },
+        USER_LOOKUP_STAGE,
+        { $unwind: '$uploader' },
+        { $project: VIDEO_PROJECTION },
+        { $limit: limitNum }
+      ];
+
+      let hotResults = await Video.aggregate(hotPipeline);
+
+      if (hotResults.length < limitNum) {
+        const currentVideoIds = hotResults.map(v => v._id);
+        const additionalExcludeIds = [...parsedExcludeIds, ...currentVideoIds];
+        
+        const additionalCriteria = { 
+          ...baseCriteria,
+          _id: { $nin: additionalExcludeIds }
+        };
+        
+        const neededCount = limitNum - hotResults.length;
+        
+        const fallbackPipeline = [
+          { $match: additionalCriteria },
+          { $sort: { hotness: -1, views: -1 } },
+          { $limit: neededCount },
+          USER_LOOKUP_STAGE,
+          { $unwind: '$uploader' },
+          { $project: VIDEO_PROJECTION }
+        ];
+        
+        const additionalResults = await Video.aggregate(fallbackPipeline);
+        hotResults = [...hotResults, ...additionalResults];
+      }
+
+      const totalCount = await Video.countDocuments(hotMatchCriteria);
+
+      return c.json({
+        success: true,
+        videos: hotResults,
+        sort: sort,
+        pagination: createPaginationResponse(totalCount, pageNum, limitNum)
+      }, 200);
+    }
+
+    let standardQueryCriteria = { ...baseCriteria };
+    let standardCountCriteria = { ...baseCriteria };
+
+    let sortOrder = {};
+    switch (sort) {
+      case 'top':
+        sortOrder = { views: -1 };
+        break;
+      case 'recent':
+        sortOrder = { createdAt: -1 };
+        break;
+      default: // Handles 'liked' (mapped to 'top' by frontend) or other unspecific sorts
+        sortOrder = { views: -1 }; 
+    }
+
+    const standardPipeline = [
+      { $match: standardQueryCriteria },
+      { $sort: sortOrder },
+      { $skip: skip },
+      { $limit: limitNum },
+      USER_LOOKUP_STAGE,
+      { $unwind: '$uploader' },
+      { $project: VIDEO_PROJECTION }
+    ];
+    
+    const [videos, totalCount] = await Promise.all([
+      Video.aggregate(standardPipeline),
+      Video.countDocuments(standardCountCriteria)
+    ]);
+
+    if (!videos || videos.length === 0) {
+      return c.json({
+        success: true,
+        videos: [],
+        message: 'No videos found',
+        isEmpty: true,
+        pagination: createPaginationResponse(0, pageNum, limitNum)
+      }, 200);
+    }
 
     return c.json({
       success: true,
-      videos: formattedVideos,
-      sort: sort,
-      pagination: {
-        currentPage: pageNum,
-        totalPages,
-        totalVideos,
-        hasNextPage,
-        hasPrevPage,
-        limit: limitNum
-      }
+      videos,
+      sort,
+      pagination: createPaginationResponse(totalCount, pageNum, limitNum)
     }, 200);
 
   } catch (error) {

@@ -2,10 +2,7 @@ import mongoose from 'mongoose';
 
 const ReplySchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  username: { type: String, required: true },
-  avatar: { type: String, default: 'https://i.pravatar.cc/150?img=1' },
   content: { type: String, required: true },
-  avatarColor: { type: String, default: '#000000' },
   likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now },
@@ -15,9 +12,6 @@ const CommentSchema = new mongoose.Schema({
   contentId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'contentType' },
   contentType: { type: String, enum: ['video', 'image'], required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  username: { type: String, required: true },
-  avatar: { type: String, default: 'https://i.pravatar.cc/150?img=1' },
-  avatarColor: { type: String, default: '#000000' },
   content: { type: String, required: true },
   likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   dislikedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@cloudflare/stream-react": "^1.9.3",
+    "@react-oauth/google": "^0.12.2",
     "@types/video.js": "^7.3.58",
     "clsx": "^2.1.1",
     "framer-motion": "^12.9.2",

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -8,7 +8,7 @@ import { FiFilter, FiSearch } from 'react-icons/fi';
 import config from '@/config.json';
 import { FaPlay, FaImage } from 'react-icons/fa';
 
-const SearchPage = () => {
+const SearchContent = () => {
   const [user, setUser] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -453,6 +453,41 @@ const SearchPage = () => {
         )}
       </div>
     </div>
+  );
+};
+
+const SearchPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#080808] text-white">
+        <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-6 pb-8">
+          <div className="mb-8">
+            <div className="text-[#aaa] mb-6">
+              <span>Loading search...</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            {Array.from({ length: 12 }, (_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-3">
+                  <div className="w-full h-full bg-[#252525] rounded-lg"></div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-9 h-9 bg-[#1a1a1a] rounded-full flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#1a1a1a] rounded w-full mb-2"></div>
+                    <div className="h-3 bg-[#1a1a1a] rounded w-3/4"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 };
 

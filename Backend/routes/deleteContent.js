@@ -30,7 +30,7 @@ const verifyTokenAndGetUser = async (token) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findOne({ email: decoded.email });
-    return user ? user._id : null;
+    return user ? user : null;
   } catch (error) {
     console.error('Token verification failed:', error.message);
     return null;
@@ -110,12 +110,12 @@ const deleteImageFromCloudflare = async (imageUrl) => {
   } catch (error) {
     // Check if it's a 404 error (image already deleted or doesn't exist)
     if (error.response?.status === 404) {
-      console.log(`Image already deleted or doesn't exist in Cloudflare Images: ${imageUrl}`);
-      return true; // Consider it successful since the image is already gone
+      // console.log(`Image already deleted or doesn't exist in Cloudflare Images: ${imageUrl}`);
+      return true;
     }
     
     const errorDetails = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-    console.error(`Error deleting image from Cloudflare Images (${imageUrl}):`, errorDetails);
+    // console.error(`Error deleting image from Cloudflare Images (${imageUrl}):`, errorDetails);
     return false;
   }
 };
@@ -146,8 +146,8 @@ router.delete('/:type/:id', limiter, async (c) => {
       }, 400)
     }
 
-    const userId = await verifyTokenAndGetUser(token)
-    if (!userId) {
+    const user = await verifyTokenAndGetUser(token)
+    if (!user) {
       return c.json({ 
         success: false, 
         message: 'Invalid or expired token' 
@@ -165,10 +165,12 @@ router.delete('/:type/:id', limiter, async (c) => {
       }, 404)
     }
 
-    if (content.uploader.toString() !== userId.toString()) {
+    const isAdmin = user.isAdmin === true;
+    const isUploader = content.uploader.toString() === user._id.toString();
+    if (!isAdmin && !isUploader) {
       return c.json({ 
         success: false, 
-        message: `You can only delete your own ${type}s` 
+        message: `You do not have permission to delete this ${type}` 
       }, 403)
     }
 
@@ -198,11 +200,10 @@ router.delete('/:type/:id', limiter, async (c) => {
     await Model.findByIdAndDelete(id)
 
     if (!cloudflareDeleteSuccess) {
-      console.warn(`${contentName} deleted from database but some Cloudflare files may not have been deleted: ${id}`);
+      // console.warn(`${contentName} deleted from database but some Cloudflare files may not have been deleted: ${id}`);
       return c.json({
         success: true,
-        message: `${contentName} deleted successfully (some files may remain in cloud storage)`,
-        warning: 'Some cloud storage files may not have been deleted'
+        message: `${contentName} deleted successfully`,
       }, 200)
     }
 

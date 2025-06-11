@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import Video from '../models/Video.js'
 import { rateLimiter } from 'hono-rate-limiter'
+import mongoose from 'mongoose'
 
 const router = new Hono()
 
@@ -18,21 +19,14 @@ router.get('/:contentId', limiter, async (c) => {
     const { limit = 12, excludeIds } = c.req.query()
     
     const limitNum = Math.min(parseInt(limit) || 12, 20);
-
     const excludedIds = excludeIds 
-      ? excludeIds.split(',').filter(id => id.trim())
+      ? excludeIds.split(',').filter(id => id.trim()).map(id => new mongoose.Types.ObjectId(id))
       : [];
 
-    let matchCriteria = { 
-      isProcessing: false,
-      _id: { $ne: contentId }
-    };
-    
-    if (excludedIds.length > 0) {
-      matchCriteria._id = { $nin: [...excludedIds, contentId] };
-    }
+    const contentObjectId = new mongoose.Types.ObjectId(contentId);
 
-    const currentVideo = await Video.findById(contentId)
+    const currentVideo = await Video.findById(contentObjectId)
+      .select('_id title uploader tags')
       .populate('uploader', '_id username')
       .lean();
 
@@ -41,81 +35,81 @@ router.get('/:contentId', limiter, async (c) => {
         success: false,
         message: 'Video not found'
       }, 404);
-    }   
-    let relatedVideos = [];
-
-    const sameUploaderCount = Math.ceil(limitNum * 0.5);
-    const sameUploaderVideos = await Video.find({
-      ...matchCriteria,
-      uploader: currentVideo.uploader._id
-    })
-      .populate('uploader', 'username avatar avatarColor subscriberCount')
-      .sort({ createdAt: -1 })
-      .limit(sameUploaderCount)
-      .lean();
-
-    relatedVideos = [...sameUploaderVideos];
-
-    const remainingSlots = limitNum - relatedVideos.length;
-    if (remainingSlots > 0 && currentVideo.tags && currentVideo.tags.length > 0) {
-      const usedVideoIds = relatedVideos.map(v => v._id.toString());
-      
-      const tagBasedVideos = await Video.find({
-        ...matchCriteria,
-        tags: { $in: currentVideo.tags },
-        _id: { $nin: [...excludedIds, contentId, ...usedVideoIds] }
-      })
-        .populate('uploader', 'username avatar avatarColor subscriberCount')
-        .sort({ hotness: -1 })
-        .limit(remainingSlots)
-        .lean();
-
-      relatedVideos = [...relatedVideos, ...tagBasedVideos];
     }
 
-    const stillRemainingSlots = limitNum - relatedVideos.length;
-    if (stillRemainingSlots > 0) {
-      const usedVideoIds = relatedVideos.map(v => v._id.toString());
-      
-      const popularVideos = await Video.find({
-        ...matchCriteria,
-        _id: { $nin: [...excludedIds, contentId, ...usedVideoIds] }
-      })
-        .populate('uploader', 'username avatar avatarColor subscriberCount')
-        .sort({ views: -1 })
-        .limit(stillRemainingSlots)
-        .lean();
-
-      relatedVideos = [...relatedVideos, ...popularVideos];
-    }
-
-    // Format the videos
-    const formattedVideos = relatedVideos.map(video => ({
-      _id: video._id,
-      title: video.title,
-      description: video.description,
-      slug: video.slug,
-      thumbnail: video.thumbnail,
-      duration: video.duration,
-      views: video.views,
-      likeCount: video.likedBy?.length || 0,
-      dislikeCount: video.dislikedBy?.length || 0,
-      tags: video.tags || [],
-      createdAt: video.createdAt,
-      hotness: video.hotness,
-      uploader: {
-        _id: video.uploader._id,
-        username: video.uploader.username,
-        avatar: video.uploader.avatar,
-        avatarColor: video.uploader.avatarColor,
-        subscriberCount: video.uploader.subscriberCount || 0
+    const relatedPipeline = [
+      {
+        $match: {
+          isProcessing: false,
+          _id: { 
+            $nin: [contentObjectId, ...excludedIds]
+          }
+        }
+      },
+      {
+        $addFields: {
+          relevanceScore: {
+            $add: [
+              { $cond: [{ $eq: ['$uploader', currentVideo.uploader._id] }, 50, 0] },
+              { 
+                $multiply: [
+                  { $size: { $setIntersection: ['$tags', currentVideo.tags || []] } },
+                  20
+                ]
+              },
+              { $multiply: [{ $ifNull: ['$hotness', 0] }, 5] },
+              { $multiply: [{ $divide: [{ $ifNull: ['$views', 0] }, 1000] }, 1] }
+            ]
+          }
+        }
+      },
+      { $sort: { relevanceScore: -1, createdAt: -1 } },
+      { $limit: limitNum },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploader',
+          foreignField: '_id',
+          as: 'uploader',
+          pipeline: [
+            { 
+              $project: { 
+                _id: 1, 
+                username: 1, 
+                avatar: 1, 
+                avatarColor: 1, 
+                subscriberCount: 1 
+              } 
+            }
+          ]
+        }
+      },
+      { $unwind: '$uploader' },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          slug: 1,
+          thumbnail: 1,
+          duration: 1,
+          views: 1,
+          likeCount: { $size: { $ifNull: ['$likedBy', []] } },
+          dislikeCount: { $size: { $ifNull: ['$dislikedBy', []] } },
+          tags: { $ifNull: ['$tags', []] },
+          createdAt: 1,
+          hotness: { $ifNull: ['$hotness', 0] },
+          uploader: 1
+        }
       }
-    }));
+    ];
+
+    const relatedVideos = await Video.aggregate(relatedPipeline);
 
     return c.json({
       success: true,
-      videos: formattedVideos,
-      total: formattedVideos.length,
+      videos: relatedVideos,
+      total: relatedVideos.length,
       currentVideo: {
         id: currentVideo._id,
         title: currentVideo.title,

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FiUpload, FiEdit2, FiLogOut } from "react-icons/fi";
@@ -7,12 +7,10 @@ import { RiVideoLine, RiImageLine, RiUser3Line } from "react-icons/ri";
 import { Toaster, toast } from "sonner";
 import { MdFavoriteBorder } from "react-icons/md";
 import { TbUsers } from "react-icons/tb";
-import { FaBell } from "react-icons/fa";
 import NavBar from "../../components/NavBar";
 import ProfileImageGrid from "../../components/ProfileImageGrid";
 import ProfileVideoGrid from "../../components/ProfileVideoGrid";
 import SubscriptionGrid from "../../components/SubscriptionGrid";
-// import { Toaster, toast } from "sonner";
 import config from "../../config.json";
 import useUserAvatar from "../../hooks/useUserAvatar";
 
@@ -21,23 +19,27 @@ const calculateLikePercentage = (likeCount = 0, dislikeCount = 0) => {
   return Math.round((likeCount / (likeCount + dislikeCount)) * 100);
 };
 
-const ProfilePage = () => {
+const ProfileContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const username = searchParams.get('user');
+  const usernameParam = searchParams.get('user');
   
   const [activeTab, setActiveTab] = useState("general");
   const [isEditingBio, setIsEditingBio] = useState(false);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [bio, setBio] = useState("");
+  const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isHoveringPfp, setIsHoveringPfp] = useState(false);
+  const [isHoveringUsername, setIsHoveringUsername] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const fileInputRef = useRef(null);
   const bioTextareaRef = useRef(null);
+  const usernameInputRef = useRef(null);
   const [fadeInOut, setFadeInOut] = useState(false);
   const [updateData, setUpdateData] = useState(false);
   const { avatarUrl } = useUserAvatar(profileData);
@@ -50,6 +52,10 @@ const ProfilePage = () => {
 
   const handleTabChange = (tabId) => {
     if (tabId === activeTab) return;
+    if (tabId === "admin") {
+      router.push('/admin');
+      return;
+    }
     
     setFadeInOut(true);
 
@@ -158,16 +164,78 @@ const ProfilePage = () => {
           ...prev,
           bio: data.bio
         }));
-        // toast('Bio updated successfully!');
+        toast('Bio updated successfully!');
       } else {
         console.error('Failed to update bio:', data.message);
-        // toast.error(data.message || 'Failed to update bio');
+        toast.error(data.message || 'Failed to update bio');
         setBio(profileData.bio || "");
       }
     } catch (error) {
       console.error('Failed to update bio:', error);
-      // toast.error('Failed to update bio');
+      toast.error('Failed to update bio');
       setBio(profileData.bio || "");
+    }
+  };
+
+  const handleUsernameSubmit = async () => {
+    if (!isOwnProfile) return;
+    
+    setIsEditingUsername(false);
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      toast.error('Username cannot be empty');
+      setUsername(profileData.username);
+      return;
+    }
+    
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 16) {
+      toast.error('Username must be 3-16 characters long');
+      setUsername(profileData.username);
+      return;
+    }
+    
+    if (!/^[a-zA-Z0-9]+$/.test(trimmedUsername)) {
+      toast.error('Username can only contain letters and numbers');
+      setUsername(profileData.username);
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Authentication required. Please log in again.');
+        setUsername(profileData.username);
+        return;
+      }
+
+      const response = await fetch(`${config.url}/api/updateUsername`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          token,
+          username: trimmedUsername
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileData(prev => ({
+          ...prev,
+          username: data.username
+        }));
+        toast.success('Username updated successfully!');
+      } else {
+        console.error('Failed to update username:', data.message);
+        toast.error(data.message || 'Failed to update username');
+        setUsername(profileData.username);
+      }
+    } catch (error) {
+      console.error('Failed to update username:', error);
+      toast.error('Network error. Please check your connection and try again.');
+      setUsername(profileData.username);
     }
   };
 
@@ -184,11 +252,17 @@ const ProfilePage = () => {
   }, [isEditingBio]);
 
   useEffect(() => {
+    if (isEditingUsername && usernameInputRef.current) {
+      usernameInputRef.current.focus();
+    }
+  }, [isEditingUsername]);
+
+  useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const token = username ? null : localStorage.getItem('token');
+        const token = usernameParam ? null : localStorage.getItem('token');
 
-        if (!token && !username) {
+        if (!token && !usernameParam) {
           router.push('/');
           return;
         }
@@ -203,7 +277,7 @@ const ProfilePage = () => {
           },
           body: JSON.stringify({ 
             token,
-            username: username || null
+            username: usernameParam || null
           }),
         });
 
@@ -243,7 +317,7 @@ const ProfilePage = () => {
     };
 
     fetchProfileData();
-  }, [username, router, updateData]);
+  }, [usernameParam, router, updateData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -261,6 +335,11 @@ const ProfilePage = () => {
     { id: "subscriptions", label: "Subs", icon: <TbUsers /> },
     // { id: "liked", label: "Liked", icon: <MdFavoriteBorder /> },
   ];
+
+  // Add Admin category only for own profile if user is admin
+  if (isOwnProfile && profileData?.isAdmin) {
+    categories.push({ id: "admin", label: "Admin", icon: <RiUser3Line /> });
+  }
 
   if (isLoading) {
     return (
@@ -347,6 +426,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-[#080808] text-white">
       <NavBar user={user} setUser={setUser} />
+      <Toaster theme="dark" position="bottom-right" richColors />
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
         <div className="flex justify-between items-center">
@@ -454,12 +534,70 @@ const ProfilePage = () => {
                 {/* Profile Info */}
                 <div className="flex-1 text-center md:text-left w-full">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <h1 className="text-2xl md:text-2xl font-pop font-bold text-white">
-                      @{profileData.username}
-                    </h1>
+                    {/* Username display/edit */}
+                    {isEditingUsername ? (
+                      <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-auto">
+                        <span className="text-2xl font-pop font-bold text-white">@</span>
+                        <input
+                          ref={usernameInputRef}
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="text-2xl font-pop font-bold bg-[#1a1a1a] text-white border border-[#3a3a3a] focus:border-[#ea4197] focus:outline-none rounded-md px-2 py-1 min-w-0 flex-1"
+                          placeholder="Enter username"
+                          maxLength={16}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleUsernameSubmit();
+                            } else if (e.key === 'Escape') {
+                              setUsername(profileData.username);
+                              setIsEditingUsername(false);
+                            }
+                          }}
+                        />
+                        <div className="flex gap-1 ml-2">
+                          <button
+                            onClick={() => {
+                              setUsername(profileData.username);
+                              setIsEditingUsername(false);
+                            }}
+                            className="px-2 py-1 text-sm bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-md transition-colors"
+                          >
+                            ✕
+                          </button>
+                          <button
+                            onClick={handleUsernameSubmit}
+                            className="px-2 py-1 text-sm bg-[#ea4197] hover:bg-[#d03884] rounded-md transition-colors"
+                          >
+                            ✓
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className={`flex items-center justify-center md:justify-start gap-2 ${isOwnProfile ? 'cursor-pointer group' : ''}`}
+                        onMouseEnter={() => isOwnProfile && setIsHoveringUsername(true)}
+                        onMouseLeave={() => isOwnProfile && setIsHoveringUsername(false)}
+                        onClick={isOwnProfile ? () => {
+                          setUsername(profileData.username);
+                          setIsEditingUsername(true);
+                        } : undefined}
+                      >
+                        <h1 className="text-2xl font-pop font-bold text-white">
+                          @{profileData.username}
+                        </h1>
+                        {isOwnProfile && (
+                          <>
+                            <div className={`hidden md:flex items-center gap-1 transition-opacity duration-200 ${isHoveringUsername ? 'opacity-100' : 'opacity-0'}`}>
+                              <FiEdit2 size={16} className="text-white/60 group-hover:text-white/90" />
+                              <span className="text-xs text-white/60 group-hover:text-white/90">Edit Username</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap gap-4 justify-center md:justify-start lg:mb-3 mb-4 mt-0 lg:mt-2">
+                  <div className="flex flex-wrap gap-4 justify-center md:justify-start lg:mb-3 mb-4 mt-2 lg:mt-2">
                     <div className="text-white/70">
                       <span className="text-white font-bold">
                         {profileData.subscriberCount}
@@ -525,15 +663,39 @@ const ProfilePage = () => {
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-end mt-2.5">
+                    <div className="flex items-center justify-end mt-2.5 gap-4">
                       {!isEditingBio && isOwnProfile && (
-                        <button
-                          onClick={() => setIsEditingBio(true)}
-                          className="flex cursor-pointer items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
-                        >
-                          <FiEdit2 size={12} />
-                          Edit bio
-                        </button>
+                        <>
+                          {/* Mobile edit buttons - show both together */}
+                          <div className="flex md:hidden items-center gap-4">
+                            <button
+                              onClick={() => {
+                                setUsername(profileData.username);
+                                setIsEditingUsername(true);
+                              }}
+                              className="flex items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
+                            >
+                              <FiEdit2 size={12} />
+                              Edit Username
+                            </button>
+                            <button
+                              onClick={() => setIsEditingBio(true)}
+                              className="flex items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
+                            >
+                              <FiEdit2 size={12} />
+                              Edit Bio
+                            </button>
+                          </div>
+                          
+                          {/* Desktop edit bio button only */}
+                          <button
+                            onClick={() => setIsEditingBio(true)}
+                            className="hidden md:flex cursor-pointer items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
+                          >
+                            <FiEdit2 size={12} />
+                            Edit bio
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -745,6 +907,66 @@ const ProfilePage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ProfilePage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#080808] text-white">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="hidden md:block w-64 shrink-0">
+              <div className="bg-[#121212] rounded-xl p-4">
+                {[...Array(5)].map((_, index) => (
+                  <div 
+                    key={index} 
+                    className="h-10 bg-[#1a1a1a] rounded-lg mb-1 animate-pulse"
+                  ></div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                  <div className="w-24 h-24 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+                  <div className="flex-1 w-full">
+                    <div className="h-8 bg-[#1a1a1a] rounded-lg w-40 mb-4 animate-pulse"></div>
+                    <div className="flex gap-4 mb-4">
+                      <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
+                      <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                    </div>
+                    <div className="h-28 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-16">
+                <div className="h-8 bg-[#1a1a1a] rounded-lg w-48 mb-6 animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[...Array(2)].map((_, index) => (
+                    <div key={index} className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
+                      <div className="h-6 bg-[#1a1a1a] rounded w-32 mb-4 animate-pulse"></div>
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="flex justify-between">
+                            <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
+                            <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ProfileContent />
+    </Suspense>
   );
 };
 

@@ -40,7 +40,6 @@ const UploadPageContent = () => {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -115,9 +114,21 @@ const UploadPageContent = () => {
     setDescription("");
     setTags("");
     setIsUploading(false);
-    setUploadProgress(0);
     setIsDragging(false);
     setThumbnailFile(null);
+    setVideoDuration(null);
+    setGalleryFiles([]);
+    setSelectedThumbnailIndex(0);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    if (replaceInputRef.current) {
+      replaceInputRef.current.value = '';
+    }
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = '';
+    }
   };
 
   useEffect(() => {
@@ -378,6 +389,15 @@ const UploadPageContent = () => {
     }
   };
 
+  const isUploadReady = () => {
+    if (uploadType === "photo") {
+      return galleryFiles.length > 0 && title.trim() && description.trim();
+    } else if (uploadType === "video") {
+      return fileSelected && title.trim() && description.trim();
+    }
+    return false;
+  };
+
   const handleUpload = async () => {
     if (!isAuthenticated) {
       toast.error("Authentication failed. Please log in again.");
@@ -393,19 +413,34 @@ const UploadPageContent = () => {
     }
 
     if (uploadType === "photo") {
-      if (galleryFiles.length === 0 || !title || !description) {
-        toast.error("Please select at least one image and add a title and description");
+      if (galleryFiles.length === 0) {
+        toast.error("Please select at least one image to upload");
+        return;
+      }
+      if (!title.trim()) {
+        toast.error("Please enter a title for your upload");
+        return;
+      }
+      if (!description.trim()) {
+        toast.error("Please write a description for your upload");
         return;
       }
     } else if (uploadType === "video") {
-      if (!fileSelected || !title || !description) {
-        toast.error("Please select a video file and add a title and description");
+      if (!fileSelected) {
+        toast.error("Please select a video file to upload");
+        return;
+      }
+      if (!title.trim()) {
+        toast.error("Please enter a title for your video");
+        return;
+      }
+      if (!description.trim()) {
+        toast.error("Please write a description for your video");
         return;
       }
     }
 
     setIsUploading(true);
-    setUploadProgress(0);
 
     toast.loading("Uploading your content...", {
       id: "upload-toast",
@@ -434,16 +469,6 @@ const UploadPageContent = () => {
       });
     }
 
-    let currentProgress = 0;
-    const progressInterval = setInterval(() => {
-      currentProgress += Math.random() * 5 + 2;
-      if (currentProgress < 95) {
-        setUploadProgress(Math.min(currentProgress, 95));
-      } else {
-        clearInterval(progressInterval);
-      }
-    }, 200);
-
     try {
       const apiEndpoint = uploadType === "photo" ? "/api/uploadImage" : "/api/uploadVideo";
       
@@ -452,15 +477,12 @@ const UploadPageContent = () => {
         body: formData,
       });
 
-      clearInterval(progressInterval);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error during upload." }));
         throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
       }
 
       const result = await response.json();
-      setUploadProgress(100);
 
       if (result.success) {
         toast.success(`${uploadType === "photo" ? "Images" : "Video"} uploaded successfully!`, {
@@ -475,8 +497,6 @@ const UploadPageContent = () => {
       }
     } catch (error) {
       console.error("Upload failed:", error);
-      clearInterval(progressInterval);
-      setUploadProgress(0);
       toast.error(`Upload failed: ${error.message}`, {
         id: "upload-toast",
         duration: 5000,
@@ -902,30 +922,17 @@ const UploadPageContent = () => {
               </div>
             )}
 
-            {isUploading && (
-              <div>
-                <div className="flex justify-between text-sm text-[#cccccc] mb-2">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <div className="w-full h-2 bg-[#101010] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#ea4197] to-[#f27a51] transition-all duration-300 ease-out"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
             <button
               onClick={handleUpload}
-              disabled={!fileSelected || !title || isUploading || !description}
+              disabled={isUploading}
               className={`
                 w-full py-3 px-6 rounded-lg flex items-center justify-center font-medium text-base mt-4
                 ${
-                  !fileSelected || !title || isUploading
+                  isUploading
                     ? "bg-[#4a4a4a] text-[#a0a0a0] cursor-not-allowed"
-                    : "bg-[#ea4197] hover:bg-[#f54da7] text-white transition-all duration-200"
+                    : isUploadReady()
+                    ? "bg-[#ea4197] hover:bg-[#f54da7] text-white transition-all duration-200"
+                    : "bg-[#4a4a4a] text-[#a0a0a0] cursor-pointer hover:bg-[#5a5a5a] transition-all duration-200"
                 }
               `}
             >

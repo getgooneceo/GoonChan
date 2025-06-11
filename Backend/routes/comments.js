@@ -20,7 +20,7 @@ const commentLimiter = rateLimiter({
 
 const postLimiter = rateLimiter({
   windowMs: 5 * 60 * 1000,
-  limit: 20,
+  limit: 200,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (c) => c.req.header('x-forwarded-for') || c.req.ip,
@@ -119,7 +119,7 @@ router.post('/action', commentLimiter, async (c) => {
       }
 
       if (action === 'delete') {
-        if (reply.user.toString() !== userId.toString()) {
+        if (reply.user.toString() !== userId.toString() && !user.isAdmin) {
           return c.json({
             success: false,
             message: 'You can only delete your own replies'
@@ -171,7 +171,7 @@ router.post('/action', commentLimiter, async (c) => {
     }
 
     if (action === 'delete') {
-      if (comment.user.toString() !== userId.toString()) {
+      if (comment.user.toString() !== userId.toString() && !user.isAdmin) {
         return c.json({
           success: false,
           message: 'You can only delete your own comments'
@@ -262,9 +262,6 @@ router.post('/:commentId/reply', postLimiter, async (c) => {
 
     const newReply = {
       user: user._id,
-      username: user.username,
-      avatar: user.avatar,
-      avatarColor: user.avatarColor,
       content: sanitizedContent,
       likedBy: [],
       dislikedBy: [],
@@ -279,9 +276,9 @@ router.post('/:commentId/reply', postLimiter, async (c) => {
     const formattedReply = {
       _id: addedReply._id,
       user: addedReply.user,
-      username: addedReply.username,
-      avatar: addedReply.avatar,
-      avatarColor: addedReply.avatarColor,
+      username: user.username,
+      avatar: user.avatar,
+      avatarColor: user.avatarColor,
       content: addedReply.content,
       likeCount: 0,
       dislikeCount: 0,
@@ -358,14 +355,16 @@ router.get('/:contentType/:contentId', commentLimiter, async (c) => {
     .sort(sortCriteria)
     .limit(limitNum)
     .skip(skip)
+    .populate('user', 'username avatar avatarColor')
+    .populate('replies.user', 'username avatar avatarColor')
     .lean();
 
     const formattedComments = comments.map(comment => ({
       _id: comment._id,
-      user: comment.user,
-      username: comment.username,
-      avatar: comment.avatar,
-      avatarColor: comment.avatarColor,
+      user: comment.user._id,
+      username: comment.user.username,
+      avatar: comment.user.avatar,
+      avatarColor: comment.user.avatarColor,
       content: comment.content,
       likeCount: comment.likedBy?.length || 0,
       dislikeCount: comment.dislikedBy?.length || 0,
@@ -377,10 +376,10 @@ router.get('/:contentType/:contentId', commentLimiter, async (c) => {
 
       replies: comment.replies?.map(reply => ({
         _id: reply._id,
-        user: reply.user,
-        username: reply.username,
-        avatar: reply.avatar,
-        avatarColor: reply.avatarColor,
+        user: reply.user._id,
+        username: reply.user.username,
+        avatar: reply.user.avatar,
+        avatarColor: reply.user.avatarColor,
         content: reply.content,
         likeCount: reply.likedBy?.length || 0,
         dislikeCount: reply.dislikedBy?.length || 0,
@@ -463,9 +462,6 @@ router.post('/:contentType/:contentId', postLimiter, async (c) => {
       contentId,
       contentType,
       user: user._id,
-      username: user.username,
-      avatar: user.avatar,
-      avatarColor: user.avatarColor,
       content: sanitizedContent,
       likedBy: [],
       dislikedBy: [],
@@ -477,9 +473,9 @@ router.post('/:contentType/:contentId', postLimiter, async (c) => {
     const formattedComment = {
       _id: newComment._id,
       user: newComment.user,
-      username: newComment.username,
-      avatar: newComment.avatar,
-      avatarColor: newComment.avatarColor,
+      username: user.username,
+      avatar: user.avatar,
+      avatarColor: user.avatarColor,
       content: newComment.content,
       likeCount: 0,
       dislikeCount: 0,

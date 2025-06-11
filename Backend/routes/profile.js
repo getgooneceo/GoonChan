@@ -83,6 +83,7 @@ router.post('/', limiter, async (c) => {
       avatar: user.avatar,
       avatarColor: user.avatarColor,
       createdAt: user.createdAt,
+      isAdmin: user.isAdmin || false,
       subscriberCount: user.subscriberCount || 0,
       totalUploads: videos.length + images.length,
       totalViews,

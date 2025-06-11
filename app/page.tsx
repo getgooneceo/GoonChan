@@ -1,12 +1,13 @@
 'use client'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import NavBar from "@/components/NavBar";
 import VideoCard from "@/components/VideoGrid";
 import ImageGrid from "@/components/ImageGrid";
+import Footer from "@/components/Footer";
 import { useRouter, useSearchParams } from "next/navigation";
 import config from "../config.json"
 
-export default function Home() {
+function HomeContent() {
   const [user, setUser] = useState(null);
   const [activeCategory, setActiveCategory] = useState("discover");
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -37,9 +38,9 @@ export default function Home() {
 
   useEffect(() => {
     if (activeCategory === "images") {
-      fetchDiscoverImages();
+      fetchDiscoverImages(1, []);
     } else {
-      fetchVideosForCategory(activeCategory);
+      fetchVideosForCategory(activeCategory, 1, []);
     }
   }, [activeCategory]);
 
@@ -54,6 +55,17 @@ export default function Home() {
 
   const fetchVideosForCategory = async (category: string, page: number = 1, excludeIds: string[] = []) => {
     try {
+      if (category === 'subscriptions') {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setVideoData([]);
+          setVideoPagination(null);
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+      }
+
       if (page === 1) {
         setLoading(true);
       } else {
@@ -73,11 +85,13 @@ export default function Home() {
       const sortParam = sortMapping[category] || 'hot';
       const url = new URL(`${config.url}/api/discover`);
       
-      url.searchParams.append('limit', '12');
+      url.searchParams.append('limit', '20');
       url.searchParams.append('page', page.toString());
       url.searchParams.append('sort', sortParam);
-      if (excludeIds.length > 0) {
-        url.searchParams.append('excludeIds', excludeIds.join(','));
+
+      const allExcludeIds = page > 1 ? Array.from(viewedVideoIds) : excludeIds;
+      if (allExcludeIds.length > 0) {
+        url.searchParams.append('excludeIds', allExcludeIds.join(','));
       }
 
       if (category === 'subscriptions') {
@@ -97,14 +111,16 @@ export default function Home() {
         }
         
         if (data.videos) {
+          const newVideos = data.videos.filter((video: any) => !viewedVideoIds.has(video._id));
+          
           if (page === 1) {
-            setVideoData(data.videos);
-            setViewedVideoIds(new Set(data.videos.map((video: any) => video._id)));
+            setVideoData(newVideos);
+            setViewedVideoIds(new Set(newVideos.map((video: any) => video._id)));
           } else {
-            setVideoData(prev => [...prev, ...data.videos]);
+            setVideoData(prev => [...prev, ...newVideos]);
             setViewedVideoIds(prev => {
               const newSet = new Set(prev);
-              data.videos.forEach((video: any) => newSet.add(video._id));
+              newVideos.forEach((video: any) => newSet.add(video._id));
               return newSet;
             });
           }
@@ -146,25 +162,28 @@ export default function Home() {
 
       const url = new URL(`${config.url}/api/discoverImages`);
       
-      url.searchParams.append('limit', '12');
+      url.searchParams.append('limit', '20');
       url.searchParams.append('page', page.toString());
 
-      if (excludeIds.length > 0) {
-        url.searchParams.append('excludeIds', excludeIds.join(','));
+      const allExcludeIds = page > 1 ? Array.from(viewedImageIds) : excludeIds;
+      if (allExcludeIds.length > 0) {
+        url.searchParams.append('excludeIds', allExcludeIds.join(','));
       }
 
       const response = await fetch(url.toString());
       const data = await response.json();
 
       if (data.success && data.images) {
+        const newImages = data.images.filter((image: any) => !viewedImageIds.has(image._id));
+        
         if (page === 1) {
-          setImageData(data.images);
-          setViewedImageIds(new Set(data.images.map((image: any) => image._id)));
+          setImageData(newImages);
+          setViewedImageIds(new Set(newImages.map((image: any) => image._id)));
         } else {
-          setImageData(prev => [...prev, ...data.images]);
+          setImageData(prev => [...prev, ...newImages]);
           setViewedImageIds(prev => {
             const newSet = new Set(prev);
-            data.images.forEach((image: any) => newSet.add(image._id));
+            newImages.forEach((image: any) => newSet.add(image._id));
             return newSet;
           });
         }
@@ -189,19 +208,18 @@ export default function Home() {
       }
     }
   };
+  
   const loadMoreVideos = () => {
     if (videoPagination && videoPagination.hasNextPage && !loading && !loadingMore) {
       const nextPage = currentVideoPage + 1;
-      const excludeIds = Array.from(viewedVideoIds);
-      fetchVideosForCategory(activeCategory, nextPage, excludeIds);
+      fetchVideosForCategory(activeCategory, nextPage, []);
     }
   };
 
   const loadMoreImages = () => {
     if (imagePagination && imagePagination.hasNextPage && !loading && !loadingMore) {
       const nextPage = currentImagePage + 1;
-      const excludeIds = Array.from(viewedImageIds);
-      fetchDiscoverImages(nextPage, excludeIds);
+      fetchDiscoverImages(nextPage, []);
     }
   };
 
@@ -232,21 +250,29 @@ export default function Home() {
 
   const renderVideoSkeletons = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-      {Array.from({ length: 12 }, (_, index) => (
-        <div key={`skeleton-${index}`} className="animate-pulse">
-          <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-2">
-            <div className="w-full h-full bg-[#252525] rounded-lg"></div>
+      {Array.from({ length: 20 }, (_, index) => (
+        <div key={`skeleton-${index}`} className="">
+          <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010] animate-pulse">
+            <div className="w-full h-full bg-[#1a1a1a]"></div>
           </div>
 
-          <div className="space-y-2">
-            <div className="h-4 bg-[#1a1a1a] rounded w-full"></div>
-            <div className="h-4 bg-[#1a1a1a] rounded w-3/4"></div>
-          </div>
+          <div className="flex mt-3 gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+            </div>
 
-          <div className="flex items-center mt-2 space-x-2">
-            <div className="h-3 bg-[#1a1a1a] rounded w-20"></div>
-            <div className="h-3 bg-[#1a1a1a] rounded w-16"></div>
-            <div className="h-3 bg-[#1a1a1a] rounded w-12"></div>
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="space-y-1">
+                <div className="h-4 bg-[#1a1a1a] rounded w-full animate-pulse"></div>
+                <div className="h-4 bg-[#1a1a1a] rounded w-3/4 animate-pulse"></div>
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="h-3 bg-[#1a1a1a] rounded w-16 animate-pulse"></div>
+                <div className="h-3 bg-[#1a1a1a] rounded w-12 animate-pulse"></div>
+                <div className="h-3 bg-[#1a1a1a] rounded w-8 animate-pulse"></div>
+              </div>
+            </div>
           </div>
         </div>
       ))}
@@ -326,7 +352,7 @@ export default function Home() {
                 <button
                   onClick={loadMoreImages}
                   disabled={loading || loadingMore}
-                  className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium"
+                  className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
                 >
                   {loadingMore ? 'Loading...' : 'Load More Images'}
                 </button>
@@ -343,7 +369,11 @@ export default function Home() {
         if (videoData.length === 0 && !isCurrentlyLoading && !error) {
           let emptyMessage = "No videos found";
           if (activeCategory === "subscriptions") {
-            emptyMessage = "No videos from your subscriptions. Subscribe to creators to see their content here!";
+            if(!user){
+              emptyMessage = "Please log in to see videos from your subscriptions.";
+            } else {
+              emptyMessage = "No videos from your subscriptions. Subscribe to creators to see their content here!";
+            }
           } else if (activeCategory === "liked") {
             emptyMessage = "No highly liked videos found";
           } else if (activeCategory === "recent") {
@@ -376,7 +406,7 @@ export default function Home() {
                 <button
                   onClick={loadMoreVideos}
                   disabled={loading || loadingMore}
-                  className="px-6 py-3 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 font-medium"
+                  className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
                 >
                   {loadingMore ? 'Loading...' : 'Load More Videos'}
                 </button>
@@ -422,8 +452,54 @@ export default function Home() {
           >
             {renderContent()}
           </div>
+          <Footer />
         </div>
       </div>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="bg-[#080808] min-h-screen w-full">
+        <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-2 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            {Array.from({ length: 20 }, (_, index) => (
+              <div key={`skeleton-${index}`} className="">
+                <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010] animate-pulse">
+                  <div className="w-full h-full bg-[#1a1a1a]"></div>
+                  
+                  <div className="absolute bottom-2 right-2 bg-black/80 rounded">
+                    <div className="h-4 w-8 bg-[#252525] rounded"></div>
+                  </div>
+                </div>
+
+                <div className="flex mt-3 gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="space-y-1">
+                      <div className="h-4 bg-[#1a1a1a] rounded w-full animate-pulse"></div>
+                      <div className="h-4 bg-[#1a1a1a] rounded w-3/4 animate-pulse"></div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="h-3 bg-[#1a1a1a] rounded w-16 animate-pulse"></div>
+                      <div className="h-3 bg-[#1a1a1a] rounded w-12 animate-pulse"></div>
+                      <div className="h-3 bg-[#1a1a1a] rounded w-8 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -16,13 +16,13 @@ const limiter = rateLimiter({
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const verifyTokenAndGetUser = async (token) => {
+const verifyTokenAndGetUserId = async (token) => {
   if (!token) return null;
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findOne({ email: decoded.email });
-    return user ? user._id : null;
+    const user = await User.findOne({ email: decoded.email }).select('_id subscriptions').lean();
+    return user || null;
   } catch (error) {
     console.error('Token verification failed:', error.message);
     return null;
@@ -41,7 +41,51 @@ router.get('/:slug', limiter, async (c) => {
       }, 400)
     }
 
-    const video = await Video.findOne({ slug }).populate('uploader', 'username avatar avatarColor subscriberCount')
+    const pipeline = [
+      { $match: { slug } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'uploader',
+          foreignField: '_id',
+          as: 'uploader',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                username: 1,
+                avatar: 1,
+                avatarColor: 1,
+                subscriberCount: 1
+              }
+            }
+          ]
+        }
+      },
+      { $unwind: '$uploader' },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          slug: 1,
+          videoUrl: 1,
+          thumbnail: 1,
+          duration: 1,
+          views: 1,
+          likeCount: { $size: { $ifNull: ['$likedBy', []] } },
+          dislikeCount: { $size: { $ifNull: ['$dislikedBy', []] } },
+          tags: { $ifNull: ['$tags', []] },
+          cloudflareStreamId: 1,
+          createdAt: 1,
+          uploader: 1,
+          likedBy: 1,
+          dislikedBy: 1
+        }
+      }
+    ];
+
+    const [video] = await Video.aggregate(pipeline);
     
     if (!video) {
       return c.json({ 
@@ -50,66 +94,59 @@ router.get('/:slug', limiter, async (c) => {
       }, 404)
     }
 
-    await Video.findByIdAndUpdate(video._id, { $inc: { views: 1 } })
+    Video.findByIdAndUpdate(video._id, { $inc: { views: 1 } }).exec();
 
     let userInteractionStatus = null;
     let userSubscriptionStatus = null;
     
     if (token) {
-      const userId = await verifyTokenAndGetUser(token);
-      if (userId) {
-        const isLiked = video.likedBy.includes(userId);
-        const isDisliked = video.dislikedBy.includes(userId);
+      const currentUser = await verifyTokenAndGetUserId(token);
+      if (currentUser) {
+        const isLiked = video.likedBy.some(id => id.equals(currentUser._id));
+        const isDisliked = video.dislikedBy.some(id => id.equals(currentUser._id));
         
         userInteractionStatus = {
           isLiked,
           isDisliked
         };
 
-        const currentUser = await User.findById(userId);
-        if (currentUser && video.uploader._id) {
-          const isSubscribed = currentUser.subscriptions.includes(video.uploader._id);
-          userSubscriptionStatus = {
-            isSubscribed,
-            canSubscribe: userId.toString() !== video.uploader._id.toString()
-          };
-        }
+        const isSubscribed = currentUser.subscriptions.some(id => id.equals(video.uploader._id));
+        userSubscriptionStatus = {
+          isSubscribed,
+          canSubscribe: !currentUser._id.equals(video.uploader._id)
+        };
       }
     }
 
-    const videoResponse = {
-      _id: video._id,
-      title: video.title,
-      description: video.description,
-      slug: video.slug,
-      videoUrl: video.videoUrl,
-      thumbnail: video.thumbnail,
-      duration: video.duration,
-      views: video.views + 1,
-      likeCount: video.likedBy.length,
-      dislikeCount: video.dislikedBy.length,
-      tags: video.tags || [],
-      cloudflareStreamId: video.cloudflareStreamId,
-      createdAt: video.createdAt,
-      uploader: {
-        _id: video.uploader._id,
-        username: video.uploader.username,
-        avatar: video.uploader.avatar,
-        avatarColor: video.uploader.avatarColor,
-        subscriberCount: video.uploader.subscriberCount || 0
-      },
+    const { likedBy, dislikedBy, ...videoResponse } = video;
+
+    const response = {
+      _id: videoResponse._id,
+      title: videoResponse.title,
+      description: videoResponse.description,
+      slug: videoResponse.slug,
+      videoUrl: videoResponse.videoUrl,
+      thumbnail: videoResponse.thumbnail,
+      duration: videoResponse.duration,
+      views: videoResponse.views + 1,
+      likeCount: videoResponse.likeCount,
+      dislikeCount: videoResponse.dislikeCount,
+      tags: videoResponse.tags,
+      cloudflareStreamId: videoResponse.cloudflareStreamId,
+      createdAt: videoResponse.createdAt,
+      uploader: videoResponse.uploader,
       ...(userInteractionStatus && { userInteractionStatus }),
       ...(userSubscriptionStatus && { userSubscriptionStatus })
     }
     
     return c.json({
       success: true,
-      video: videoResponse
+      video: response
     }, 200)
     
   } catch (error) {
     console.error('Video retrieval error:', error)
-    return c.json({ success: false, message: 'Server error', error: error.message }, 500)
+    return c.json({ success: false, message: 'Server error' }, 500)
   }
 })
 

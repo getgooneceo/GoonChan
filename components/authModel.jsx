@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import "remixicon/fonts/remixicon.css";
 import { Toaster, toast } from "sonner";
+import { useGoogleLogin } from '@react-oauth/google';
 import config from "../config.json";
 
 const AuthModel = ({ setShowAuthModel, setUser }) => {
@@ -140,9 +141,81 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
     };
   }, []);
 
-  const googleLogin = () => {
-    // To be implemented
-  };
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (response) => {
+      try {
+        setIsVerifying(true);
+
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${response.access_token}`,
+          },
+        });
+
+        if (!userInfoResponse.ok) {
+          throw new Error(`HTTP error! status: ${userInfoResponse.status}`);
+        }
+
+        const googleUserData = await userInfoResponse.json();
+
+        const serverResponse = await fetch(`${config.url}/api/google-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(googleUserData),
+        });
+
+        if (!serverResponse.ok) {
+          console.error(`Server responded with status: ${serverResponse.status}`);
+        }
+
+        const text = await serverResponse.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error('Failed to parse response as JSON:', text);
+          throw new Error('Invalid JSON response from server');
+        }
+
+        setIsVerifying(false);
+
+        if (data.success) {
+          if (data.user && data.user.token) {
+            localStorage.setItem('token', data.user.token);
+            setUser(data.user);
+          }
+
+          toast.success(data.message || 'Login successful!', {
+            position: 'bottom-right',
+          });
+
+          setTimeout(() => {
+            closeModal();
+            window.location.href = '/profile';
+          }, 500);
+        } else {
+          toast.error(data.message || 'Google authentication failed. Please try again.', {
+            position: 'bottom-right',
+          });
+        }
+
+      } catch (error) {
+        setIsVerifying(false);
+        console.error('Google login error:', error);
+        toast.error('Google authentication failed. Please try again.', {
+          position: 'bottom-right',
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Google OAuth error:', error);
+      toast.error('Google authentication failed. Please try again.', {
+        position: 'bottom-right',
+      });
+    },
+  });
 
   const handleOtpChange = (index, value) => {
     if (otpError) setOtpError(false);

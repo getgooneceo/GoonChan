@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import Video from '../models/Video.js'
 import { rateLimiter } from 'hono-rate-limiter'
+import mongoose from 'mongoose'
 
 const router = new Hono()
 
@@ -12,102 +13,123 @@ const limiter = rateLimiter({
   keyGenerator: (c) => c.req.header('x-forwarded-for') || c.req.ip,
 })
 
+const VIDEO_PROJECTION = {
+  _id: 1,
+  title: 1,
+  description: 1,
+  slug: 1,
+  thumbnail: 1,
+  duration: 1,
+  views: 1,
+  likeCount: { $size: { $ifNull: ['$likedBy', []] } },
+  dislikeCount: { $size: { $ifNull: ['$dislikedBy', []] } },
+  tags: 1,
+  createdAt: 1,
+  hotness: 1,
+  uploader: 1
+}
+
+const USER_LOOKUP_STAGE = {
+  $lookup: {
+    from: 'users',
+    localField: 'uploader',
+    foreignField: '_id',
+    as: 'uploader',
+    pipeline: [{ $project: { username: 1, avatar: 1, avatarColor: 1, subscriberCount: 1 } }]
+  }
+}
+
 router.get('/', limiter, async (c) => {
   try {
     const { limit = 12, excludeId, excludeIds } = c.req.query()
     
     const limitNum = Math.min(parseInt(limit) || 12, 20);
 
-    let excludedIds = [];
+    let excludedObjectIds = [];
     if (excludeIds) {
-      excludedIds = excludeIds.split(',').filter(id => id.trim());
+      const ids = excludeIds.split(',').filter(id => id.trim());
+      excludedObjectIds = ids.map(id => {
+        try {
+          return new mongoose.Types.ObjectId(id);
+        } catch (error) {
+          console.warn(`Invalid ObjectId: ${id}`);
+          return null;
+        }
+      }).filter(Boolean);
     }
     if (excludeId) {
-      excludedIds.push(excludeId);
+      try {
+        excludedObjectIds.push(new mongoose.Types.ObjectId(excludeId));
+      } catch (error) {
+        console.warn(`Invalid excludeId: ${excludeId}`);
+      }
     }
 
     let matchCriteria = { isProcessing: false };
-    if (excludedIds.length > 0) {
-      matchCriteria._id = { $nin: excludedIds };
+    if (excludedObjectIds.length > 0) {
+      matchCriteria._id = { $nin: excludedObjectIds };
     }
 
-    const hotVideosCount = Math.round(limitNum * 0.7);
-    const randomRecentCount = limitNum - hotVideosCount; 
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const hotVideos = await Video.find(matchCriteria)
-      .populate('uploader', 'username avatar avatarColor subscriberCount')
-      .sort({ hotness: -1 })
-      .limit(hotVideosCount)
-      .lean();
-
-    let combinedVideos = [...hotVideos];
-
-    if (combinedVideos.length < limitNum && randomRecentCount > 0) {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const hotVideoIds = hotVideos.map(video => video._id.toString());
-      
-      const recentMatchCriteria = {
-        ...matchCriteria,
-        createdAt: { $gte: sevenDaysAgo },
-        _id: { $nin: [...excludedIds, ...hotVideoIds] }
-      };
-
-      const recentVideoCount = await Video.countDocuments(recentMatchCriteria);
-      
-      if (recentVideoCount > 0) {
-        const randomSkips = new Set();
-        const maxSkip = Math.max(0, recentVideoCount - randomRecentCount);
-        
-        while (randomSkips.size < Math.min(randomRecentCount, recentVideoCount)) {
-          randomSkips.add(Math.floor(Math.random() * (maxSkip + 1)));
+    const hotPoolSize = limitNum * 5;
+    const recentPoolSize = limitNum * 3;
+    
+    const hotPipeline = [
+      { $match: matchCriteria },
+      { $facet: {
+        hot: [
+          { $sort: { hotness: -1 } },
+          { $limit: hotPoolSize },
+          { $sample: { size: Math.ceil(limitNum * 0.8) } }
+        ],
+        recent: [
+          { $match: { createdAt: { $gte: sevenDaysAgo } } },
+          { $sort: { createdAt: -1 } },
+          { $limit: recentPoolSize },
+          { $sample: { size: Math.ceil(limitNum * 0.6) } }
+        ]
+      }},
+      { $project: {
+        hot: 1, 
+        hotIds: { $map: { input: '$hot', as: 'video', in: '$$video._id' } },
+        recent: 1
+      }},
+      { $project: {
+        hot: 1,
+        recentFiltered: {
+          $filter: {
+            input: '$recent',
+            as: 'video',
+            cond: { $not: { $in: ['$$video._id', '$hotIds'] } }
+          }
         }
+      }},
+      { $project: {
+        combined: { 
+          $concatArrays: [
+            '$hot', 
+            { $slice: ['$recentFiltered', Math.ceil(limitNum * 0.2)] }
+          ]
+        }
+      }},
+      { $unwind: '$combined' },
+      { $replaceRoot: { newRoot: '$combined' } },
+      { $addFields: { randomSort: { $rand: {} } } },
+      { $sort: { randomSort: 1 } },
+      USER_LOOKUP_STAGE,
+      { $unwind: '$uploader' },
+      { $project: VIDEO_PROJECTION },
+      { $limit: limitNum }
+    ];
 
-        const randomSkipArray = Array.from(randomSkips);
-        const randomVideoPromises = randomSkipArray.map(skipValue =>
-          Video.findOne(recentMatchCriteria)
-            .populate('uploader', 'username avatar avatarColor subscriberCount')
-            .skip(skipValue)
-            .lean()
-        );
-
-        const randomRecentVideos = (await Promise.all(randomVideoPromises)).filter(video => video !== null);
-        combinedVideos = [...combinedVideos, ...randomRecentVideos];
-      }
-    }
-
-    for (let i = combinedVideos.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [combinedVideos[i], combinedVideos[j]] = [combinedVideos[j], combinedVideos[i]];
-    }
-
-    const formattedVideos = combinedVideos.map(video => ({
-      _id: video._id,
-      title: video.title,
-      description: video.description,
-      slug: video.slug,
-      thumbnail: video.thumbnail,
-      duration: video.duration,
-      views: video.views,
-      likeCount: video.likedBy?.length || 0,
-      dislikeCount: video.dislikedBy?.length || 0,
-      tags: video.tags || [],
-      createdAt: video.createdAt,
-      hotness: video.hotness,
-      uploader: {
-        _id: video.uploader._id,
-        username: video.uploader.username,
-        avatar: video.uploader.avatar,
-        avatarColor: video.uploader.avatarColor,
-        subscriberCount: video.uploader.subscriberCount || 0
-      }
-    }));
+    const hotResults = await Video.aggregate(hotPipeline);
 
     return c.json({
       success: true,
-      videos: formattedVideos,
-      total: formattedVideos.length,
+      videos: hotResults,
+      total: hotResults.length,
       algorithm: 'hotness-based'
     }, 200);
 
