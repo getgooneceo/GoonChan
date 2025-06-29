@@ -453,7 +453,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                       ${currentActiveCategory === category.id 
                         ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_6px_20px_rgba(234,65,151,0.01)] lg:scale-[1.02]' 
                         : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white lg:hover:shadow-[0_4px_12px_rgba(255,255,255,0.01)]'}
-                      
+                       
                       ${/* Medium screens - text with icons, no background */''}
                       md:flex md:flex-row md:items-center md:justify-center md:px-2 md:py-1.5
                       md:hover:text-white md:mx-0.5 md:hover:scale-[1.02]
