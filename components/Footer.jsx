@@ -50,10 +50,10 @@ const Footer = () => {
             <h4 className="text-lg font-semibold text-white tracking-tight">Contact</h4>
             <div className="flex items-center space-x-3">
               <a 
-                href="mailto:contact@goonchan.com" 
+                href="mailto:support@goonchan.org" 
                 className="text-neutral-400 hover:text-[#ea4197] transition-colors duration-200 text-sm font-medium"
               >
-                contact@goonchan.com
+                support@goonchan.org
               </a>
             </div>
           </div>

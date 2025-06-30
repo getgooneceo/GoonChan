@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { FaUserAlt, FaRegUser, FaRandom, FaHeart,  FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
@@ -22,7 +22,6 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
 }) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const [localActiveCategory, setLocalActiveCategory] = useState("discover");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +31,52 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   const [showUploadModal, setShowUploadModal] = useState(false);
   const { avatarUrl } = useUserAvatar(user) as { avatarUrl: string; isLoading: boolean };
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [showStickyNav, setShowStickyNav] = useState(false);
+  const [stickyNavOpacity, setStickyNavOpacity] = useState(0);
+
+  const handleScroll = useCallback(() => {
+    const currentScrollY = window.scrollY;
+
+    if (currentScrollY > 150) {
+      if (!showStickyNav) {
+        setShowStickyNav(true);
+        setIsVisible(false);
+        setStickyNavOpacity(1); 
+      }
+
+      if (currentScrollY > lastScrollY && currentScrollY > 200) {
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsVisible(true);
+        setStickyNavOpacity(1);
+      }
+    } else {
+      if (showStickyNav) {
+        const fadeThreshold = 500;
+        const fadeOpacity = Math.max(0, currentScrollY / fadeThreshold);
+        setStickyNavOpacity(fadeOpacity);
+
+        if (currentScrollY <= 50) {
+          setShowStickyNav(false);
+          setIsVisible(true);
+          setStickyNavOpacity(0);
+        }
+      }
+    }
+    
+    setLastScrollY(currentScrollY);
+  }, [lastScrollY, showStickyNav]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -108,7 +153,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     };
   }, [isSidebarOpen]);
 
-  const handleProfileNavigation = () => {
+  const handleProfileNavigation = useCallback(() => {
     if (isAuthChecking) return;
     
     if (user) {
@@ -116,9 +161,9 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     } else{
       setShowAuthModal(true);
     }
-  };
+  }, [isAuthChecking, user, router]);
 
-  const handleUploadNavigation = () => {
+  const handleUploadNavigation = useCallback(() => {
     if (isAuthChecking) return;
     
     if (user) {
@@ -126,30 +171,23 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     } else {
       setShowAuthModal(true);
     }
-  };
+  }, [isAuthChecking, user]);
 
-  const handleSearchSubmit = () => {
-    if (searchValue.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-      setSearchValue("");
+  const handleSearchSubmit = useCallback((searchTerm: string) => {
+    if (searchTerm.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
     }
-  };
+  }, [router]);
 
-  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearchSubmit();
-    }
-  };
-
-  const focusSearchInput = (isMobileView: boolean) => {
+  const focusSearchInput = useCallback((isMobileView: boolean) => {
     if (isMobileView) {
       mobileSearchInputRef.current?.focus();
     } else {
       desktopSearchInputRef.current?.focus();
     }
-  };
+  }, []);
 
-  const handleCategoryNavigation = (categoryId: string) => {
+  const handleCategoryNavigation = useCallback((categoryId: string) => {
     if (categoryId === "discover") {
       router.push("/");
     } else {
@@ -163,27 +201,86 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
         setLocalActiveCategory(categoryId);
       }
     }
-  };
+  }, [router, setActiveCategory]);
 
-  const categories = [
+  const categories = useMemo(() => [
     { id: "discover", name: "Discover", icon: <FaCompass /> },
     { id: "images", name: "Images", icon: <FaRegImage /> },
     { id: "top", name: "Top Videos", icon: <FaTrophy /> },
-    // { id: "popular", name: "Popular Now", icon: <FaFire /> },
     { id: "recent", name: "Recently Added", icon: <FaClock /> },
     { id: "liked", name: "Most Liked", icon: <FaHeart /> },
     { id: "random", name: "Random", icon: <FaRandom /> },
     { id: "subscriptions", name: "Subscriptions", icon: <FaUser /> },
-  ];
+  ], []);
 
   const currentActiveCategory = activeCategory || localActiveCategory;
 
-  return (
-    <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
+  // Independent Search Input Component with its own state
+  const SearchInput = React.memo(({ 
+    isMobile, 
+    inputRef, 
+    isSticky,
+    onSubmit
+  }: {
+    isMobile: boolean;
+    inputRef: React.RefObject<HTMLInputElement | null>;
+    isSticky?: boolean;
+    onSubmit: (searchTerm: string) => void;
+  }) => {
+    const [searchValue, setSearchValue] = useState("");
+    
+    const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        onSubmit(searchValue);
+        setSearchValue("");
+      }
+    };
+    
+    return (
+      <div className={`${isMobile ? 'w-full mb-4' : 'flex-1 max-w-xl mx-4 px-2'}`}>
+        <div 
+          className={`flex items-center w-full border border-[#1f1f1f] bg-[#101010] ${
+            isMobile 
+              ? 'rounded-lg py-2 px-3 text-sm focus-within:shadow-[0_0_15px_rgba(234,65,151,0.1)]' 
+              : 'rounded-full py-2 sm:py-3 px-3 sm:px-5 text-sm focus-within:shadow-[0_0_15px_rgba(234,65,151,0.085)]'
+          } transition-all ease-in-out duration-200 cursor-text`}
+          onClick={() => inputRef.current?.focus()}
+        >
+          <FiSearch className="text-[#939393] text-lg min-w-[20px]" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search GoonChan..."
+            className={`flex-1 text-[1rem] bg-transparent ${
+              isMobile ? 'ml-2' : 'ml-2 sm:ml-3'
+            } text-[#c0c0c0] placeholder-[#808080] focus:outline-none truncate [&::-webkit-search-cancel-button]:appearance-none`}
+            onKeyDown={handleSearchKeyPress}
+          />
+          {searchValue && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); 
+                setSearchValue("");
+                inputRef.current?.focus();
+              }}
+              className="focus:outline-none"
+            >
+              <FiX className={`text-[#ea4198a5] hover:text-[#ff61b7] text-lg cursor-pointer ${
+                !isMobile ? 'ml-2' : ''
+              }`} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  });
 
-      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
-      {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
-      
+  SearchInput.displayName = 'SearchInput';
+
+  const NavbarContent = React.memo(({ isSticky = false }: { isSticky?: boolean }) => (
+    <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
       {isMobile && (
         <>
           <div 
@@ -200,7 +297,6 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             }`}
           >
             <div className="p-5 flex flex-col h-full">
-
               <div className="flex items-center justify-between mb-8">
                 <Link href="/" className="flex items-center" onClick={() => setIsSidebarOpen(false)}>
                   <Image
@@ -293,6 +389,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 width={30}
                 height={30}
                 className="rounded-full opacity-95"
+                priority
               />
               <h1 className="font-inter text-xl font-semibold text-white ml-[0.42rem]">
                 Goon<span className="text-[#ea4197]">Chan</span>
@@ -313,6 +410,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                     width={25}
                     height={25}
                     className="rounded-full object-cover"
+                    priority
                   />
                 </div>
               ) : (
@@ -325,35 +423,12 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             </div>
           </div>
 
-          <div className="w-full mb-4">
-            <div 
-              className="flex items-center w-full border border-[#1f1f1f] bg-[#101010] rounded-lg py-2 px-3 text-sm focus-within:shadow-[0_0_15px_rgba(234,65,151,0.1)] cursor-text"
-              onClick={() => focusSearchInput(true)}
-            >
-              <FiSearch className="text-[#939393] text-lg min-w-[20px]" />
-              <input
-                ref={mobileSearchInputRef}
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search GoonChan..."
-                className="flex-1 text-[1rem] bg-transparent ml-2 text-[#c0c0c0] placeholder-[#808080] focus:outline-none truncate [&::-webkit-search-cancel-button]:appearance-none"
-                onKeyDown={handleSearchKeyPress}
-              />
-              {searchValue && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); 
-                    setSearchValue("");
-                    focusSearchInput(true);
-                  }}
-                  className="focus:outline-none"
-                >
-                  <FiX className="text-[#ea4198a5] hover:text-[#ff61b7] text-lg cursor-pointer" />
-                </button>
-              )}
-            </div>
-          </div>
+          <SearchInput 
+            isMobile={true}
+            inputRef={mobileSearchInputRef}
+            isSticky={false}
+            onSubmit={handleSearchSubmit}
+          />
         </div>
       ) : (
         // Desktop Layout
@@ -366,41 +441,19 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 width={34}
                 height={34}
                 className="rounded-full opacity-95"
+                priority
               />
               <h1 className="font-inter text-2xl font-semibold text-white hidden sm:block">
                 Goon<span className="text-[#ea4197]">Chan</span>
               </h1>
             </Link>
 
-            <div className="flex-1 max-w-xl mx-4 px-2">
-              <div 
-                className="flex items-center w-full border border-[#1f1f1f] bg-[#101010] rounded-full py-2 sm:py-3 px-3 sm:px-5 text-sm focus-within:shadow-[0_0_15px_rgba(234,65,151,0.085)] transition-all ease-in-out duration-200 cursor-text"
-                onClick={() => focusSearchInput(false)}
-              >
-                <FiSearch className="text-[#939393] text-lg min-w-[20px]" />
-                <input
-                  ref={desktopSearchInputRef}
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Search GoonChan..."
-                  className="flex-1 text-[1rem] bg-transparent ml-2 sm:ml-3 text-[#c0c0c0] placeholder-[#808080] focus:outline-none truncate [&::-webkit-search-cancel-button]:appearance-none"
-                  onKeyDown={handleSearchKeyPress}
-                />
-                {searchValue && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent the container's onClick from firing
-                      setSearchValue("");
-                      focusSearchInput(false);
-                    }}
-                    className="focus:outline-none"
-                  >
-                    <FiX className="text-[#ea4198a5] ml-2 hover:text-[#ff61b7] text-lg cursor-pointer" />
-                  </button>
-                )}
-              </div>
-            </div>
+            <SearchInput 
+              isMobile={false}
+              inputRef={desktopSearchInputRef}
+              isSticky={showStickyNav}
+              onSubmit={handleSearchSubmit}
+            />
 
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button 
@@ -425,6 +478,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                       width={41}
                       height={41}
                       className="rounded-full object-cover"
+                      priority
                     />
                   ) : (
                     <FaUserAlt
@@ -437,7 +491,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             </div>
           </div>
 
-          {!isMobile && showCategories && (
+          {!isMobile && showCategories && !isSticky && (
             <div className="categories-nav py-2 mb-2 overflow-x-auto scrollbar-hide hidden md:block [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="flex items-center justify-between w-full gap-1">
                 {categories.map((category) => (
@@ -447,21 +501,18 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                     className={`
                       flex-1 cursor-pointer transition-all ease-out duration-300 whitespace-nowrap transform
                       
-                      ${/* Large screens - buttons with background */''}
                       lg:flex lg:flex-row lg:items-center lg:justify-center lg:px-3 lg:py-[0.6rem] lg:rounded-full
                       lg:hover:scale-[1.05] lg:transform-gpu lg:mx-0.5
                       ${currentActiveCategory === category.id 
                         ? 'lg:bg-[#dc2b87d2] lg:text-white lg:font-medium lg:shadow-[0_6px_20px_rgba(234,65,151,0.01)] lg:scale-[1.02]' 
                         : 'lg:bg-[#151515] lg:hover:bg-[#1c1c1c] lg:text-[#b3b3b3] lg:hover:text-white lg:hover:shadow-[0_4px_12px_rgba(255,255,255,0.01)]'}
                        
-                      ${/* Medium screens - text with icons, no background */''}
                       md:flex md:flex-row md:items-center md:justify-center md:px-2 md:py-1.5
                       md:hover:text-white md:mx-0.5 md:hover:scale-[1.02]
                       ${currentActiveCategory === category.id 
                         ? 'md:text-[#ea4197] md:font-medium md:scale-[1.02]' 
                         : 'md:text-[#b3b3b3]'}
                       
-                      ${/* Small screens - icons above text */''}
                       flex flex-col items-center justify-center px-1 py-1
                       hover:text-white mx-0.5 hover:scale-[1.02]
                       ${currentActiveCategory === category.id 
@@ -481,6 +532,32 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
         </div>
       )}
     </div>
+  ));
+
+  NavbarContent.displayName = 'NavbarContent';
+
+  return (
+    <>
+      {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
+      {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
+
+      <nav className="relative z-20 bg-[#080808]/95 backdrop-blur-md">
+        <NavbarContent isSticky={false} />
+      </nav>
+
+      {showStickyNav && (
+        <nav 
+          className={`
+            fixed top-0 left-0 right-0 z-30 bg-[#080808]/95 backdrop-blur-md
+            transition-all duration-250 ease-out
+            ${isVisible ? 'translate-y-0' : '-translate-y-full'}
+          `}
+          style={{ opacity: stickyNavOpacity }}
+        >
+          <NavbarContent isSticky={true} />
+        </nav>
+      )}
+    </>
   );
 };
 

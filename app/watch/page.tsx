@@ -22,6 +22,7 @@ import useUserAvatar from "@/hooks/useUserAvatar";
 import AuthModel from "@/components/authModel";
 import BannerAds from "@/components/BannerAds";
 import ChatHeadAd from "@/components/ChatHeadAd";
+import PostitialAd from "@/components/PostitialAd";
 
 interface VideoUploader {
   _id: string;
@@ -2010,7 +2011,6 @@ const WatchPageContent = () => {
                 <FaBell className="text-sm" />
                 <span className="font-inter">
                   {isCurrentUserUploader
-                   
                     ? "Subscribed"
                     : isSubscribed
                     ? " Subscribed"
@@ -2724,6 +2724,7 @@ const WatchPageContent = () => {
       </div>
 
       <ChatHeadAd />
+      <PostitialAd />
     </div>
   );
 };

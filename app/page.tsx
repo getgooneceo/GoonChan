@@ -18,7 +18,7 @@ function HomeContent() {
   const [imageData, setImageData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<{type: 'server' | 'network' | 'auth' | 'no-data' | null, message: string} | null>(null);
   const [viewedVideoIds, setViewedVideoIds] = useState<Set<string>>(new Set());
   const [viewedImageIds, setViewedImageIds] = useState<Set<string>>(new Set());
   const [currentVideoPage, setCurrentVideoPage] = useState(1);
@@ -87,7 +87,7 @@ function HomeContent() {
       const sortParam = sortMapping[category] || 'hot';
       const url = new URL(`${config.url}/api/discover`);
       
-      url.searchParams.append('limit', '20');
+      url.searchParams.append('limit', '40');
       url.searchParams.append('page', page.toString());
       url.searchParams.append('sort', sortParam);
 
@@ -106,13 +106,29 @@ function HomeContent() {
       const response = await fetch(url.toString());
       const data = await response.json();
 
+      if (!response.ok) {
+        if (response.status === 500) {
+          setError({type: 'server', message: 'Server error. Please try again later.'});
+        } else if (response.status === 401) {
+          setError({type: 'auth', message: 'Authentication required. Please log in.'});
+        } else if (response.status === 404) {
+          setError({type: 'no-data', message: 'No videos found for this category.'});
+        } else {
+          setError({type: 'server', message: `Error ${response.status}: ${response.statusText}`});
+        }
+        if (page === 1) {
+          setVideoData([]);
+        }
+        return;
+      }
+
       if (data.success) {
         if (data.redirect && data.videoSlug) {
           router.push(`/watch?v=${data.videoSlug}`);
           return;
         }
         
-        if (data.videos) {
+        if (data.videos && data.videos.length > 0) {
           const newVideos = data.videos.filter((video: any) => !viewedVideoIds.has(video._id));
           
           if (page === 1) {
@@ -128,19 +144,28 @@ function HomeContent() {
           }
           setCurrentVideoPage(page);
           setVideoPagination(data.pagination || null);
+          setError(null);
         } else {
           if (page === 1) {
             setVideoData([]);
+            setError({type: 'no-data', message: 'No videos found for this category.'});
           }
         }
       } else {
-        setError(data.message || 'Failed to fetch videos');
+        if (data.message && data.message.toLowerCase().includes('no videos')) {
+          setError({type: 'no-data', message: data.message});
+        } else if (data.message && data.message.toLowerCase().includes('auth')) {
+          setError({type: 'auth', message: data.message});
+        } else {
+          setError({type: 'server', message: data.message || 'Failed to fetch videos'});
+        }
         if (page === 1) {
           setVideoData([]);
         }
       }
     } catch (error) {
       console.error(`Error fetching ${category} videos:`, error);
+      setError({type: 'network', message: 'Network error. Please check your connection and try again.'});
       if (page === 1) {
         setVideoData([]);
       }
@@ -164,7 +189,7 @@ function HomeContent() {
 
       const url = new URL(`${config.url}/api/discoverImages`);
       
-      url.searchParams.append('limit', '20');
+      url.searchParams.append('limit', '24');
       url.searchParams.append('page', page.toString());
 
       const allExcludeIds = page > 1 ? Array.from(viewedImageIds) : excludeIds;
@@ -174,6 +199,22 @@ function HomeContent() {
 
       const response = await fetch(url.toString());
       const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 500) {
+          setError({type: 'server', message: 'Server error. Please try again later.'});
+        } else if (response.status === 401) {
+          setError({type: 'auth', message: 'Authentication required. Please log in.'});
+        } else if (response.status === 404) {
+          setError({type: 'no-data', message: 'No images found.'});
+        } else {
+          setError({type: 'server', message: `Error ${response.status}: ${response.statusText}`});
+        }
+        if (page === 1) {
+          setImageData([]);
+        }
+        return;
+      }
 
       if (data.success && data.images) {
         const newImages = data.images.filter((image: any) => !viewedImageIds.has(image._id));
@@ -191,14 +232,20 @@ function HomeContent() {
         }
         setCurrentImagePage(page);
         setImagePagination(data.pagination || null);
+        setError(null);
       } else {
-        setError(data.message || 'Failed to fetch images');
+        if (data.message && data.message.toLowerCase().includes('no images')) {
+          setError({type: 'no-data', message: data.message});
+        } else {
+          setError({type: 'server', message: data.message || 'Failed to fetch images'});
+        }
         if (page === 1) {
           setImageData([]);
         }
       }
     } catch (error) {
       console.error('Error fetching discover images:', error);
+      setError({type: 'network', message: 'Network error. Please check your connection and try again.'});
       if (page === 1) {
         setImageData([]);
       }
@@ -319,15 +366,12 @@ function HomeContent() {
     }
     
     if (error && currentData.length === 0 && !isCurrentlyLoading) {
+
       return (
         <div className="flex flex-col justify-center items-center py-16 text-center">
-          <div className="text-red-400 mb-4">⚠️ {error}</div>
-          <button 
-            onClick={() => activeCategory === "images" ? fetchDiscoverImages() : fetchVideosForCategory(activeCategory)}
-            className="px-4 py-2 bg-[#ea4197] text-white rounded-lg hover:bg-[#d63384] transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="text-white/60 mb-4">
+            {error.message}
+          </div>
         </div>
       );
     }
