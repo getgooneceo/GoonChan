@@ -6,6 +6,8 @@ import ImageGrid from "@/components/ImageGrid";
 import Footer from "@/components/Footer";
 import { useRouter, useSearchParams } from "next/navigation";
 import config from "../config.json"
+import BannerAds from "@/components/BannerAds";
+import PopUnderAd from "@/components/PopUnderAd";
 
 function HomeContent() {
   const [user, setUser] = useState(null);
@@ -391,6 +393,7 @@ function HomeContent() {
 
         return (
           <>
+            <BannerAds className="mb-5 mt-0" />
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {videoData.map((video) => (
                 <VideoCard key={video._id} video={video} />
@@ -433,6 +436,7 @@ function HomeContent() {
 
   return (
     <>
+      <PopUnderAd />
       <div className="bg-[#080808] min-h-screen w-full">
         <NavBar 
           user={user} 
@@ -441,7 +445,7 @@ function HomeContent() {
           activeCategory={activeCategory}
           setActiveCategory={handleCategoryChange}
         />
-        <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-2 pb-8 relative overflow-hidden">
+        <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-1 pb-8 relative overflow-hidden">
           <div
             key={contentKey}
             className={`transition-all duration-250 ease-in-out transform ${
