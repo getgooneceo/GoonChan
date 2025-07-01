@@ -281,91 +281,6 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
 
   const NavbarContent = React.memo(({ isSticky = false }: { isSticky?: boolean }) => (
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
-      {isMobile && (
-        <>
-          <div 
-            className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out ${
-              isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-            onClick={() => setIsSidebarOpen(false)}
-          ></div>
-          
-          <div 
-            ref={sidebarRef}
-            className={`fixed top-0 left-0 h-full w-[80%] max-w-[300px] bg-[#121212] z-50 shadow-xl transform transition-transform duration-300 ease-in-out ${
-              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          >
-            <div className="p-5 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-8">
-                <Link href="/" className="flex items-center" onClick={() => setIsSidebarOpen(false)}>
-                  <Image
-                    src="/logo.webp"
-                    alt="GoonChan Logo"
-                    width={32}
-                    height={32}
-                    className="rounded-full opacity-95"
-                  />
-                  <h1 className="font-inter text-xl font-semibold text-white ml-3">
-                    Goon<span className="text-[#ea4197]">Chan</span>
-                  </h1>
-                </Link>
-                <button 
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-1 rounded-full hover:bg-[#2a2a2a] transition-colors duration-200"
-                >
-                  <FiX size={22} className="text-[#c2c2c2] hover:text-white" />
-                </button>
-              </div>
-
-              <div className="mt-2">
-                <h3 className="text-[#9e9e9e] text-xs font-medium uppercase tracking-wider mb-3 pl-2">Categories</h3>
-                <div className="flex flex-col space-y-1">
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => {
-                        handleCategoryNavigation(category.id);
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`
-                        flex items-center p-3 rounded-lg transition-all duration-300 ease-out transform hover:scale-[1.02]
-                        ${currentActiveCategory === category.id 
-                          ? 'bg-[#ea4197]/15 text-[#ea4197] shadow-lg' 
-                          : 'text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white'}
-                      `}
-                    >
-                      <span className="text-xl mr-4">{category.icon}</span>
-                      <span className="font-medium">{category.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-[#2a2a2a]">
-                <h3 className="text-[#9e9e9e] text-xs font-medium uppercase tracking-wider mb-3 pl-2">Account</h3>
-                <div className="flex flex-col space-y-1">
-                  <button 
-                    onClick={handleProfileNavigation}
-                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
-                  >
-                    <FaUserAlt className="text-lg mr-4" />
-                    <span className="font-medium">Profile</span>
-                  </button>
-                  <button 
-                    onClick={handleUploadNavigation}
-                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
-                  >
-                    <RiVideoUploadFill className="text-lg mr-4" />
-                    <span className="font-medium">Upload Video</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {isMobile ? (
         <div className="flex flex-col md:hidden">
           <div className="relative h-[4rem] flex justify-between items-center">
@@ -540,6 +455,98 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     <>
       {showAuthModal && <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />}
       {showUploadModal && <UploadModal setShowUploadModal={setShowUploadModal} user={user} />}
+
+      {isMobile && (
+        <>
+          {/* Backdrop overlay */}
+          <div 
+            className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ease-in-out ${
+              isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+
+          <div 
+            ref={sidebarRef}
+            className={`fixed top-0 left-0 h-full w-[80%] max-w-[300px] bg-[#121212] z-50 shadow-xl transform transition-transform duration-300 ease-in-out ${
+              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="p-5 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-8">
+                <Link href="/" className="flex items-center" onClick={() => setIsSidebarOpen(false)}>
+                  <Image
+                    src="/logo.webp"
+                    alt="GoonChan Logo"
+                    width={32}
+                    height={32}
+                    className="rounded-full opacity-95"
+                  />
+                  <h1 className="font-inter text-xl font-semibold text-white ml-3">
+                    Goon<span className="text-[#ea4197]">Chan</span>
+                  </h1>
+                </Link>
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1 rounded-full hover:bg-[#2a2a2a] transition-colors duration-200"
+                >
+                  <FiX size={22} className="text-[#c2c2c2] hover:text-white" />
+                </button>
+              </div>
+
+              <div className="mt-2">
+                <h3 className="text-[#9e9e9e] text-xs font-medium uppercase tracking-wider mb-3 pl-2">Categories</h3>
+                <div className="flex flex-col space-y-1">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => {
+                        handleCategoryNavigation(category.id);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        flex items-center p-3 rounded-lg transition-all duration-300 ease-out
+                        ${currentActiveCategory === category.id 
+                          ? 'bg-[#ea4197]/15 text-[#ea4197] shadow-lg' 
+                          : 'text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white'}
+                      `}
+                    >
+                      <span className="text-xl mr-4">{category.icon}</span>
+                      <span className="font-medium">{category.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-[#2a2a2a]">
+                <h3 className="text-[#9e9e9e] text-xs font-medium uppercase tracking-wider mb-3 pl-2">Account</h3>
+                <div className="flex flex-col space-y-1">
+                  <button 
+                    onClick={() => {
+                      handleProfileNavigation();
+                      setIsSidebarOpen(false);
+                    }}
+                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
+                  >
+                    <FaUserAlt className="text-lg mr-4" />
+                    <span className="font-medium">Profile</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleUploadNavigation();
+                      setIsSidebarOpen(false);
+                    }}
+                    className="flex items-center p-3 rounded-lg text-[#c2c2c2] hover:bg-[#ffffff10] hover:text-white transition-all duration-200"
+                  >
+                    <RiVideoUploadFill className="text-lg mr-4" />
+                    <span className="font-medium">Upload Video</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <nav className="relative z-20 bg-[#080808]/95 backdrop-blur-md">
         <NavbarContent isSticky={false} />
