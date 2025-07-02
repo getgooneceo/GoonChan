@@ -91,13 +91,13 @@ export const usePopUnderLink = () => {
     return (e) => {
       e.preventDefault();
 
-      try {
-        window.open(href, '_blank');
-      } catch (error) {
-        console.log('Failed to open content in new tab');
-      }
-
       if (shouldShowPopunder()) {
+        try {
+          window.open(href, '_blank');
+        } catch (error) {
+          console.log('Failed to open content in new tab');
+        }
+
         setTimeout(() => {
           try {
             const randomUrl = getRandomPopunder();
@@ -106,6 +106,12 @@ export const usePopUnderLink = () => {
             console.log('Pop-under redirect failed');
           }
         }, delay);
+      } else {
+        try {
+          window.location.href = href;
+        } catch (error) {
+          console.log('Failed to redirect');
+        }
       }
     };
   };
