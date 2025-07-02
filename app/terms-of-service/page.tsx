@@ -11,9 +11,7 @@ const TermsOfService = () => {
     <div className="min-h-screen bg-[#080808] text-white font-inter">
       <NavBar user={user} setUser={setUser} showCategories={false} />
 
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-5 sm:px-8 py-10 sm:py-14">
-        {/* Title */}
         <div className="text-center mb-10 sm:mb-14">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-4 sm:mb-6">
             Terms of Service
@@ -23,15 +21,10 @@ const TermsOfService = () => {
             By accessing or using our service, you agree to be bound by these terms.
           </p>
           <div className="text-sm text-[#939393] font-medium mt-2 italic">
-            Last updated: {new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            Last updated: July 1, 2025
           </div>
         </div>
 
-        {/* All Sections */}
         <div className="space-y-12">
           {[
             {

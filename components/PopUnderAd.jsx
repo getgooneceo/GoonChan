@@ -4,8 +4,25 @@ import { useEffect, useRef } from 'react';
 const PopUnderAd = () => {
   const scriptLoaded = useRef(false);
 
+  const popunderUrls = [
+    'https://t.mbslr2.com/324742/8780/0?bo=2779,2C2778,2C2777,2C2776,2C2775&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
+    'https://t.acrsmartcam.com/324742/3664/0?bo=2779,2C2778,2C2777,2C2776,2C2775&target=banners&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
+    'https://t.ancdu.link/324742/3785/0?bo=2753,2C2754,2C2755,2C2756&target=pops&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz'
+  ];
+
+  const getRandomPopunder = () => {
+    return popunderUrls[Math.floor(Math.random() * popunderUrls.length)];
+  };
+
+  const shouldShowPopunder = () => {
+    return Math.random() < 0.6;
+  };
+
   useEffect(() => {
     if (scriptLoaded.current || document.querySelector('script[src*="mnpw3.js"]')) {
+      return;
+    }
+    if (!shouldShowPopunder()) {
       return;
     }
 
@@ -17,10 +34,11 @@ const PopUnderAd = () => {
     script1.onload = () => {
       setTimeout(() => {
         try {
+          const randomUrl = getRandomPopunder();
           const script2 = document.createElement('script');
           script2.innerHTML = `
             if (typeof mnpw !== 'undefined') {
-              mnpw.add('https://t.mbslr2.com/324742/8780/0?bo=2779,2C2778,2C2777,2C2776,2C2775&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz', {
+              mnpw.add('${randomUrl}', {
                 newTab: true, 
                 cookieExpires: 86401
               });
@@ -55,6 +73,20 @@ const PopUnderAd = () => {
 export default PopUnderAd;
 
 export const usePopUnderLink = () => {
+  const popunderUrls = [
+    'https://t.mbslr2.com/324742/8780/0?bo=2779,2C2778,2C2777,2C2776,2C2775&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
+    'https://t.acrsmartcam.com/324742/3664/0?bo=2779,2C2778,2C2777,2C2776,2C2775&target=banners&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
+    'https://t.ancdu.link/324742/3785/0?bo=2753,2C2754,2C2755,2C2756&target=pops&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz'
+  ];
+
+  const getRandomPopunder = () => {
+    return popunderUrls[Math.floor(Math.random() * popunderUrls.length)];
+  };
+
+  const shouldShowPopunder = () => {
+    return Math.random() < 0.6;
+  };
+
   const createPopUnderLink = (href, delay = 100) => {
     return (e) => {
       e.preventDefault();
@@ -65,13 +97,16 @@ export const usePopUnderLink = () => {
         console.log('Failed to open content in new tab');
       }
 
-      setTimeout(() => {
-        try {
-          window.location.href = 'https://t.mbslr2.com/324742/8780/0?bo=2779,2C2778,2C2777,2C2776,2C2775&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz';
-        } catch (error) {
-          console.log('Pop-under redirect failed');
-        }
-      }, delay);
+      if (shouldShowPopunder()) {
+        setTimeout(() => {
+          try {
+            const randomUrl = getRandomPopunder();
+            window.location.href = randomUrl;
+          } catch (error) {
+            console.log('Pop-under redirect failed');
+          }
+        }, delay);
+      }
     };
   };
 

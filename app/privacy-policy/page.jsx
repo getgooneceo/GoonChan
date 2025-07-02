@@ -20,11 +20,7 @@ const PrivacyPolicy = () => {
             This Privacy Policy outlines how GoonChan collects, uses, and protects your information. By using our service, you agree to the terms outlined here.
           </p>
           <div className="text-sm text-[#939393] font-medium mt-2 italic">
-            Last updated: {new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            Last updated: July 1, 2025
           </div>
         </div>
 

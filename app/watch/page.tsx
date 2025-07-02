@@ -22,7 +22,7 @@ import useUserAvatar from "@/hooks/useUserAvatar";
 import AuthModel from "@/components/authModel";
 import BannerAds from "@/components/BannerAds";
 import ChatHeadAd from "@/components/ChatHeadAd";
-import PostitialAd from "@/components/PostitialAd";
+import PrestitialAd from "@/components/PrestitialAd";
 
 interface VideoUploader {
   _id: string;
@@ -1847,57 +1847,71 @@ const WatchPageContent = () => {
         )}
 
         {video.contentType !== "image" && (
-          <div
-            ref={streamContainerRef}
-            className="w-full relative bg-black rounded-lg overflow-hidden mb-4 aspect-video"
-          >
-            {isLoading && (
+          <div className="flex flex-col lg:flex-row gap-4 mb-4">
+            <div className="flex-1">
               <div
-                className="absolute inset-0 flex items-center justify-center bg-black"
-                id="video-loading-overlay"
+                ref={streamContainerRef}
+                className="w-full relative bg-black rounded-lg overflow-hidden aspect-video"
               >
-                {video.thumbnail && (
-                  <img
-                    src={video.thumbnail}
-                    alt="Loading thumbnail"
-                    className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
-                  />
+                {isLoading && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center bg-black"
+                    id="video-loading-overlay"
+                  >
+                    {video.thumbnail && (
+                      <img
+                        src={video.thumbnail}
+                        alt="Loading thumbnail"
+                        className="absolute top-0 left-0 w-full h-full object-cover opacity-30"
+                      />
+                    )}
+                    <div className="flex flex-col items-center z-10">
+                      {loadingMessage == "Loading video..." && (
+                        <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
+                      )}
+                      <p className="text-white text-base">{loadingMessage}</p>
+                    </div>
+                  </div>
                 )}
-                <div className="flex flex-col items-center z-10">
-                  {loadingMessage == "Loading video..." && (
-                    <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-[#ea4197] rounded-full animate-spin mb-3"></div>
-                  )}
-                  <p className="text-white text-base">{loadingMessage}</p>
-                </div>
+                <iframe
+                  src={videoSource}
+                  className={`w-full h-full ${isLoading ? "hidden" : ""}`}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                  }}
+
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                  allowFullScreen={true}
+                  onLoad={() => handleVideoLoad()}
+                ></iframe>
               </div>
-            )}
-            {/* <Stream
-              controls
-              src={video.videoUrl || ""}
-              primaryColor="#cfcfcf"
-              poster={video.thumbnail || ""}
-              preload="metadata"
-              onLoadedMetaData={() => handleVideoLoad()}
-              // responsive={false}
-              onError={() => setLoadingMessage("Error 404 - Video not found")}
-              className={`w-full h-full ${isLoading ? "hidden" : ""}`}
-              autoplay={false}
-              muted={false}
-            /> */}
-            <iframe
-              src={videoSource}
-              className={`w-full h-full ${isLoading ? "hidden" : ""}`}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-              }}
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen={true}
-              onLoad={() => handleVideoLoad()}
-            ></iframe>
+            </div>
+
+            <div className="hidden lg:flex lg:flex-col justify-around gap-4">
+              <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
+                <iframe 
+                  src="https://sefsdvc.com/en/us/media/dynamic/id?zid=11923&pid=0&custom1=&custom2=60671&custom3=%7Btransaction_id%7D&custom6=&custom7=PUB_324742&cturl=https://t.irtyf.com/ihxg01j1ds?file_id=252622&aff_id=324742&offer_id=3664&aff_sub=&url=" 
+                  width="300" 
+                  height="250"  
+                  scrolling="no" 
+                  frameBorder="0"
+                  className="w-full rounded-lg"
+                ></iframe>
+              </div>
+
+              <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
+                <iframe 
+                  src="https://www.shfsdvc.com/en/us/about?zid=15442&pid=0&custom1=SPOT_SALESFORCE&custom2=324742&custom3=TS-{campaign_id}&custom4=PUB_{src_hostname}&custom7=KW&custom8=a.vfghe.com&custom9=487c489c-8ee4-40f8-b2ec-dc0e342b5275" 
+                  style={{width: "300px", height: "250px", border: "0px solid", verticalAlign: "bottom"}} 
+                  scrolling="no"
+                  className="w-full rounded-lg"
+                ></iframe>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2209,8 +2223,9 @@ const WatchPageContent = () => {
               </div>
             </>
           )}
-
-          <BannerAds className="mb-3 mt-6" />
+          {video?.contentType != "image" && (
+            <BannerAds className="mb-3 mt-6" />
+          )}
 
           <div ref={commentsRef} className="mt-8">
             <div className="flex items-center justify-between mb-6 px-1 lg:px-0">
@@ -2724,7 +2739,7 @@ const WatchPageContent = () => {
       </div>
 
       <ChatHeadAd />
-      <PostitialAd />
+      <PrestitialAd />
     </div>
   );
 };

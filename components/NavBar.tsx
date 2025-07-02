@@ -55,7 +55,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
       }
     } else {
       if (showStickyNav) {
-        const fadeThreshold = 500;
+        const fadeThreshold = 70;
         const fadeOpacity = Math.max(0, currentScrollY / fadeThreshold);
         setStickyNavOpacity(fadeOpacity);
 

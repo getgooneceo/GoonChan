@@ -20,11 +20,7 @@ const DmcaNotice = () => {
             GoonChan respects the intellectual property rights of others and expects users of our services to do the same. This page explains how copyright owners can report infringing content and how we handle such notices under the Digital Millennium Copyright Act (“DMCA”).
           </p>
           <div className="text-sm text-[#939393] font-medium mt-2 italic">
-            Last updated: {new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+            Last updated: July 1, 2025
           </div>
         </div>
 
