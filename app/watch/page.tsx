@@ -1453,7 +1453,7 @@ const WatchPageContent = () => {
 
   // Use the Cloudflare Stream ID to construct the iframe URL
   const videoSource = video.cloudflareStreamId
-    ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe`
+    ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe?ad-url=${encodeURIComponent('https://cpm.afkwa.com/vast?zone=265316&tagid=324742&page_url=www.goonchan.org')}`
     : "";
 
   const renderVideoSkeletons = () => (
