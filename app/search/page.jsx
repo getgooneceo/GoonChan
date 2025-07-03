@@ -7,6 +7,7 @@ import NavBar from '@/components/NavBar';
 import { FiFilter, FiSearch } from 'react-icons/fi';
 import config from '@/config.json';
 import { FaPlay, FaImage } from 'react-icons/fa';
+import PopUnderAd, { usePopUnderLink } from '@/components/PopUnderAd';
 
 const SearchContent = () => {
   const [user, setUser] = useState(null);
@@ -26,6 +27,7 @@ const SearchContent = () => {
 
   const searchParams = useSearchParams();
   const resultsPerPage = 20;
+  const { createPopUnderLink } = usePopUnderLink();
 
   useEffect(() => {
     const query = searchParams.get('q');
@@ -161,7 +163,7 @@ const SearchContent = () => {
     
     return (
       <div className="group">
-        <Link href={linkPath} className="block">
+        <a href={linkPath} onClick={createPopUnderLink(linkPath)} className="block">
           <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
             <Image
               src={result.thumbnail}
@@ -176,7 +178,7 @@ const SearchContent = () => {
               {isVideo ? formatDuration(result.duration) : 'Image'}
             </div>
           </div>
-        </Link>
+        </a>
 
         <div className="flex mt-3 gap-3">
           <Link href={`/profile?user=${result.uploader.username}`} className="flex-shrink-0">
@@ -201,11 +203,11 @@ const SearchContent = () => {
           </Link>
 
           <div className="flex-1 min-w-0">
-            <Link href={linkPath} className="block group">
+            <a href={linkPath} onClick={createPopUnderLink(linkPath)} className="block group">
               <h3 className="font-medium text-white text-sm font-inter leading-5 group-hover:text-[#ea4197] transition-colors duration-200 line-clamp-2">
                 {result.title}
               </h3>
-            </Link>
+            </a>
 
             <div className="mt-1">
               <div className="flex items-center font-pop flex-wrap gap-1.5 text-xs">
@@ -486,6 +488,7 @@ const SearchPage = () => {
         </div>
       </div>
     }>
+      <PopUnderAd />
       <SearchContent />
     </Suspense>
   );
