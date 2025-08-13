@@ -128,7 +128,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
               alt={video.title || ""}
               width={640}
               height={360}
-              className="object-cover w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
+              className="object-contain w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
             />
           )}
 

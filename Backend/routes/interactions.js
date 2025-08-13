@@ -8,7 +8,7 @@ import { rateLimiter } from 'hono-rate-limiter';
 const router = new Hono();
 
 const limiter = rateLimiter({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   limit: 250,
   standardHeaders: true,
   legacyHeaders: false,

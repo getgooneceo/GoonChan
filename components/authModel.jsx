@@ -235,6 +235,16 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
       if (otpInputRefs.current[nextIndex]) {
         otpInputRefs.current[nextIndex].focus();
       }
+
+      if (newOtpValues.every(digit => digit !== "")) {
+        setTimeout(() => {
+          if (isForgotPassword && forgotPasswordStep === 2) {
+            verifyForgotPasswordOtp(newOtpValues);
+          } else if (isOtpVerification) {
+            handleEmailAuth(newOtpValues);
+          }
+        }, 50);
+      }
       return;
     }
 
@@ -246,6 +256,16 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
 
     if (value && index < 3) {
       otpInputRefs.current[index + 1].focus();
+    }
+
+    if (newOtpValues.every(digit => digit !== "")) {
+      setTimeout(() => {
+        if (isForgotPassword && forgotPasswordStep === 2) {
+          verifyForgotPasswordOtp(newOtpValues);
+        } else if (isOtpVerification) {
+          handleEmailAuth(newOtpValues);
+        }
+      }, 50);
     }
   };
 
@@ -263,9 +283,9 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
     }
   };
 
-  const handleEmailAuth = () => {
+  const handleEmailAuth = (overrideOtpValues) => {
     if (isOtpVerification) {
-      const otp = otpValues.join('');
+      const otp = Array.isArray(overrideOtpValues) ? overrideOtpValues.join('') : otpValues.join('');
       if (otp.length !== 4) {
         setOtpError(true);
         return;
@@ -641,8 +661,8 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
       });
   };
 
-  const verifyForgotPasswordOtp = () => {
-    const otp = otpValues.join("");
+  const verifyForgotPasswordOtp = (overrideOtpValues) => {
+    const otp = Array.isArray(overrideOtpValues) ? overrideOtpValues.join("") : otpValues.join("");
     if (otp.length !== 4) {
       setOtpError(true);
       return;

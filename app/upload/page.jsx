@@ -53,6 +53,14 @@ const UploadPageContent = () => {
   const replaceInputRef = React.useRef(null);
   const thumbnailInputRef = React.useRef(null);
 
+  useEffect(() => {
+    return () => {
+      if (filePreview && typeof filePreview === 'string' && filePreview.startsWith('blob:')) {
+        try { URL.revokeObjectURL(filePreview); } catch {}
+      }
+    };
+  }, [filePreview]);
+
   const pageTitle = uploadType === "photo" ? "Upload Photo" : "Upload Video";
   const TypeIcon = uploadType === "photo" ? RiImageAddLine : RiVideoAddLine;
 
@@ -182,11 +190,8 @@ const UploadPageContent = () => {
         setVideoDuration(null);
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFilePreview(reader.result);
-      };
-      reader.readAsDataURL(videoFile);
+      const objectUrl = URL.createObjectURL(videoFile);
+      setFilePreview(objectUrl);
     }
   };
 
@@ -232,11 +237,8 @@ const UploadPageContent = () => {
         setVideoDuration(null);
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        setFilePreview(reader.result);
-      };
-      reader.readAsDataURL(videoFile);
+      const objectUrl = URL.createObjectURL(videoFile);
+      setFilePreview(objectUrl);
 
       toast.success("Video replaced successfully");
     }
@@ -322,11 +324,8 @@ const UploadPageContent = () => {
           setVideoDuration(null);
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-          setFilePreview(reader.result);
-        };
-        reader.readAsDataURL(videoFile);
+        const objectUrl = URL.createObjectURL(videoFile);
+        setFilePreview(objectUrl);
       }
     }
   };

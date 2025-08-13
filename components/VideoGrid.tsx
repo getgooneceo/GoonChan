@@ -70,7 +70,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             alt={video.title || ''}
             width={640}
             height={360}
-            className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
+            className="object-contain w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
           />
           
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>

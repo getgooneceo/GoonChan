@@ -60,20 +60,20 @@ const checkVideoProcessingStatus = async (cloudflareStreamId, videoId) => {
         }
       );
       
-      const videoStatus = response.data.result?.status;
-      console.log(`Video ${videoId} status: ${videoStatus}`);
+      const resultData = response.data.result;
+      const videoStatus = resultData?.status;
+      console.log(`Video ${videoId} status: ${videoStatus?.state || videoStatus}`);
       
       if (videoStatus?.state === 'ready') {
-        await Video.findByIdAndUpdate(videoId, {
-          isProcessing: false
-        });
-        // console.log(`Video ${videoId} processing completed successfully`);
+        const durationSec = Math.round(Number(resultData?.duration || 0));
+        const updateFields = { isProcessing: false };
+        if (durationSec > 0) updateFields.duration = durationSec;
+        if (resultData?.thumbnail) updateFields.thumbnail = resultData.thumbnail;
+        await Video.findByIdAndUpdate(videoId, updateFields);
         return;
       } else if (videoStatus?.state === 'error') {
         console.error(`Video ${videoId} processing failed`);
-        await Video.findByIdAndUpdate(videoId, {
-          isProcessing: false
-        });
+        await Video.findByIdAndUpdate(videoId, { isProcessing: false });
         return;
       }
 

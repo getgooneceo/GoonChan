@@ -10,7 +10,7 @@ const router = new Hono()
 const JWT_SECRET = process.env.JWT_SECRET
 
 const limiter = rateLimiter({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   limit: 250,
   standardHeaders: true,
   legacyHeaders: false,

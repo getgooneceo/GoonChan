@@ -346,7 +346,7 @@ const ProfileContent = () => {
       // skelly
       <div className="min-h-screen bg-[#080808] text-white">
         <NavBar user={user} setUser={setUser} />
-        <Toaster theme="dark" position="bottom-right" richColors />
+        {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="hidden md:block w-64 shrink-0">
@@ -426,7 +426,7 @@ const ProfileContent = () => {
   return (
     <div className="min-h-screen bg-[#080808] text-white">
       <NavBar user={user} setUser={setUser} />
-      <Toaster theme="dark" position="bottom-right" richColors />
+      {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
         <div className="flex justify-between items-center">

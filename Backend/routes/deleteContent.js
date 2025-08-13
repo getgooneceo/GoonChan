@@ -59,7 +59,7 @@ const deleteVideoFromCloudflare = async (cloudflareStreamId) => {
       return true;
     } else {
       const errorDetails = response.data?.errors ? JSON.stringify(response.data.errors) : 'No error details provided';
-      console.error(`Failed to delete video from Cloudflare Stream: ${cloudflareStreamId}`, errorDetails);
+      console.error(`says failed to delete but prolly got deleted: ${cloudflareStreamId}`, errorDetails);
       return false;
     }
   } catch (error) {
