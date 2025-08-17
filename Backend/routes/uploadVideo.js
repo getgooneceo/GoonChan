@@ -42,7 +42,7 @@ const generateUniqueSlug = async (title) => {
   return slug;
 };
 
-const checkVideoProcessingStatus = async (cloudflareStreamId, videoId) => {
+const checkVideoProcessingStatus = async (cloudflareStreamId, videoId, hasCustomThumbnail) => {
   const maxAttempts = 600;
   let attempts = 0;
   
@@ -68,7 +68,9 @@ const checkVideoProcessingStatus = async (cloudflareStreamId, videoId) => {
         const durationSec = Math.round(Number(resultData?.duration || 0));
         const updateFields = { isProcessing: false };
         if (durationSec > 0) updateFields.duration = durationSec;
-        if (resultData?.thumbnail) updateFields.thumbnail = resultData.thumbnail;
+        if (resultData?.thumbnail && !hasCustomThumbnail) {
+          updateFields.thumbnail = resultData.thumbnail;
+        }
         await Video.findByIdAndUpdate(videoId, updateFields);
         return;
       } else if (videoStatus?.state === 'error') {
@@ -258,7 +260,8 @@ router.post('/', async (c) => {
     const newVideo = new Video(videoData);
     await newVideo.save();
 
-    checkVideoProcessingStatus(cloudflareStreamId, newVideo._id).catch(error => {
+    const hasCustomThumbnail = customThumbnailFile instanceof File && customThumbnailFile.size > 0;
+    checkVideoProcessingStatus(cloudflareStreamId, newVideo._id, hasCustomThumbnail).catch(error => {
       console.error('Error in background processing check:', error);
     });
 
