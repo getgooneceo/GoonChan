@@ -11,6 +11,16 @@ import config from '../../config.json' assert { type: 'json' };
 
 dotenvConfig();
 
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
+];
+
+const getRandomUserAgent = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -71,58 +81,70 @@ async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken)
 }
 
 
-async function scrapeVideoData(pageUrl) {
-    try {
-        const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36' };
-        const response = await axios.get(pageUrl, { headers, timeout: 30000 });
-        const $ = cheerio.load(response.data);
+async function scrapeVideoData(pageUrl, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const headers = {
+                'User-Agent': getRandomUserAgent(),
+                'Referer': 'https://motherless.com/',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+            };
+            const response = await axios.get(pageUrl, { headers, timeout: 30000 });
+            const $ = cheerio.load(response.data);
 
-        const videoTag = $('video');
-        if (!videoTag.length) throw new Error("No <video> tag found.");
+            const videoTag = $('video');
+            if (!videoTag.length) throw new Error("No <video> tag found.");
 
-        const sources = videoTag.find('source');
-        if (!sources.length) throw new Error("No <source> tags found.");
-        
-        const sourceList = [];
-        sources.each((i, el) => {
-            const src = $(el).attr('src');
-            if (!src || !src.startsWith('https') || !src.includes('.mp4')) return;
+            const sources = videoTag.find('source');
+            if (!sources.length) throw new Error("No <source> tags found.");
             
-            const label = $(el).attr('label');
-            let res = 0;
-            if (label && label.includes('p')) {
-                res = parseInt(label, 10);
-            } else {
-                const match = src.match(/-(\d+)p\.mp4/);
-                if (match) res = parseInt(match[1], 10);
+            const sourceList = [];
+            sources.each((i, el) => {
+                const src = $(el).attr('src');
+                if (!src || !src.startsWith('https') || !src.includes('.mp4')) return;
+                
+                const label = $(el).attr('label');
+                let res = 0;
+                if (label && label.includes('p')) {
+                    res = parseInt(label, 10);
+                } else {
+                    const match = src.match(/-(\d+)p\.mp4/);
+                    if (match) res = parseInt(match[1], 10);
+                }
+                sourceList.push({ res, src });
+            });
+
+            if (!sourceList.length) throw new Error("No valid MP4 sources found.");
+
+            sourceList.sort((a, b) => b.res - a.res);
+            const videoUrl = sourceList[0].src;
+
+            const title = $('.media-meta-title h1').text().trim();
+            if (!title) throw new Error("Title not found.");
+
+            const tags = [];
+            $('.media-meta-tags a').each((i, el) => {
+                tags.push($(el).text().replace('#', '').trim());
+            });
+
+            const thumbnailUrl = $('meta[property="og:image"]').attr('content');
+            if (!thumbnailUrl) {
+                console.warn(`Could not find thumbnail for ${pageUrl}`);
             }
-            sourceList.push({ res, src });
-        });
 
-        if (!sourceList.length) throw new Error("No valid MP4 sources found.");
+            return { videoUrl, title, tags, thumbnailUrl }; // Success, return data
 
-        sourceList.sort((a, b) => b.res - a.res);
-        const videoUrl = sourceList[0].src;
-
-        const title = $('.media-meta-title h1').text().trim();
-        if (!title) throw new Error("Title not found.");
-
-        const tags = [];
-        $('.media-meta-tags a').each((i, el) => {
-            tags.push($(el).text().replace('#', '').trim());
-        });
-
-        const thumbnailUrl = $('meta[property="og:image"]').attr('content');
-        if (!thumbnailUrl) {
-            console.warn(`Could not find thumbnail for ${pageUrl}`);
+        } catch (error) {
+            console.error(`Failed to get video data for ${pageUrl} (attempt ${i + 1}/${retries}):`, error.message);
+            if (i === retries - 1) { // Last attempt failed
+                throw error;
+            }
+            await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5s before retrying
         }
-
-        return { videoUrl, title, tags, thumbnailUrl };
-
-    } catch (error) {
-        console.error(`Failed to get video data for ${pageUrl}:`, error.message);
-        throw error;
     }
+    throw new Error(`Failed to scrape video data from ${pageUrl} after ${retries} attempts.`);
 }
 
 async function downloadVideo(url, videoId, retries = 3) {
@@ -136,8 +158,11 @@ async function downloadVideo(url, videoId, retries = 3) {
                 method: 'GET',
                 responseType: 'stream',
                 headers: {
-                    'User-Agent': 'Mozilla/Jostle/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36',
-                    'Referer': 'https://motherless.com/'
+                    'User-Agent': getRandomUserAgent(),
+                    'Referer': 'https://motherless.com/',
+                    'Accept': 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
                 },
                 timeout: 120000 // 2 minutes timeout
             });
@@ -226,7 +251,7 @@ async function processQueue() {
         console.error(`Failed to process ${video.link}:`, error.message);
         io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
         
-        const delay = 300000; // 5 minutes
+        const delay = 10000; // 10 seconds
         setTimeout(processQueue, delay);
     }
 }
