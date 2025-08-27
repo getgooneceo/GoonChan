@@ -287,9 +287,9 @@ const page = () => {
                         </p>
                       </div>
                     </div>
-                    <button onClick={() => removeFromQueue(video._id)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full">
+                    {/* <button onClick={() => removeFromQueue(video._id)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full">
                       <FaTrash />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               ))}
