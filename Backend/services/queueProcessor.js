@@ -8,8 +8,12 @@ import { fileURLToPath } from 'url';
 import FormDataNode from 'form-data';
 import { config as dotenvConfig } from 'dotenv';
 import config from '../../config.json' assert { type: 'json' };
+import { Worker } from 'worker_threads';
+import proxyManager from './proxyManager.js';
 
 dotenvConfig();
+
+let processorRunning = false; // singleton guard
 
 const USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
@@ -80,145 +84,161 @@ async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken)
     }
 }
 
+async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
+    const workingProxies = proxyManager.getWorkingProxies();
+    
+    if (workingProxies.length === 0) {
+        throw new Error('No working proxies available');
+    }
 
-async function scrapeVideoData(pageUrl, retries = 3) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const headers = {
-                'User-Agent': getRandomUserAgent(),
-                'Referer': 'https://motherless.com/',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-            };
-            const response = await axios.get(pageUrl, { headers, timeout: 30000 });
-            const $ = cheerio.load(response.data);
+    console.log(`[QUEUE PROCESSOR] Starting download with ${Math.min(5, workingProxies.length)} threads using working proxies...`);
 
-            const videoTag = $('video');
-            if (!videoTag.length) throw new Error("No <video> tag found.");
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        const resolveOnce = (data) => {
+            if (settled) return;
+            settled = true;
+            resolve(data);
+        };
+        const rejectOnce = (err) => {
+            if (settled) return;
+            settled = true;
+            reject(err);
+        };
+        const proxyQueue = [...workingProxies];
+        let activeWorkers = 0;
+        let downloadStarted = false;
+        let allWorkers = [];
+        let activeWorker = null;
+        const CONCURRENT_WORKERS = 5; // Reduced for better performance
 
-            const sources = videoTag.find('source');
-            if (!sources.length) throw new Error("No <source> tags found.");
-            
-            const sourceList = [];
-            sources.each((i, el) => {
-                const src = $(el).attr('src');
-                if (!src || !src.startsWith('https') || !src.includes('.mp4')) return;
-                
-                const label = $(el).attr('label');
-                let res = 0;
-                if (label && label.includes('p')) {
-                    res = parseInt(label, 10);
-                } else {
-                    const match = src.match(/-(\d+)p\.mp4/);
-                    if (match) res = parseInt(match[1], 10);
+        function terminateOthers(except) {
+            allWorkers.forEach(w => {
+                if (w !== except) {
+                    try { w.terminate(); } catch (e) { console.error(`Failed to terminate worker: ${e.message}`); }
                 }
-                sourceList.push({ res, src });
             });
+            allWorkers = except ? [except] : [];
+        }
 
-            if (!sourceList.length) throw new Error("No valid MP4 sources found.");
-
-            sourceList.sort((a, b) => b.res - a.res);
-            const videoUrl = sourceList[0].src;
-
-            const title = $('.media-meta-title h1').text().trim();
-            if (!title) throw new Error("Title not found.");
-
-            const tags = [];
-            $('.media-meta-tags a').each((i, el) => {
-                tags.push($(el).text().replace('#', '').trim());
-            });
-
-            const thumbnailUrl = $('meta[property="og:image"]').attr('content');
-            if (!thumbnailUrl) {
-                console.warn(`Could not find thumbnail for ${pageUrl}`);
+        function startWorker() {
+            if (proxyQueue.length === 0 || downloadStarted) {
+                if (activeWorkers === 0 && !downloadStarted) {
+                    rejectOnce(new Error('All proxies failed to download the video'));
+                }
+                return;
             }
 
-            return { videoUrl, title, tags, thumbnailUrl }; // Success, return data
-
-        } catch (error) {
-            console.error(`Failed to get video data for ${pageUrl} (attempt ${i + 1}/${retries}):`, error.message);
-            if (i === retries - 1) { // Last attempt failed
-                throw error;
-            }
-            await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5s before retrying
-        }
-    }
-    throw new Error(`Failed to scrape video data from ${pageUrl} after ${retries} attempts.`);
-}
-
-async function downloadVideo(url, videoId, retries = 3) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const filePath = path.join(downloadsDir, `${videoId}.mp4`);
-            const writer = fs.createWriteStream(filePath);
-
-            const response = await axios({
-                url,
-                method: 'GET',
-                responseType: 'stream',
-                headers: {
-                    'User-Agent': getRandomUserAgent(),
-                    'Referer': 'https://motherless.com/',
-                    'Accept': 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                },
-                timeout: 120000 // 2 minutes timeout
+            activeWorkers++;
+            const proxy = proxyQueue.shift();
+            const worker = new Worker(path.resolve(__dirname, 'videoDownloadWorker.js'), {
+                workerData: { proxy, targetUrl: pageUrl, videoId }
             });
 
-            response.data.pipe(writer);
+            allWorkers.push(worker);
 
-            return await new Promise((resolve, reject) => {
-                response.data.on('error', err => {
-                    console.error(`Error during video download stream (attempt ${i + 1}/${retries}):`, err.message);
-                    writer.close();
-                    fs.unlink(filePath, () => {});
-                    reject(err);
-                });
-                writer.on('finish', () => {
-                    resolve(filePath);
-                });
-                writer.on('error', reject);
+            worker.on('message', async (message) => {
+                console.log(`[QUEUE PROCESSOR] [${message.proxy}] ${message.message}`);
+                
+                switch (message.status) {
+                    case 'download_started':
+                        if (!downloadStarted) {
+                            downloadStarted = true;
+                            activeWorker = worker;
+                            try {
+                                if (queueDocId) {
+                                    const v = await VideoQueue.findById(queueDocId);
+                                    if (v && v.status !== 'downloading') {
+                                        v.status = 'downloading';
+                                        await v.save();
+                                    }
+                                    io.emit('queue:downloading', { _id: queueDocId.toString() });
+                                }
+                            } catch (e) {
+                                console.error('Emit on download_started failed:', e.message);
+                            }
+                            terminateOthers(worker);
+                        }
+                        break;
+                    case 'download_finished':
+                        if (worker !== activeWorker) return;
+                        try {
+                            if (queueDocId) {
+                                const v2 = await VideoQueue.findById(queueDocId);
+                                if (v2) {
+                                    v2.status = 'uploading';
+                                    await v2.save();
+                                }
+                                io.emit('queue:uploading', { _id: queueDocId.toString() });
+                            }
+                        } catch (e) {
+                            console.error('Emit on download_finished failed:', e.message);
+                        }
+                        console.log(`[QUEUE PROCESSOR] Download completed successfully!`);
+                        terminateOthers(null);
+                        resolveOnce(message.data);
+                        break;
+                    case 'fail':
+                        if (activeWorker && worker !== activeWorker) {
+                            return;
+                        }
+                        if (activeWorker && worker === activeWorker) {
+                            console.log(`[QUEUE PROCESSOR] Active worker with proxy ${message.proxy} failed. Retrying...`);
+                            activeWorker = null;
+                            downloadStarted = false;
+                        }
+                        break;
+                }
             });
-        } catch (error) {
-            console.error(`Download attempt ${i + 1} failed for ${url}:`, error.message);
-            if (i === retries - 1) throw error;
-            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            worker.on('error', (error) => {
+                console.error(`[QUEUE PROCESSOR] Worker error for proxy ${proxy}:`, error.message);
+            });
+
+            worker.on('exit', (code) => {
+                activeWorkers--;
+                if (!downloadStarted) {
+                    startWorker();
+                }
+            });
         }
-    }
-    // This should not be reachable, but as a safeguard:
-    throw new Error(`Failed to download video from ${url} after ${retries} attempts.`);
+
+        for (let i = 0; i < Math.min(CONCURRENT_WORKERS, workingProxies.length); i++) {
+            startWorker();
+        }
+    });
 }
 
 async function processQueue() {
-    const video = await VideoQueue.findOneAndUpdate(
-      { status: 'queued' },
-      { status: 'processing' },
-      { new: true, sort: { createdAt: 1 } }
-    );
+    // DISABLED: Old queue processing loop is replaced by orchestrator in server.js
+    // This function is kept as a no-op for compatibility but does nothing
+    console.log('[QUEUE PROCESSOR] Old processQueue called but disabled - using server.js orchestrator instead');
+    return;
+}
 
+export async function processOneById(id) {
+    const video = await VideoQueue.findById(id);
     if (!video) {
-        setTimeout(processQueue, 5000); 
         return;
     }
 
-    io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
-    
     let filePath = null;
     try {
-        const { videoUrl, title, tags, thumbnailUrl } = await scrapeVideoData(video.link);
         const videoId = video.link.split('/').pop() || `video_${video._id.toString()}`;
-        
-        video.status = 'downloading';
-        await video.save();
-        io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
 
-        filePath = await downloadVideo(videoUrl, videoId);
+        if (video.status !== 'processing') {
+            video.status = 'processing';
+            await video.save();
+            io.emit('queue:processing', { _id: video._id.toString() });
+        }
+
+        const { filePath: downloadedPath, videoData } = await downloadVideoWithProxies(video.link, videoId, video._id);
+        filePath = downloadedPath;
+        const { title, tags, thumbnailUrl } = videoData;
 
         video.status = 'uploading';
         await video.save();
-        io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
+        io.emit('queue:uploading', { _id: video._id.toString() });
 
         if (video.destination === 'goonchan' || video.destination === 'both') {
             await uploadViaApiRoute(filePath, title, tags, thumbnailUrl, video.userToken);
@@ -226,37 +246,41 @@ async function processQueue() {
 
         video.status = 'completed';
         await video.save();
-        io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
-        
-        console.log(`Successfully processed: ${video.link}.`);
+        io.emit('queue:completed', { _id: video._id.toString() });
 
         if (filePath) {
             fs.unlink(filePath, (err) => {
                 if (err) console.error(`Failed to delete temporary file ${filePath}:`, err);
             });
         }
-        processQueue();
-
     } catch (error) {
         if (filePath) {
             fs.unlink(filePath, (err) => {
                 if (err) console.error(`Failed to delete temporary file on error ${filePath}:`, err);
             });
         }
-        video.status = 'failed';
-        video.errorMessage = error.message;
-        video.retries += 1;
-        await video.save();
-
-        console.error(`Failed to process ${video.link}:`, error.message);
-        io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
-        
-        const delay = 10000; // 10 seconds
-        setTimeout(processQueue, delay);
+        try {
+            if (video) {
+                if (error.message && error.message.includes('No working proxies available')) {
+                    video.status = 'queued';
+                } else if (error.message && error.message.includes('All proxies failed')) {
+                    video.status = 'failed';
+                    video.errorMessage = error.message;
+                    video.retries += 1;
+                } else {
+                    video.status = 'failed';
+                    video.errorMessage = error.message;
+                    video.retries += 1;
+                }
+                await video.save();
+                io.emit(video.status === 'queued' ? 'queue:requeued' : 'queue:failed', { _id: video._id.toString() });
+            }
+        } catch {}
+        throw error;
     }
 }
 
-export function startQueueProcessor() {
-    console.log('Queue processor started.');
-    processQueue();
+export async function startQueueProcessor() {
+    console.log('[QUEUE PROCESSOR] Old startQueueProcessor called but disabled - using server.js orchestrator instead');
+    return;
 } 

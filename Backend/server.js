@@ -5,7 +5,8 @@ import mongoose from "mongoose";
 import { config } from "dotenv";
 import { Server } from 'socket.io';
 import VideoQueue from "./models/VideoQueue.js";
-import { startQueueProcessor } from './services/queueProcessor.js';
+import { processOneById } from './services/queueProcessor.js';
+import proxyManager from './services/proxyManager.js';
 import jwt from 'jsonwebtoken';
 import User from './models/User.js';
 
@@ -111,6 +112,50 @@ const io = new Server(server, {
     }
 });
 
+const memoryQueue = [];
+let isProcessing = false;
+let isProxyChecking = false;
+
+async function broadcastQueue() {
+    try {
+        io.emit('queue:update', await VideoQueue.find().sort({ createdAt: -1 }));
+    } catch (e) {
+        console.error('Failed to broadcast queue:', e.message);
+    }
+}
+
+async function tryProcessNext() {
+    if (isProcessing || isProxyChecking) return;
+    const nextId = memoryQueue.shift();
+    if (!nextId) return;
+    isProcessing = true;
+    try {
+        await processOneById(nextId);
+    } catch (e) {
+        console.error('Processing error:', e.message);
+    } finally {
+        isProcessing = false;
+        setImmediate(tryProcessNext);
+    }
+}
+
+async function bootstrapQueue() {
+    try {
+        // Reset any stuck items and rebuild the memory queue
+        await VideoQueue.updateMany(
+            { status: { $in: ['processing', 'downloading', 'uploading'] } },
+            { $set: { status: 'queued' } }
+        );
+        const queued = await VideoQueue.find({ status: 'queued' }).sort({ createdAt: 1 });
+        memoryQueue.length = 0;
+        for (const v of queued) memoryQueue.push(v._id);
+        await broadcastQueue();
+        tryProcessNext();
+    } catch (e) {
+        console.error('Bootstrap queue failed:', e.message);
+    }
+}
+
 io.on('connection', (socket) => {
     console.log('a user connected');
     
@@ -135,8 +180,12 @@ io.on('connection', (socket) => {
 
             const newVideo = new VideoQueue({ link, destination, queuedBy: user._id, userToken: token });
             await newVideo.save();
-            const fullQueue = await VideoQueue.find().sort({ createdAt: -1 });
-            io.emit('queue:update', fullQueue);
+
+            io.emit('queue:added', { _id: newVideo._id.toString(), link: newVideo.link, status: newVideo.status, destination: newVideo.destination });
+
+            memoryQueue.push(newVideo._id);
+            await broadcastQueue();
+            tryProcessNext();
         } catch (error) {
             console.error('Error adding to queue:', error);
             socket.emit('queue:error', 'Failed to add video to the queue.');
@@ -148,9 +197,19 @@ io.on('connection', (socket) => {
             if (id.toString().startsWith('temp-')) {
                 return;
             }
-            await VideoQueue.findByIdAndDelete(id);
-            const fullQueue = await VideoQueue.find().sort({ createdAt: -1 });
-            io.emit('queue:update', fullQueue);
+
+            const v = await VideoQueue.findById(id);
+            if (!v) return;
+
+            if (v.status === 'queued') {
+                await VideoQueue.findByIdAndDelete(id);
+                const idx = memoryQueue.findIndex(x => x.toString() === id.toString());
+                if (idx !== -1) memoryQueue.splice(idx, 1);
+                io.emit('queue:removed', id.toString());
+                await broadcastQueue();
+            } else {
+                socket.emit('queue:error', 'Cannot remove an item that has already started.');
+            }
         } catch (error) {
             console.error('Error removing from queue:', error);
             socket.emit('queue:error', 'Failed to remove video from the queue.');
@@ -162,6 +221,16 @@ io.on('connection', (socket) => {
     });
 });
 
-startQueueProcessor();
+proxyManager.start({
+    onCheckStart: () => {
+        console.log('[ORCHESTRATOR] Pausing queue processing for proxy check.');
+        isProxyChecking = true;
+    },
+    onCheckEnd: () => {
+        console.log('[ORCHESTRATOR] Resuming queue processing after proxy check.');
+        isProxyChecking = false;
+        setImmediate(tryProcessNext);
+    }
+}).then(bootstrapQueue);
 
-export { server, io };
+export { server, io, proxyManager };

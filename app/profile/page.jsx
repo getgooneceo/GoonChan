@@ -51,12 +51,17 @@ const ProfileContent = () => {
   };
 
   const handleTabChange = (tabId) => {
-    if (tabId === activeTab) return;
+    if (activeTab === tabId) return;
+
     if (tabId === "admin") {
-      router.push('/admin');
+      router.push('/something');
       return;
     }
-    
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.push(`/profile?${params.toString()}`, { scroll: false });
+
     setFadeInOut(true);
 
     setTimeout(() => {
@@ -302,9 +307,18 @@ const ProfileContent = () => {
           setIsOwnProfile(data.isOwnProfile);
           setBio(data.user.bio || "");
 
-          if (!data.isOwnProfile) {
-            setActiveTab("videos");
+          const tabParam = searchParams.get('tab');
+          const validTabs = ['videos', 'images', 'subscriptions'];
+          if (data.isOwnProfile) {
+            validTabs.push('general');
           }
+
+          let initialTab = data.isOwnProfile ? 'general' : 'videos';
+          if (tabParam && validTabs.includes(tabParam)) {
+            initialTab = tabParam;
+          }
+          
+          setActiveTab(initialTab);
         } else {
           setError(data.message || "Failed to load profile");
         }

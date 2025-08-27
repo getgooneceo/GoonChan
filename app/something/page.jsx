@@ -37,7 +37,6 @@ const page = () => {
         if (data.success && data.user?.isAdmin) {
           setUser(data.user);
           
-          // Fetch initial queue state after authentication
           const queueRes = await fetch(`${config.url}/api/queue`);
           const queueData = await queueRes.json();
           if (queueData.success) {
@@ -55,25 +54,63 @@ const page = () => {
 
     checkAuth();
 
-    // Initialize Socket.IO connection
-    socketRef.current = io(config.url);
-
-    socketRef.current.on('connect', () => {
-        console.log('Connected to Socket.IO server');
+    // Initialize Socket.IO connection with reliable websocket transport
+    socketRef.current = io(config.url, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
     });
 
-    socketRef.current.on('queue:update', (updatedQueue) => {
-        setQueue(updatedQueue);
+    const socket = socketRef.current;
+
+    socket.on('connect', () => {
+      console.log('Connected to Socket.IO server');
     });
 
-    socketRef.current.on('queue:error', (errorMessage) => {
-        toast.error(errorMessage);
+    // Helper to update status by id
+    const setStatus = (id, status) => {
+      setQueue(prev => {
+        const idx = prev.findIndex(v => v._id === id);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        next[idx] = { ...next[idx], status, isOptimistic: false };
+        return next;
+      });
+    };
+
+    // When a new item is added by server, replace optimistic item if present
+    socket.on('queue:added', (doc) => {
+      setQueue(prev => {
+        const withoutOptimistic = prev.filter(v => !(v.isOptimistic && v.link === doc.link && v.destination === doc.destination));
+        return [doc, ...withoutOptimistic];
+      });
+    });
+
+    socket.on('queue:removed', (id) => {
+      setQueue(prev => prev.filter(v => v._id !== id));
+    });
+
+    socket.on('queue:processing', ({ _id }) => setStatus(_id, 'processing'));
+    socket.on('queue:downloading', ({ _id }) => setStatus(_id, 'downloading'));
+    socket.on('queue:uploading', ({ _id }) => setStatus(_id, 'uploading'));
+    socket.on('queue:completed', ({ _id }) => setStatus(_id, 'completed'));
+    socket.on('queue:failed', ({ _id }) => setStatus(_id, 'failed'));
+    socket.on('queue:requeued', ({ _id }) => setStatus(_id, 'queued'));
+
+    // Fallback full-queue updates (bootstrap or rare resyncs)
+    socket.on('queue:update', (updatedQueue) => {
+      setQueue(updatedQueue);
+    });
+
+    socket.on('queue:error', (errorMessage) => {
+      toast.error(errorMessage);
     });
 
     return () => {
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-        }
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, [router]);
 
@@ -87,7 +124,7 @@ const page = () => {
     }
 
     const optimisticVideo = {
-      _id: `temp-${Date.now()}`,
+      _id: `temp-${Date.now()}-${Math.random()}`,
       link: trimmedLink,
       status: 'queued',
       destination: uploadDestination,
@@ -102,11 +139,36 @@ const page = () => {
   };
 
   const removeFromQueue = (id) => {
-    // Optimistic UI update for removing
     setQueue(prevQueue => prevQueue.filter(video => video._id !== id));
 
     socketRef.current.emit('queue:remove', id);
     toast.warning('Video removed from the queue.');
+  };
+
+  const getDisplayedQueue = (queue) => {
+    let activeVideoIndex = -1;
+    for (let i = queue.length - 1; i >= 0; i--) {
+        const video = queue[i];
+        if (video.status !== 'completed' && video.status !== 'failed') {
+            activeVideoIndex = i;
+            break;
+        }
+    }
+
+    if (activeVideoIndex === -1) {
+        return queue;
+    }
+
+    return queue.map((video, index) => {
+        if (index < activeVideoIndex) {
+            if (video.status === 'completed') {
+                return video;
+            }
+            return { ...video, status: 'queued' };
+        }
+        
+        return video;
+    });
   };
 
   const getStatusIcon = (status) => {
@@ -142,6 +204,7 @@ const page = () => {
   const goonChanUploads = queue.filter(v => v.status === 'completed' && (v.destination === 'goonchan' || v.destination === 'both')).length;
   const goonVideosUploads = queue.filter(v => v.status === 'completed' && (v.destination === 'goonvideos' || v.destination === 'both')).length;
   const inQueueCount = queue.filter(v => v.status === 'queued' || v.status === 'processing').length;
+  const displayedQueue = getDisplayedQueue(queue);
 
   return (
     <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen text-white">
@@ -200,7 +263,7 @@ const page = () => {
 
         <div>
           <h2 className="text-2xl font-bold mb-6">Upload Queue</h2>
-          {queue.length === 0 ? (
+          {displayedQueue.length === 0 ? (
             <div className="text-center py-20 bg-gradient-to-br from-[#111]/60 to-[#171717]/60 rounded-3xl p-8 border border-[#2a2a2a]/40">
               <i className="ri-upload-cloud-2-line text-6xl text-[#ea4197]"></i>
               <h3 className="text-xl font-bold mt-4">Queue is empty</h3>
@@ -208,7 +271,7 @@ const page = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {queue.map(video => (
+              {displayedQueue.map(video => (
                 <div 
                   key={video._id} 
                   className={`bg-gradient-to-br from-[#121212] to-[#171717] border border-[#2a2a2a]/50 rounded-2xl p-4 flex flex-col gap-3 transition-all duration-300 ${video.isOptimistic ? 'opacity-50' : ''}`}
@@ -224,9 +287,9 @@ const page = () => {
                         </p>
                       </div>
                     </div>
-                    {/* <button onClick={() => removeFromQueue(video._id)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full">
+                    <button onClick={() => removeFromQueue(video._id)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full">
                       <FaTrash />
-                    </button> */}
+                    </button>
                   </div>
                 </div>
               ))}

@@ -1,0 +1,10 @@
+{
+  "ignore": [
+    "services/proxy-cache.json",
+    "services/cache/**"
+  ],
+  "ext": "js,mjs,cjs,json",
+  "watch": [
+    "./"
+  ]
+} 

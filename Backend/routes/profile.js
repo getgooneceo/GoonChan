@@ -60,16 +60,14 @@ router.post('/', limiter, async (c) => {
 
     const videos = await Video.find({ uploader: user._id })
       .sort({ createdAt: -1 })
-      .limit(20)
 
     const images = await Image.find({ uploader: user._id })
       .sort({ createdAt: -1 })
-      .limit(20)
 
     const subscriptions = await User.find(
       { _id: { $in: user.subscriptions || [] } },
       { username: 1, avatar: 1, avatarColor: 1, subscriberCount: 1 }
-    ).limit(10)
+    )
 
     const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0) + 
                      images.reduce((sum, image) => sum + (image.views || 0), 0)
