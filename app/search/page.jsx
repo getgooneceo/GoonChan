@@ -10,22 +10,24 @@ import { FaPlay, FaImage } from 'react-icons/fa';
 import PopUnderAd, { usePopUnderLink } from '@/components/PopUnderAd';
 
 const SearchContent = () => {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q');
+
   const [user, setUser] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!initialQuery);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [filterJustOpened, setFilterJustOpened] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialQuery || '');
   const [filters, setFilters] = useState({
     contentType: 'all', // 'all', 'videos', 'images'
     sortBy: 'relevance', // 'relevance', 'recent', 'views', 'hot'
     dateRange: 'all', // 'all', 'today', 'week', 'month', 'year'
   });
 
-  const searchParams = useSearchParams();
   const resultsPerPage = 20;
   const { createPopUnderLink } = usePopUnderLink();
 

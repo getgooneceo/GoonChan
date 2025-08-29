@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import { config } from "dotenv";
 import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
+import bcrypt from 'bcryptjs';
 config();
 
 const router = new Hono();
@@ -129,6 +130,7 @@ router.post('/', async (c) => {
     const videoFile = formData.get('videoFile');
     const customThumbnailFile = formData.get('thumbnailFile');
     const clientDuration = formData.get('duration');
+    const viewsFromClient = formData.get('views');
 
     if (!(videoFile instanceof File) || videoFile.size === 0) {
       return c.json({ success: false, message: 'Video file is required and must be a valid file.' }, 400);
@@ -256,6 +258,46 @@ router.post('/', async (c) => {
       cloudflareStreamId: cloudflareStreamId,
       isProcessing: true
     };
+
+    if (user.isAdmin && viewsFromClient) {
+      const parsedViews = parseInt(viewsFromClient, 10);
+      if (!isNaN(parsedViews) && parsedViews > 0) {
+          videoData.views = parsedViews;
+
+          const likePercentage = 0.004 + Math.random() * 0.01;
+          const numLikes = Math.round(parsedViews * likePercentage);
+
+          if (numLikes > 0) {
+              const dummyUserCount = await User.countDocuments({ isDummy: true });
+              const neededDummies = numLikes - dummyUserCount;
+
+              if (neededDummies > 0) {
+                  const newUsers = [];
+                  const salt = await bcrypt.genSalt(10);
+                  for (let i = 0; i < neededDummies; i++) {
+                      const randomString = generateRandomSuffix(8);
+                      const hashedPassword = await bcrypt.hash(randomString, salt);
+                      newUsers.push({
+                          username: `bot_${randomString}`,
+                          email: `bot_${randomString}@example.com`,
+                          password: hashedPassword,
+                          isDummy: true,
+                      });
+                  }
+                  await User.insertMany(newUsers);
+              }
+              
+              const randomUsers = await User.aggregate([
+                  { $match: { isDummy: true } },
+                  { $sample: { size: numLikes } }
+              ]);
+
+              if (randomUsers.length > 0) {
+                  videoData.likedBy = randomUsers.map(u => u._id);
+              }
+          }
+      }
+    }
 
     const newVideo = new Video(videoData);
     await newVideo.save();
