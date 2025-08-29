@@ -80,15 +80,7 @@ async function scrapeVideoData(pageUrl, proxy) {
 
     const thumbnailUrl = $('meta[property="og:image"]').attr('content');
 
-    let views = 0;
-    $('.media-meta-stats .count').each((i, el) => {
-        const text = $(el).text();
-        if (text.includes('Views')) {
-            views = parseInt(text.replace(/,/g, '').replace(' Views', '').trim(), 10) || 0;
-        }
-    });
-
-    return { videoUrl, title, tags, thumbnailUrl, views };
+    return { videoUrl, title, tags, thumbnailUrl };
 }
 
 async function downloadVideo(url, videoId, proxy) {

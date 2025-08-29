@@ -33,16 +33,13 @@ if (!fs.existsSync(downloadsDir)) {
   fs.mkdirSync(downloadsDir, { recursive: true });
 }
 
-async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken, views) {
+async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken) {
     const form = new FormDataNode();
 
     form.append('title', title);
     form.append('description', 'nothing');
     form.append('tags', tags.join(' '));
     form.append('token', userToken);
-    if (views) {
-        form.append('views', views.toString());
-    }
 
     const videoBuffer = fs.readFileSync(filePath);
     form.append('videoFile', videoBuffer, {
@@ -237,14 +234,14 @@ export async function processOneById(id) {
 
         const { filePath: downloadedPath, videoData } = await downloadVideoWithProxies(video.link, videoId, video._id);
         filePath = downloadedPath;
-        const { title, tags, thumbnailUrl, views } = videoData;
+        const { title, tags, thumbnailUrl } = videoData;
 
         video.status = 'uploading';
         await video.save();
         io.emit('queue:uploading', { _id: video._id.toString() });
 
         if (video.destination === 'goonchan' || video.destination === 'both') {
-            await uploadViaApiRoute(filePath, title, tags, thumbnailUrl, video.userToken, views);
+            await uploadViaApiRoute(filePath, title, tags, thumbnailUrl, video.userToken);
         }
 
         video.status = 'completed';
