@@ -1,6 +1,5 @@
-'use client'
+.'use client'
 import React, { useState, useEffect, Suspense } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import NavBar from '@/components/NavBar';
@@ -167,11 +166,9 @@ const SearchContent = () => {
       <div className="group">
         <a href={linkPath} onClick={createPopUnderLink(linkPath)} className="block">
           <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
-            <Image
+            <img
               src={result.thumbnail}
               alt={result.title}
-              width={400}
-              height={225}
               className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
@@ -186,11 +183,9 @@ const SearchContent = () => {
           <Link href={`/profile?user=${result.uploader.username}`} className="flex-shrink-0">
             <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1f1f1f] hover:opacity-80 transition-opacity">
               {result.uploader.avatar ? (
-                <Image
+                <img
                   src={result.uploader.avatar}
                   alt={result.uploader.username}
-                  width={36}
-                  height={36}
                   className="w-full h-full object-cover"
                 />
               ) : (

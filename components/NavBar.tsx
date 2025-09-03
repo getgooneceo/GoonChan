@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import Image from "next/image";
 import { FiSearch, FiMenu, FiX } from "react-icons/fi";
 import { FaUserAlt, FaRegUser, FaRandom, FaHeart,  FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
 import { RiVideoUploadFill, RiVideoUploadLine } from "react-icons/ri";
@@ -298,13 +297,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             </div>
 
             <Link href="/" className="absolute left-1/2 transform -translate-x-1/2 flex items-center cursor-pointer">
-              <Image
+              <img
                 src="/logo.webp"
                 alt="GoonChan Logo"
-                width={30}
-                height={30}
                 className="rounded-full opacity-95"
-                priority
+                style={{ width: '30px', height: '30px' }}
               />
               <h1 className="font-inter text-xl font-semibold text-white ml-[0.42rem]">
                 Goon<span className="text-[#ea4197]">Chan</span>
@@ -319,13 +316,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               />
               {user && (user.avatar || avatarUrl) ? (
                 <div className="cursor-pointer" onClick={handleProfileNavigation}>
-                  <Image
+                  <img
                     src={user.avatar || avatarUrl}
                     alt={user.username || "User Avatar"}
-                    width={25}
-                    height={25}
                     className="rounded-full object-cover"
-                    priority
+                    style={{ width: '25px', height: '25px' }}
                   />
                 </div>
               ) : (
@@ -350,13 +345,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
         <div className="hidden md:flex flex-col">
           <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
             <Link href={"/"} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
-              <Image
+              <img
                 src="/logo.webp"
                 alt="GoonChan Logo"
-                width={34}
-                height={34}
                 className="rounded-full opacity-95"
-                priority
+                style={{ width: '34px', height: '34px' }}
               />
               <h1 className="font-inter text-2xl font-semibold text-white hidden sm:block">
                 Goon<span className="text-[#ea4197]">Chan</span>
@@ -387,13 +380,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               >
                 <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && (user.avatar || avatarUrl) ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
                   {user && (user.avatar || avatarUrl) ? (
-                    <Image
+                    <img
                       src={user.avatar || avatarUrl}
                       alt={user.username || "User Avatar"}
-                      width={41}
-                      height={41}
                       className="rounded-full object-cover"
-                      priority
+                      style={{ width: '41px', height: '41px' }}
                     />
                   ) : (
                     <FaUserAlt
@@ -475,12 +466,11 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             <div className="p-5 flex flex-col h-full">
               <div className="flex items-center justify-between mb-8">
                 <Link href="/" className="flex items-center" onClick={() => setIsSidebarOpen(false)}>
-                  <Image
+                  <img
                     src="/logo.webp"
                     alt="GoonChan Logo"
-                    width={32}
-                    height={32}
                     className="rounded-full opacity-95"
+                    style={{ width: '32px', height: '32px' }}
                   />
                   <h1 className="font-inter text-xl font-semibold text-white ml-3">
                     Goon<span className="text-[#ea4197]">Chan</span>

@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import NavBar from "@/components/NavBar";
 import "remixicon/fonts/remixicon.css";
 import VideoGrid from "@/components/VideoGrid";
@@ -1721,14 +1720,10 @@ const WatchPageContent = () => {
               {video.imageUrls && video.imageUrls.length > 0 ? (
                 <>
                   <div className="flex-1 px-2 relative w-full h-auto lg:h-full">
-                    <Image
+                    <img
                       src={video.imageUrls[currentImageIndex]}
                       alt={`${video.title} - Image ${currentImageIndex + 1}`}
-                      width={0}
-                      height={0}
-                      sizes="100vw"
                       className="w-full h-auto lg:h-full lg:max-h-[35rem] object-contain lg:object-contain"
-                      priority
                     />
 
                     {video.imageUrls.length > 1 && (
@@ -1760,11 +1755,10 @@ const WatchPageContent = () => {
                                       : "border-none"
                                   }`}
                                 >
-                                  <Image
+                                  <img
                                     src={imageUrl}
                                     alt={`Thumbnail ${actualIndex + 1}`}
-                                    fill
-                                    className="object-cover group-hover:brightness-105 brightness-95 transition-all duration-200"
+                                    className="object-cover group-hover:brightness-105 brightness-95 transition-all duration-200 w-full h-full"
                                   />
                                 </button>
                               );
@@ -1987,13 +1981,12 @@ const WatchPageContent = () => {
                 className="relative w-9 h-9 md:w-10 md:h-10 bg-[#2d2d2d] rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={handleUploaderClick}
               >
-                <Image
+                <img
                   src={
                     video.uploader?.avatar || uploaderAvatarUrl || "/logo.webp"
                   }
                   alt={video.uploader?.username || "User"}
-                  fill
-                  className="object-cover opacity-[97%]"
+                  className="object-cover opacity-[97%] w-full h-full"
                 />
               </div>
               <div className="cursor-pointer" onClick={handleUploaderClick}>
@@ -2090,13 +2083,12 @@ const WatchPageContent = () => {
               className="relative w-10 h-10 bg-[#252525] rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
               onClick={handleUploaderClick}
             >
-              <Image
+              <img
                 src={
                   video.uploader?.avatar || uploaderAvatarUrl || "/logo.webp"
                 }
                 alt={video.uploader?.username || "User"}
-                fill
-                className="object-cover opacity-[97%]"
+                className="object-cover opacity-[97%] w-full h-full"
               />
             </div>
             <div
@@ -2252,15 +2244,14 @@ const WatchPageContent = () => {
 
             <div className="mb-8 flex gap-3 px-1 lg:px-0">
               <div className="relative w-10 h-10 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]">
-                <Image
+                <img
                   src={
                     user
                       ? user.avatar || userAvatarUrl || "/logo.webp"
                       : "/logo.webp"
                   }
                   alt={user?.username || "User"}
-                  fill
-                  className="object-cover"
+                  className="object-cover w-full h-full"
                 />
               </div>
               <div className="flex-grow">
@@ -2374,7 +2365,7 @@ const WatchPageContent = () => {
                             handleCommentUserClick(comment.username)
                           }
                         >
-                          <Image
+                          <img
                             src={
                               comment.avatar ||
                               `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(
@@ -2384,8 +2375,6 @@ const WatchPageContent = () => {
                               }</text></svg>`
                             }
                             alt={comment.username}
-                            width={32}
-                            height={32}
                             className="object-cover w-full h-full"
                           />
                         </div>
@@ -2499,7 +2488,7 @@ const WatchPageContent = () => {
                           {showReplyBox[comment._id] && (
                             <div className="mt-3 flex gap-2 bg-[#0a0a0a]/40 rounded-lg p-2.5 border border-[#2a2a2a]/40 animate-in slide-in-from-top-2 duration-200">
                               <div className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden bg-[#2a2a2a] ring-1 ring-[#3a3a3a]">
-                                <Image
+                                <img
                                   src={
                                     user
                                       ? user.avatar ||
@@ -2508,9 +2497,7 @@ const WatchPageContent = () => {
                                       : "/logo.webp"
                                   }
                                   alt={user?.username || "User"}
-                                  width={24}
-                                  height={24}
-                                  className="object-cover"
+                                  className="object-cover w-full h-full"
                                 />
                               </div>
                               <div className="flex-grow">
@@ -2588,7 +2575,7 @@ const WatchPageContent = () => {
                                         handleCommentUserClick(reply.username)
                                       }
                                     >
-                                      <Image
+                                      <img
                                         src={
                                           reply.avatar ||
                                           `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(
@@ -2599,8 +2586,6 @@ const WatchPageContent = () => {
                                           }</text></svg>`
                                         }
                                         alt={reply.username}
-                                        width={24}
-                                        height={24}
                                         className="object-cover w-full h-full"
                                       />
                                     </div>

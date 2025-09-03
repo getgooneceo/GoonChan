@@ -1,6 +1,5 @@
 "use client";
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { VideoType } from './Types';
 import { RiUser3Line } from "react-icons/ri";
@@ -65,11 +64,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
         className="block group cursor-pointer"
       >
         <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
-          <Image 
+          <img 
             src={video.thumbnail || ''} 
             alt={video.title || ''}
-            width={640}
-            height={360}
             className="object-contain w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
           />
           
@@ -88,11 +85,9 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
         >
           <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1f1f1f] hover:opacity-80 transition-opacity">
             {(uploaderObj.avatar || avatarUrl) ? (
-              <Image
+              <img
                 src={uploaderObj.avatar || avatarUrl || ''}
                 alt={`${uploaderObj.username}'s avatar`}
-                width={36}
-                height={36}
                 className="object-cover w-full h-full"
               />
             ) : (

@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { toast, Toaster } from "sonner";
 import { FiTrash2 } from "react-icons/fi";
@@ -82,11 +81,9 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
     <>
       <Link href={`/watch?v=${image.slug || image._id}`} className="group relative cursor-pointer">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-[#101010]">
-          <Image
+          <img
             src={thumbnailUrl}
             alt={image.title || ""}
-            width={400}
-            height={400}
             className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
           />
 

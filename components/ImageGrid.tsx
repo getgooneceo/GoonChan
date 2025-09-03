@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaEye, FaUser } from "react-icons/fa";
@@ -85,11 +84,9 @@ const ImageCard = ({
           {!imageLoaded && (
             <div className="absolute inset-0 bg-[#1a1a1a] animate-pulse rounded-xl" />
           )}
-          <Image
+          <img
             src={getThumbnailUrl()}
             alt={video.title}
-            width={400}
-            height={600}
             className={`w-full h-auto object-cover transition-opacity duration-300 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}

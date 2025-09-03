@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { RiImageAddLine, RiVideoAddLine, RiCloseLine } from "react-icons/ri";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 const UploadModal = ({ setShowUploadModal, user }) => {
   const router = useRouter();
@@ -73,12 +72,11 @@ const UploadModal = ({ setShowUploadModal, user }) => {
       >
         <div className="flex justify-between items-center px-6 py-4 border-b border-[#2a2a2a]">
           <div className="flex items-center space-x-2.5">
-            <Image
+            <img
               src="/logo.webp"
               alt="GoonChan Logo"
-              width={30}
-              height={30}
               className="rounded-full opacity-95"
+              style={{ width: '30px', height: '30px' }}
             />
             <h2 className="text-xl font-bold text-white">Upload Content</h2>
           </div>

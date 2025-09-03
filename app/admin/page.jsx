@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
-import Image from "next/image";
 import { Toaster, toast } from "sonner";
 import config from "@/config.json";
 import useUserAvatar from '@/hooks/useUserAvatar';
@@ -26,19 +25,15 @@ const ReporterAvatar = ({ reporter }) => {
   return (
     <div className="w-10 h-10 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#2a2a2a] to-[#2f2f2f] flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg">
       {reporter?.avatar ? (
-        <Image
+        <img
           src={reporter.avatar}
           alt={reporter.username}
-          width={48}
-          height={48}
           className="object-cover w-full h-full"
         />
       ) : reporterAvatarUrl ? (
-        <Image
+        <img
           src={reporterAvatarUrl}
           alt={reporter?.username || 'Reporter'}
-          width={48}
-          height={48}
           className="object-cover w-full h-full"
         />
       ) : (

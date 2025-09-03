@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useRef, useEffect, Suspense } from "react";
-import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FiUpload, FiEdit2, FiLogOut } from "react-icons/fi";
 import { RiVideoLine, RiImageLine, RiUser3Line } from "react-icons/ri";
@@ -507,11 +506,10 @@ const ProfileContent = () => {
                 >
                   <div className="w-26 h-26 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-[#1f1f1f] bg-[#1f1f1f] relative">
                     {(profileData.avatar || avatarUrl) ? (
-                      <Image
+                      <img
                         src={profileData.avatar || avatarUrl}
                         alt="Profile Picture"
-                        fill
-                        className="object-cover transition-transform duration-200 ease-in-out"
+                        className="object-cover transition-transform duration-200 ease-in-out w-full h-full"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#1f1f1f]">

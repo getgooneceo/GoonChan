@@ -1,6 +1,5 @@
 "use client";
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import useUserAvatar from '../hooks/useUserAvatar';
 import { FaUserAlt } from 'react-icons/fa';
@@ -25,11 +24,9 @@ const SubscriptionCard = ({ subscription }) => {
     >
       <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#272727] mb-3">
         {(subscription.avatar || avatarUrl) ? (
-          <Image 
+          <img 
             src={subscription.avatar || avatarUrl} 
             alt={subscription.username}
-            width={64}
-            height={64}
             className="object-cover w-full h-full"
           />
         ) : (

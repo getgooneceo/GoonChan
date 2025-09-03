@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { toast, Toaster } from "sonner";
 import { FiTrash2 } from "react-icons/fi";
@@ -123,11 +122,9 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
               <div className="text-white/80 font-roboto text-sm font-medium">Processing...</div>
             </div>
           ) : (
-            <Image
+            <img
               src={video.thumbnail || ""}
               alt={video.title || ""}
-              width={640}
-              height={360}
               className="object-contain w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
             />
           )}
