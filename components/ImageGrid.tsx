@@ -93,7 +93,7 @@ const ImageCard = ({
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               console.warn('Image failed to load:', getThumbnailUrl());
-              e.target.src = '/logo.webp'; // Fallback to logo
+              (e.target as HTMLImageElement).src = '/logo.webp'; // Fallback to logo
               setImageLoaded(true);
             }}
             style={{

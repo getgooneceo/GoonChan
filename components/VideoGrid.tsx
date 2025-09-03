@@ -68,10 +68,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             src={video.thumbnail || ''} 
             alt={video.title || ''}
             className="object-contain w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
-            onError={(e) => {
-              console.warn('Video thumbnail failed to load:', video.thumbnail);
-              e.target.src = '/logo.webp'; // Fallback to logo
-            }}
           />
           
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
@@ -94,10 +90,6 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
                   src={uploaderObj.avatar || avatarUrl || ''}
                   alt={`${uploaderObj.username}'s avatar`}
                   className="object-cover w-full h-full"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'flex';
-                  }}
                 />
                 <div className="w-full h-full flex items-center justify-center bg-[#1f1f1f]" style={{display: 'none'}}>
                   <RiUser3Line className="text-[#666] text-lg" />
