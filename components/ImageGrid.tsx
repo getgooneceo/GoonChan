@@ -91,6 +91,11 @@ const ImageCard = ({
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              console.warn('Image failed to load:', getThumbnailUrl());
+              e.target.src = '/logo.webp'; // Fallback to logo
+              setImageLoaded(true);
+            }}
             style={{
               aspectRatio: `auto ${1 + Math.random() * 0.1}`,
             }}

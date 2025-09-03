@@ -126,6 +126,10 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
               src={video.thumbnail || ""}
               alt={video.title || ""}
               className="object-contain w-full h-full group-hover:scale-[1.03] transition-transform duration-300 ease-in-out"
+              onError={(e) => {
+                console.warn('Video thumbnail failed to load:', video.thumbnail);
+                e.target.src = '/logo.webp'; // Fallback to logo
+              }}
             />
           )}
 

@@ -22,13 +22,22 @@ const SubscriptionCard = ({ subscription }) => {
       href={`/profile?user=${subscription.username}`}
       className="flex flex-col items-center p-3 bg-[#151515] rounded-lg hover:bg-[#1a1a1a] transition-colors"
     >
-      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#272727] mb-3">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#272727] mb-3">
         {(subscription.avatar || avatarUrl) ? (
-          <img 
-            src={subscription.avatar || avatarUrl} 
-            alt={subscription.username}
-            className="object-cover w-full h-full"
-          />
+          <>
+            <img 
+              src={subscription.avatar || avatarUrl} 
+              alt={subscription.username}
+              className="object-cover w-full h-full"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextElementSibling.style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]" style={{display: 'none'}}>
+              <FaUserAlt size={24} className="text-[#444]" />
+            </div>
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a]">
             <FaUserAlt size={24} className="text-[#444]" />

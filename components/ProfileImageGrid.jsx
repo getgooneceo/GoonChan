@@ -85,6 +85,10 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
             src={thumbnailUrl}
             alt={image.title || ""}
             className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
+            onError={(e) => {
+              console.warn('Profile image failed to load:', thumbnailUrl);
+              e.target.src = '/logo.webp'; // Fallback to logo
+            }}
           />
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
