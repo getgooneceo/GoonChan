@@ -85,7 +85,7 @@ const BannerAds = ({
 
   return (
     <div className={`w-full px-10 md:px-0 rounded-lg overflow-hidden ${className}`}>
-      <div className="flex flex-wrap justify-center gap-4">
+      {/* <div className="flex flex-wrap justify-center gap-4">
         {randomAds.map((ad, index) => (
           <div
             key={index}
@@ -102,7 +102,7 @@ const BannerAds = ({
             </a>
           </div>
         ))}
-      </div>
+      </div> */}
     </div>
   );
 };
