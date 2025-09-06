@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from 'react';
 
+/*
 const PopUnderAd = () => {
   const scriptLoaded = useRef(false);
 
@@ -72,7 +73,7 @@ const PopUnderAd = () => {
 
 export default PopUnderAd;
 
-export const usePopUnderLink = () => {
+export const usePopUnderLink_OLD = () => {
   const popunderUrls = [
     'https://t.mbslr2.com/324742/8780/0?bo=2779,2C2778,2C2777,2C2776,2C2775&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
     'https://t.acrsmartcam.com/324742/3664/0?bo=2779,2C2778,2C2777,2C2776,2C2775&target=banners&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0005&pud=scptpz',
@@ -113,6 +114,21 @@ export const usePopUnderLink = () => {
           console.log('Failed to redirect');
         }
       }
+    };
+  };
+
+  return { createPopUnderLink };
+};
+*/
+
+export const usePopUnderLink = () => {
+  const createPopUnderLink = (href) => {
+    return (e) => {
+      e.preventDefault();
+      
+      // The script provided handles the pop-under, so we just need to navigate.
+      // The external script will hijack the click.
+      window.location.href = href;
     };
   };
 

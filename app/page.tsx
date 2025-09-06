@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { useRouter, useSearchParams } from "next/navigation";
 import config from "../config.json"
 import BannerAds from "@/components/BannerAds";
-import PopUnderAd from "@/components/PopUnderAd";
+// import PopUnderAd from "@/components/PopUnderAd";
 
 function HomeContent() {
   const [user, setUser] = useState(null);
@@ -480,7 +480,7 @@ function HomeContent() {
 
   return (
     <>
-      <PopUnderAd />
+      {/* <PopUnderAd /> */}
       <div className="bg-[#080808] min-h-screen w-full">
         <NavBar 
           user={user} 

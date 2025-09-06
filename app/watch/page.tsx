@@ -1714,6 +1714,19 @@ const WatchPageContent = () => {
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
         <BannerAds className="mb-6" />
 
+        <div className="mb-4">
+          <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
+            <iframe
+              src="https://chaturbate.com/in/?tour=x1Rd&campaign=H5o9o&track=default&c=6&p=3&tag=sexy&gender=f"
+              width="100%"
+              height="190"
+              scrolling="no"
+              frameBorder="0"
+              className="w-full"
+            ></iframe>
+          </div>
+        </div>
+
         {video.contentType === "image" && (
           <div className="w-full overflow-hidden mb-4">
             <div className="w-full h-full relative flex flex-col lg:flex-row">
@@ -1908,6 +1921,20 @@ const WatchPageContent = () => {
             </div>
           </div>
         )}
+
+        {/* Inserted full-width bubble ad below the video, above info container */}
+        <div className="mb-4">
+          <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
+            <iframe
+              src="https://chaturbate.com/in/?tour=x1Rd&campaign=H5o9o&track=default&c=6&p=1&gender=f"
+              width="100%"
+              height="190"
+              scrolling="no"
+              frameBorder="0"
+              className="w-full"
+            ></iframe>
+          </div>
+        </div>
 
         <div className="mb-4 bg-[#121212] rounded-lg p-4 md:p-6">
           <h1 className="text-[#ebebeb] font-roboto mb-1 md:mb-0 text-xl leading-tight md:leading-normal  md:text-2xl font-bold">
