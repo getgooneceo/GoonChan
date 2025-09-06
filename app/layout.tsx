@@ -1,17 +1,25 @@
 "use client";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins, Inter, Roboto } from "next/font/google";
 import { Toaster } from 'sonner';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  variable: "--font-pop",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter", 
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export default function RootLayout({
@@ -23,11 +31,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <title>Goonchan</title>
-        <meta name="description" content="Adult content platform" />
+        {/* <meta name="description" content="Adult content platform" /> */}
         <script src='https://chaturbate.com/affiliates/promotools/popup/H5o9o/popchaturbaterevshare.js' type='text/javascript' defer></script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${poppins.variable} ${inter.variable} ${roboto.variable} antialiased`}
       >
         <GoogleOAuthProvider clientId="93231412308-nddbtq85qlh653qd40s4fsjnbtjf96si.apps.googleusercontent.com">
           <Toaster richColors theme="dark" position="top-right" />
