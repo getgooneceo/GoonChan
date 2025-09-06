@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FaEye, FaUser } from "react-icons/fa";
 import { FaRegImage } from "react-icons/fa6";
 import { VideoType, UploaderType } from "./Types";
-import { usePopUnderLink } from './PopUnderAd';
 
 interface ImageGridProps {
   videos: VideoType[];
@@ -22,7 +21,6 @@ const ImageCard = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const router = useRouter();
-  const { createPopUnderLink } = usePopUnderLink();
 
   const handleUsernameClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,8 +71,8 @@ const ImageCard = ({
   const imageUrl = `/watch?v=${video.slug || video._id || video.id}`;
 
   return (
-    <div 
-      onClick={createPopUnderLink(imageUrl)}
+    <Link 
+      href={imageUrl}
       className="block cursor-pointer"
     >
       <div 
@@ -135,7 +133,7 @@ const ImageCard = ({
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

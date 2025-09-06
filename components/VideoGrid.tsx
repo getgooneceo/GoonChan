@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { VideoType } from './Types';
 import { RiUser3Line } from "react-icons/ri";
 import useUserAvatar from "@/hooks/useUserAvatar";
-import { usePopUnderLink } from './PopUnderAd';
 
 const formatCount = (count: number): string => {
   if (count >= 1000000) {
@@ -46,7 +45,6 @@ interface VideoCardProps {
 
 const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
   const likePercentage = calculateLikePercentage(video.likeCount, video.dislikeCount);
-  const { createPopUnderLink } = usePopUnderLink();
   
   const uploaderObj = typeof video.uploader === 'string' 
     ? { username: video.uploader, avatar: undefined, avatarColor: undefined }
@@ -59,8 +57,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
   
   return (
     <div className="">
-      <div 
-        onClick={createPopUnderLink(videoUrl)}
+      <Link 
+        href={videoUrl}
         className="block group cursor-pointer"
       >
         <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
@@ -76,7 +74,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             {formatDuration(video.duration)}
           </div>
         </div>
-      </div>
+      </Link>
 
       <div className="flex mt-3 gap-3">
         <Link 
@@ -104,14 +102,14 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
         </Link>
 
         <div className="flex-1 min-w-0">
-          <div 
-            onClick={createPopUnderLink(videoUrl)}
+          <Link 
+            href={videoUrl}
             className="block group cursor-pointer"
           >
             <h3 className="font-medium text-white text-sm font-inter leading-5 group-hover:text-[#ea4197] transition-colors duration-200 line-clamp-2">
               {video.title}
             </h3>
-          </div>
+          </Link>
 
           <div className="mt-[1.5px]">
             <div className="flex items-center font-pop flex-wrap gap-1.5 text-xs">
