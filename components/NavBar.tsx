@@ -1,7 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { FiSearch, FiMenu, FiX } from "react-icons/fi";
-import { FaUserAlt, FaRegUser, FaRandom, FaHeart,  FaUser, FaClock, FaTrophy, FaCompass } from "react-icons/fa";
+import { FaUserAlt, FaRegUser, FaRandom, FaHeart,  FaUser, FaClock, FaTrophy, FaCompass, FaMagic } from "react-icons/fa";
 import { RiVideoUploadFill, RiVideoUploadLine } from "react-icons/ri";
 import { IoSearchSharp } from "react-icons/io5";
 import { FaRegImage } from "react-icons/fa6";
@@ -171,6 +175,10 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
       setShowAuthModal(true);
     }
   }, [isAuthChecking, user]);
+
+  const handleUndressNavigation = useCallback(() => {
+    window.open("https://pornworks.com/?refid=goonproject", "_blank");
+  }, []);
 
   const handleSearchSubmit = useCallback((searchTerm: string) => {
     if (searchTerm.trim()) {
@@ -365,6 +373,16 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
 
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button 
+                onClick={handleUndressNavigation}
+                className="flex items-center cursor-pointer justify-center bg-[#d97b00] hover:bg-[#e68200] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+              >
+                <FaMagic size={18} />
+                <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
+                  Undress Her
+                </span>
+              </button>
+
+              <button 
                 onClick={handleUploadNavigation}
                 className="flex items-center cursor-pointer justify-center bg-[#ec4c9ef2] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
               >
@@ -520,6 +538,16 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                   >
                     <FaUserAlt className="text-lg mr-4" />
                     <span className="font-medium">Profile</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleUndressNavigation();
+                      setIsSidebarOpen(false);
+                    }}
+                    className="flex items-center p-3 rounded-lg text-[#ff9000] hover:bg-[#ff9000]/20 hover:text-[#ffab33] transition-all duration-200"
+                  >
+                    <FaMagic className="text-lg mr-4" />
+                    <span className="font-medium">Undress Her</span>
                   </button>
                   <button 
                     onClick={() => {
