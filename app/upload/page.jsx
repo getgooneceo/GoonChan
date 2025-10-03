@@ -507,7 +507,7 @@ const UploadPageContent = () => {
 
   return (
     <div className="md:py-14 py-7">
-      <Toaster theme="dark" position="bottom-right" richColors />
+
 
       <div className="mb-8 max-w-[79rem] lg:px-0 px-4 mx-auto">
         <div className="flex items-center justify-between">

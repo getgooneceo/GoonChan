@@ -835,7 +835,6 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
         isExiting ? "opacity-0" : isEntering ? "opacity-0" : "opacity-100"
       }`}
     >
-      <Toaster theme="dark" position="bottom-right" richColors />
       <div
         ref={modalContentRef}
         className={`w-full max-w-4xl flex flex-col md:flex-row rounded-xl overflow-hidden shadow-2xl bg-black transition-all duration-300 ease-in-out 

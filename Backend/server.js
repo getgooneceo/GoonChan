@@ -42,6 +42,12 @@ import recommendedRoute from "./routes/recommended.js";
 import commentsRoute from "./routes/comments.js";
 import reportsRoute from "./routes/reports.js";
 import googleAuthRoute from "./routes/googleAuth.js";
+import analyticsRoute from "./routes/analytics.js";
+import analyticsManager from "./services/analyticsManager.js";
+import adminSettingsRoute from "./routes/adminSettings.js";
+import settingsManager from "./services/settingsManager.js";
+import userManagementRoute from "./routes/userManagement.js";
+import adminDataRoute from "./routes/adminData.js";
 
 const app = new Hono();
 
@@ -87,11 +93,18 @@ app.route('/api/related', relatedRoute);
 app.route('/api/recommended', recommendedRoute);
 app.route('/api/comments', commentsRoute);
 app.route('/api/reports', reportsRoute);
+app.route('/api/analytics', analyticsRoute);
+app.route('/api/admin/settings', adminSettingsRoute);
+app.route('/api/admin/users', userManagementRoute);
+app.route('/api/admin/data', adminDataRoute);
 
 app.get('/api/queue', async (c) => {
     try {
-        const queue = await VideoQueue.find().sort({ createdAt: -1 });
-        return c.json({ success: true, queue });
+        const [queue, totalCount] = await Promise.all([
+            VideoQueue.find({ status: 'completed' }).sort({ createdAt: -1 }).limit(50),
+            VideoQueue.countDocuments()
+        ]);
+        return c.json({ success: true, queue, totalCount });
     } catch (error) {
         return c.json({ success: false, message: 'Failed to fetch queue' }, 500);
     }
@@ -233,4 +246,8 @@ proxyManager.start({
     }
 }).then(bootstrapQueue);
 
-export { server, io, proxyManager };
+settingsManager.start();
+
+analyticsManager.start();
+
+export { server, io, proxyManager, analyticsManager, settingsManager };

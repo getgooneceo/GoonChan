@@ -1,3 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react/no-unescaped-entities */
+/* eslint-disable @next/next/no-html-link-for-pages */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -90,6 +96,11 @@ interface CommentData {
   isDisliked?: boolean;
 }
 
+interface BannerAdData {
+  link: string;
+  gif: string;
+}
+
 interface CommentsResponse {
   success: boolean;
   comments: CommentData[];
@@ -145,22 +156,37 @@ const WatchPageLoading = () => {
     <div className="bg-[#080808] min-h-screen w-full">
       <NavBar />
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
-        <div className="w-full mb-4">
-          <div className="animate-pulse">
-            <div className="w-full aspect-video bg-[#1a1a1a] rounded-lg mb-4"></div>
+
+        <div className="mb-4 animate-pulse">
+          <div className="h-48 bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-4 mb-4">
+          <div className="flex-1 animate-pulse">
+            <div className="w-full aspect-video bg-[#1a1a1a] rounded-lg"></div>
+          </div>
+
+          <div className="hidden lg:flex lg:flex-col justify-around gap-4">
+            <div className="animate-pulse">
+              <div className="w-[300px] h-[250px] bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+            </div>
+            <div className="animate-pulse">
+              <div className="w-[300px] h-[250px] bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+            </div>
           </div>
         </div>
+
         <div className="mb-4 bg-[#121212] rounded-lg p-4 md:p-6">
           <div className="animate-pulse">
-            <div className="h-6 md:h-8 bg-[#1a1a1a] rounded-lg mb-2 w-3/4"></div>
-            <div className="h-6 md:h-8 bg-[#1a1a1a] rounded-lg mb-4 w-1/2"></div>
+            <div className="h-7 md:h-8 bg-[#1a1a1a] rounded-lg mb-2 w-3/4"></div>
 
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-4 bg-[#1a1a1a] rounded w-20"></div>
+              <div className="h-4 bg-[#1a1a1a] rounded w-24"></div>
               <div className="w-1 h-1 bg-[#1a1a1a] rounded-full"></div>
-              <div className="h-4 bg-[#1a1a1a] rounded w-16"></div>
+              <div className="h-4 bg-[#1a1a1a] rounded w-20"></div>
             </div>
 
+            {/* Mobile Action Buttons */}
             <div className="md:hidden flex flex-wrap gap-2 mb-5">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
@@ -170,42 +196,47 @@ const WatchPageLoading = () => {
               ))}
             </div>
 
+            {/* Desktop Layout */}
             <div className="hidden md:flex flex-wrap gap-y-5 mt-2 justify-between items-center">
+              {/* Uploader Info */}
               <div className="flex items-center gap-3 py-1">
-                <div className="w-11.5 h-11.5 bg-[#1a1a1a] rounded-full"></div>
+                <div className="w-10 h-10 bg-[#1a1a1a] rounded-full"></div>
                 <div className="space-y-2">
-                  <div className="h-4 bg-[#1a1a1a] rounded w-24"></div>
-                  <div className="h-3 bg-[#1a1a1a] rounded w-20"></div>
+                  <div className="h-4 bg-[#1a1a1a] rounded w-28"></div>
+                  <div className="h-3 bg-[#1a1a1a] rounded w-24"></div>
                 </div>
-                <div className="h-6 w-px bg-[#1a1a1a] mx-2"></div>
-                <div className="h-9 bg-[#1a1a1a] rounded-lg w-24"></div>
+                <div className="h-9 w-px bg-[#323232] mx-2"></div>
+                <div className="h-9 bg-[#1a1a1a] rounded-lg w-28"></div>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center gap-2.5">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={i}
-                    className="h-10 bg-[#1a1a1a] rounded-lg w-20"
+                    className="h-10 bg-[#1a1a1a] rounded-lg w-24"
                   ></div>
                 ))}
               </div>
             </div>
 
-            <div className="md:hidden flex items-center gap-3 bg-[#1a1a1a] p-3 rounded-lg mb-5">
+            {/* Mobile Uploader Info */}
+            <div className="md:hidden flex items-center gap-3 bg-[#1a1a1abf] p-3 rounded-lg mb-5">
               <div className="w-10 h-10 bg-[#252525] rounded-full"></div>
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-[#252525] rounded w-24"></div>
-                <div className="h-3 bg-[#252525] rounded w-20"></div>
+                <div className="h-4 bg-[#252525] rounded w-28"></div>
+                <div className="h-3 bg-[#252525] rounded w-24"></div>
               </div>
-              <div className="h-8 bg-[#252525] rounded-lg w-20"></div>
+              <div className="h-8 bg-[#252525] rounded-full w-24"></div>
             </div>
 
+            {/* Tags and Description */}
             <div className="mt-5 pt-5 border-t border-[#2a2a2a] space-y-3">
               <div className="flex flex-wrap gap-2 mb-3">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div
                     key={i}
-                    className="h-6 bg-[#1a1a1a] rounded-full w-16"
+                    className="h-6 bg-[#1a1a1a] rounded-full w-20"
                   ></div>
                 ))}
               </div>
@@ -218,15 +249,27 @@ const WatchPageLoading = () => {
           </div>
         </div>
 
+        {/* Chaturbate Ad 2 Skeleton */}
+        <div className="mb-4 animate-pulse">
+          <div className="h-48 bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+        </div>
+
+        {/* Banner Ad Skeleton */}
+        <div className="mb-6 mt-6 animate-pulse">
+          <div className="h-24 bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+        </div>
+
         <div className="px-4 lg:px-0">
+          {/* Tabs Skeleton */}
           <div className="mb-4 border-b border-[#2a2a2a]">
-            <div className="flex gap-4 animate-pulse">
-              <div className="h-10 bg-[#1a1a1a] rounded-t w-32"></div>
-              <div className="h-10 bg-[#1a1a1a] rounded-t w-32"></div>
-              <div className="h-10 bg-[#1a1a1a] rounded-t w-24"></div>
+            <div className="flex gap-1 md:gap-4 animate-pulse">
+              <div className="h-10 bg-[#1a1a1a] rounded-t w-36"></div>
+              <div className="h-10 bg-[#1a1a1a] rounded-t w-36"></div>
+              <div className="h-10 bg-[#1a1a1a] rounded-t w-32 hidden md:block"></div>
             </div>
           </div>
 
+          {/* Related Videos Grid Skeleton */}
           <div className="mb-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {Array.from({ length: 8 }, (_, index) => (
@@ -247,12 +290,20 @@ const WatchPageLoading = () => {
             </div>
           </div>
 
+          {/* Banner Ad Skeleton */}
+          <div className="mb-3 mt-6 animate-pulse">
+            <div className="h-24 bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]"></div>
+          </div>
+
+          {/* Comments Section */}
           <div className="mt-8">
+            {/* Comments Header */}
             <div className="flex items-center justify-between mb-6 px-1 lg:px-0">
-              <div className="h-6 bg-[#1a1a1a] rounded w-32 animate-pulse"></div>
-              <div className="h-8 bg-[#1a1a1a] rounded w-32 animate-pulse"></div>
+              <div className="h-6 bg-[#1a1a1a] rounded w-36 animate-pulse"></div>
+              <div className="h-9 bg-[#1a1a1a] rounded-lg w-32 animate-pulse"></div>
             </div>
 
+            {/* Add Comment Box */}
             <div className="mb-8 flex gap-3 px-1 lg:px-0 animate-pulse">
               <div className="w-10 h-10 bg-[#1a1a1a] rounded-full flex-shrink-0"></div>
               <div className="flex-grow">
@@ -260,6 +311,7 @@ const WatchPageLoading = () => {
               </div>
             </div>
 
+            {/* Comments List */}
             <div className="space-y-3 px-1 lg:px-0">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
@@ -268,13 +320,13 @@ const WatchPageLoading = () => {
                 >
                   <div className="w-8 h-8 bg-[#2a2a2a] rounded-full"></div>
                   <div className="flex-grow space-y-2">
-                    <div className="h-3 bg-[#2a2a2a] rounded w-20"></div>
+                    <div className="h-3 bg-[#2a2a2a] rounded w-24"></div>
                     <div className="h-3 bg-[#2a2a2a] rounded w-full"></div>
                     <div className="h-3 bg-[#2a2a2a] rounded w-3/4"></div>
                     <div className="flex gap-3 mt-2">
-                      <div className="h-3 bg-[#2a2a2a] rounded w-8"></div>
-                      <div className="h-3 bg-[#2a2a2a] rounded w-8"></div>
                       <div className="h-3 bg-[#2a2a2a] rounded w-12"></div>
+                      <div className="h-3 bg-[#2a2a2a] rounded w-12"></div>
+                      <div className="h-3 bg-[#2a2a2a] rounded w-16"></div>
                     </div>
                   </div>
                 </div>
@@ -346,6 +398,7 @@ const WatchPageContent = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
   const [uploaderProfile, setUploaderProfile] = useState<any>(null);
+  const [adSettings, setAdSettings] = useState<any>(null);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentThumbnailPage, setCurrentThumbnailPage] = useState(0);
@@ -1261,6 +1314,38 @@ const WatchPageContent = () => {
     }
   }, [comments]);
 
+  // Fetch ad settings
+  useEffect(() => {
+    const fetchAdSettings = async () => {
+      try {
+        const response = await fetch(`${config.url}/api/admin/settings/ads`);
+        
+        // Check if response is ok
+        if (!response.ok) {
+          console.error('Ad settings fetch failed:', response.status, response.statusText);
+          return;
+        }
+
+        // Get response as text first to check format
+        const text = await response.text();
+        
+        // Try to parse as JSON
+        try {
+          const data = JSON.parse(text);
+          if (data.success && data.adSettings) {
+            setAdSettings(data.adSettings);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse ad settings JSON:', parseError);
+          console.error('Response text:', text);
+        }
+      } catch (error) {
+        console.error('Error fetching ad settings:', error);
+      }
+    };
+    fetchAdSettings();
+  }, []);
+
   const { avatarUrl: userAvatarUrl } = useUserAvatar(user) as {
     avatarUrl: string;
     isLoading: boolean;
@@ -1451,9 +1536,13 @@ const WatchPageContent = () => {
   }
 
   // Use the Cloudflare Stream ID to construct the iframe URL
+  // video ad 
   const videoSource = video.cloudflareStreamId
-    ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe?ad-url=${encodeURIComponent('https://cpm.afkwa.com/vast?zone=265316&tagid=324742&page_url=www.goonchan.org')}`
+    ? adSettings?.videoAd?.enabled && adSettings?.videoAd?.url
+      ? `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe?ad-url=${encodeURIComponent(adSettings.videoAd.url)}`
+      : `https://customer-jolq13ybmuso6gvq.cloudflarestream.com/${video.cloudflareStreamId}/iframe`
     : "";
+    
 
   const renderVideoSkeletons = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1500,7 +1589,11 @@ const WatchPageContent = () => {
       <>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {relatedVideos.map((relatedVideo) => (
-            <VideoGrid key={relatedVideo._id} video={relatedVideo as any} />
+            <VideoGrid 
+              key={relatedVideo._id} 
+              video={relatedVideo as any}
+              popunderSettings={adSettings?.popunderAd}
+            />
           ))}
         </div>
 
@@ -1550,6 +1643,7 @@ const WatchPageContent = () => {
             <VideoGrid
               key={recommendedVideo._id}
               video={recommendedVideo as any}
+              popunderSettings={adSettings?.popunderAd}
             />
           ))}
         </div>
@@ -1712,20 +1806,27 @@ const WatchPageContent = () => {
       )}
 
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
-        <BannerAds className="mb-6" />
-
-        <div className="mb-4">
-          <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
-            <iframe
-              src="https://chaturbate.com/in/?tour=x1Rd&campaign=H5o9o&track=default&c=6&p=3&tag=sexy&gender=f"
-              width="100%"
-              height="190"
-              scrolling="no"
-              frameBorder="0"
-              className="w-full"
-            ></iframe>
+        {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+          <BannerAds 
+            ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+            className="mb-6" 
+          />
+        )}
+        {/* chaturbate 1 */}
+        {adSettings?.chaturbate1?.enabled && adSettings?.chaturbate1?.iframeUrl && (
+          <div className="mb-4">
+            <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
+              <iframe
+                src={adSettings.chaturbate1.iframeUrl}
+                width="100%"
+                height="190"
+                scrolling="no"
+                frameBorder="0"
+                className="w-full"
+              ></iframe>
+            </div>
           </div>
-        </div>
+        )}
 
         {video.contentType === "image" && (
           <div className="w-full overflow-hidden mb-4">
@@ -1899,42 +2000,32 @@ const WatchPageContent = () => {
             </div>
 
             <div className="hidden lg:flex lg:flex-col justify-around gap-4">
-              <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
-                <iframe 
-                  src="https://sefsdvc.com/en/us/media/dynamic/id?zid=11923&pid=0&custom1=&custom2=60671&custom3=%7Btransaction_id%7D&custom6=&custom7=PUB_324742&cturl=https://t.irtyf.com/ihxg01j1ds?file_id=252622&aff_id=324742&offer_id=3664&aff_sub=&url=" 
-                  width="300" 
-                  height="250"  
-                  scrolling="no" 
-                  frameBorder="0"
-                  className="w-full rounded-lg"
-                ></iframe>
-              </div>
-
-              <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
-                <iframe 
-                  src="https://www.shfsdvc.com/en/us/about?zid=15442&pid=0&custom1=SPOT_SALESFORCE&custom2=324742&custom3=TS-{campaign_id}&custom4=PUB_{src_hostname}&custom7=KW&custom8=a.vfghe.com&custom9=487c489c-8ee4-40f8-b2ec-dc0e342b5275" 
-                  style={{width: "300px", height: "250px", border: "0px solid", verticalAlign: "bottom"}} 
-                  scrolling="no"
-                  className="w-full rounded-lg"
-                ></iframe>
-              </div>
+              {adSettings?.smartAd1?.enabled && adSettings?.smartAd1?.iframeUrl && (
+                <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
+                  <iframe 
+                    src={adSettings.smartAd1.iframeUrl}
+                    width="300" 
+                    height="250"  
+                    scrolling="no" 
+                    frameBorder="0"
+                    className="w-full rounded-lg"
+                  ></iframe>
+                </div>
+              )}
+              {/* smart ads */}
+              {adSettings?.smartAd2?.enabled && adSettings?.smartAd2?.iframeUrl && (
+                <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f]">
+                  <iframe 
+                    src={adSettings.smartAd2.iframeUrl}
+                    style={{width: "300px", height: "250px", border: "0px solid", verticalAlign: "bottom"}} 
+                    scrolling="no"
+                    className="w-full rounded-lg"
+                  ></iframe>
+                </div>
+              )}
             </div>
           </div>
         )}
-
-        {/* Inserted full-width bubble ad below the video, above info container */}
-        <div className="mb-4">
-          <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
-            <iframe
-              src="https://chaturbate.com/in/?tour=x1Rd&campaign=H5o9o&track=default&c=6&p=1&gender=f"
-              width="100%"
-              height="190"
-              scrolling="no"
-              frameBorder="0"
-              className="w-full"
-            ></iframe>
-          </div>
-        </div>
 
         <div className="mb-4 bg-[#121212] rounded-lg p-4 md:p-6">
           <h1 className="text-[#ebebeb] font-roboto mb-1 md:mb-0 text-xl leading-tight md:leading-normal  md:text-2xl font-bold">
@@ -2180,7 +2271,28 @@ const WatchPageContent = () => {
           )}
         </div>
 
-        <BannerAds className="mb-3 mt-6" />
+        {/* chaturbate 2 */}
+        {adSettings?.chaturbate2?.enabled && adSettings?.chaturbate2?.iframeUrl && (
+          <div className="mb-4">
+            <div className="bg-[#0a0a0a] rounded-lg border border-[#1f1f1f] overflow-hidden">
+              <iframe
+                src={adSettings.chaturbate2.iframeUrl}
+                width="100%"
+                height="190"
+                scrolling="no"
+                frameBorder="0"
+                className="w-full"
+              ></iframe>
+            </div>
+          </div>
+        )}
+
+        {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+          <BannerAds 
+            ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+            className="mb-3 mt-6" 
+          />
+        )}
 
         <div className="px-4 lg:px-0">
           {video?.contentType === "video" && (
@@ -2242,8 +2354,11 @@ const WatchPageContent = () => {
               </div>
             </>
           )}
-          {video?.contentType != "image" && (
-            <BannerAds className="mb-3 mt-6" />
+          {video?.contentType != "image" && adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+            <BannerAds 
+              ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+              className="mb-3 mt-6" 
+            />
           )}
 
           <div ref={commentsRef} className="mt-8">

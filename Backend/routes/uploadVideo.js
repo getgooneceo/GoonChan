@@ -7,6 +7,7 @@ import { config } from "dotenv";
 import jwt from 'jsonwebtoken';
 import sharp from 'sharp';
 import bcrypt from 'bcryptjs';
+import settingsManager from '../services/settingsManager.js';
 config();
 
 const router = new Hono();
@@ -139,6 +140,19 @@ router.post('/', async (c) => {
     }
     if (!description || typeof description !== 'string' || description.trim() === '') {
       return c.json({ success: false, message: 'Description is required.' }, 400);
+    }
+
+    // Check for blocked keywords in title and description
+    const blockedKeywords = settingsManager.getBlockedKeywords();
+    const contentToCheck = `${title} ${description} ${tagsString || ''}`.toLowerCase();
+    
+    for (const keyword of blockedKeywords) {
+      if (contentToCheck.includes(keyword.toLowerCase())) {
+        return c.json({ 
+          success: false, 
+          message: `Content contains blocked keyword: "${keyword}". Please remove it and try again.` 
+        }, 400);
+      }
     }
 
     let videoUploadResult;

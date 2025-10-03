@@ -10,6 +10,7 @@ import { config as dotenvConfig } from 'dotenv';
 import config from '../../config.json' assert { type: 'json' };
 import { Worker } from 'worker_threads';
 import proxyManager from './proxyManager.js';
+import settingsManager from './settingsManager.js';
 
 dotenvConfig();
 
@@ -24,6 +25,25 @@ const USER_AGENTS = [
 ];
 
 const getRandomUserAgent = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+
+function checkBlockedKeywords(title, tags) {
+    const blockedKeywords = settingsManager.getBlockedKeywords();
+    if (!blockedKeywords || blockedKeywords.length === 0) {
+        return { blocked: false };
+    }
+
+    const titleLower = title.toLowerCase();
+    const tagsString = Array.isArray(tags) ? tags.join(' ').toLowerCase() : '';
+
+    for (const keyword of blockedKeywords) {
+        const keywordLower = keyword.toLowerCase();
+        if (titleLower.includes(keywordLower) || tagsString.includes(keywordLower)) {
+            return { blocked: true, keyword };
+        }
+    }
+
+    return { blocked: false };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,6 +255,11 @@ export async function processOneById(id) {
         const { filePath: downloadedPath, videoData } = await downloadVideoWithProxies(video.link, videoId, video._id);
         filePath = downloadedPath;
         const { title, tags, thumbnailUrl } = videoData;
+
+        const keywordCheck = checkBlockedKeywords(title, tags);
+        if (keywordCheck.blocked) {
+            throw new Error(`Video contains blocked keyword: "${keywordCheck.keyword}"`);
+        }
 
         video.status = 'uploading';
         await video.save();

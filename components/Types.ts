@@ -33,6 +33,7 @@ export interface VideoType {
   slug?: string; // Add slug field for SEO-friendly URLs
   title: string;
   thumbnail?: string;
+  cloudflareStreamId?: string; // Cloudflare Stream ID for video preview
   imageUrls?: string[]; // Array of image URLs for image posts
   thumbnailIndex?: number; // Index of the thumbnail image in imageUrls array
   duration: string;

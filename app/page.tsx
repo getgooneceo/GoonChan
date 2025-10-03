@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
@@ -27,6 +28,8 @@ function HomeContent() {
   const [currentImagePage, setCurrentImagePage] = useState(1);
   const [videoPagination, setVideoPagination] = useState<any>(null);
   const [imagePagination, setImagePagination] = useState<any>(null);
+  const [adSettings, setAdSettings] = useState<any>(null);
+  const observerTargetVideos = React.useRef(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,12 +44,41 @@ function HomeContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     if (activeCategory === "images") {
       fetchDiscoverImages(1, []);
     } else {
       fetchVideosForCategory(activeCategory, 1, []);
     }
   }, [activeCategory]);
+
+  // Fetch ad settings
+  useEffect(() => {
+    const fetchAdSettings = async () => {
+      try {
+        const response = await fetch(`${config.url}/api/admin/settings/ads`);
+        
+        if (!response.ok) {
+          console.error('Ad settings fetch failed:', response.status, response.statusText);
+          return;
+        }
+
+        const text = await response.text();
+        
+        try {
+          const data = JSON.parse(text);
+          if (data.success && data.adSettings) {
+            setAdSettings(data.adSettings);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse ad settings JSON:', parseError);
+        }
+      } catch (error) {
+        console.error('Error fetching ad settings:', error);
+      }
+    };
+    fetchAdSettings();
+  }, []);
 
   useEffect(() => {
     setViewedVideoIds(new Set());
@@ -56,6 +88,28 @@ function HomeContent() {
     setVideoPagination(null);
     setImagePagination(null);
   }, [activeCategory]);
+
+  // Intersection observer for videos infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && videoPagination?.hasNextPage && !loading && !loadingMore && activeCategory !== 'images') {
+          loadMoreVideos();
+        }
+      },
+      { threshold: 0.7, rootMargin: '300px' }
+    );
+
+    if (observerTargetVideos.current) {
+      observer.observe(observerTargetVideos.current);
+    }
+
+    return () => {
+      if (observerTargetVideos.current) {
+        observer.unobserve(observerTargetVideos.current);
+      }
+    };
+  }, [videoPagination, loading, loadingMore, activeCategory, videoData]);
 
   const fetchVideosForCategory = async (category: string, page: number = 1, excludeIds: string[] = []) => {
     try {
@@ -332,15 +386,15 @@ function HomeContent() {
 
   const renderImageSkeletons = () => (
     <div className="flex gap-2.5 sm:gap-4">
-      {Array.from({ length: typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2) : 4 }, (_, columnIndex) => (
-        <div key={`skeleton-column-${columnIndex}`} className="flex-1 space-y-3 sm:space-y-4">
+      {Array.from({ length: 4 }, (_, columnIndex) => (
+        <div key={`skeleton-column-${columnIndex}`} className={`flex-1 space-y-3 sm:space-y-4 ${columnIndex >= 3 ? 'hidden sm:hidden lg:block' : columnIndex >= 2 ? 'hidden sm:block' : ''}`}>
           {Array.from({ length: 3 }, (_, cardIndex) => (
             <div key={`skeleton-${columnIndex}-${cardIndex}`} className="break-inside-avoid">
               <div className="bg-[#1a1a1a] rounded-xl overflow-hidden animate-pulse">
                 <div 
                   className="w-full bg-[#252525]"
                   style={{
-                    height: `${200 + Math.random() * 100}px`
+                    height: `${250}px`
                   }}
                 />
               </div>
@@ -390,19 +444,25 @@ function HomeContent() {
         return (
           <>
             <ImageGrid videos={imageData} />
-            {loadingMore && (
-              <div className="mt-6">
-                {renderImageSkeletons()}
-              </div>
-            )}
             {imagePagination && imagePagination.hasNextPage && (
-              <div className="flex justify-center mt-8">
+              <div className="mt-8 flex justify-center">
                 <button
                   onClick={loadMoreImages}
-                  disabled={loading || loadingMore}
-                  className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
+                  disabled={loadingMore}
+                  className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                    loadingMore 
+                      ? 'bg-[#1a1a1a] text-white/40 cursor-not-allowed' 
+                      : 'bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30'
+                  }`}
                 >
-                  {loadingMore ? 'Loading...' : 'Load More Images'}
+                  {loadingMore ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white/60 rounded-full animate-spin"></div>
+                      Loading...
+                    </div>
+                  ) : (
+                    'Load More Images'
+                  )}
                 </button>
               </div>
             )}
@@ -415,7 +475,7 @@ function HomeContent() {
       case "liked":
       case "subscriptions":
         if (videoData.length === 0 && !isCurrentlyLoading && !error) {
-          let emptyMessage = "No videos found";
+          let emptyMessage = "";
           if (activeCategory === "subscriptions") {
             if(!user){
               emptyMessage = "Please log in to see videos from your subscriptions.";
@@ -430,6 +490,14 @@ function HomeContent() {
             emptyMessage = "No top videos found";
           }
           
+          if (emptyMessage === "") {
+            return (
+              <div className="w-full">
+                {renderVideoSkeletons()}
+              </div>
+            );
+          }
+          
           return (
             <div className="flex justify-center text-center items-center py-16 text-white/60">
               {emptyMessage}
@@ -442,23 +510,43 @@ function HomeContent() {
             {/* <BannerAds className="mb-5 mt-0" /> */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {videoData.map((video) => (
-                <VideoCard key={video._id} video={video} />
+                <VideoCard 
+                  key={video._id} 
+                  video={video} 
+                  popunderSettings={adSettings?.popunderAd}
+                />
               ))}
             </div>
-            {loadingMore && (
-              <div className="mt-6">
-                {renderVideoSkeletons()}
-              </div>
-            )}
             {videoPagination && videoPagination.hasNextPage && (
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={loadMoreVideos}
-                  disabled={loading || loadingMore}
-                  className="px-5 py-2.5 bg-[#c91d76dd] hover:bg-[#c91d76d6] cursor-pointer text-white rounded-lg transition-colors duration-200 font-medium"
-                >
-                  {loadingMore ? 'Loading...' : 'Load More Videos'}
-                </button>
+              <div ref={observerTargetVideos} className="mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                  {Array.from({ length: typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : window.innerWidth >= 640 ? 2 : 1) : 4 }, (_, index) => (
+                    <div key={`loading-skeleton-${index}`} className="">
+                      <div className={`relative aspect-video overflow-hidden rounded-lg bg-[#101010] ${loadingMore ? 'animate-pulse' : ''}`}>
+                        <div className="w-full h-full bg-[#1a1a1a]"></div>
+                      </div>
+
+                      <div className="flex mt-3 gap-3">
+                        <div className="flex-shrink-0">
+                          <div className={`w-9 h-9 rounded-full bg-[#1a1a1a] ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                        </div>
+
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="space-y-1">
+                            <div className={`h-4 bg-[#1a1a1a] rounded w-full ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                            <div className={`h-4 bg-[#1a1a1a] rounded w-3/4 ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <div className={`h-3 bg-[#1a1a1a] rounded w-16 ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                            <div className={`h-3 bg-[#1a1a1a] rounded w-12 ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                            <div className={`h-3 bg-[#1a1a1a] rounded w-8 ${loadingMore ? 'animate-pulse' : ''}`}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -494,7 +582,7 @@ function HomeContent() {
         <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-1 pb-8 relative overflow-hidden">
           <div
             key={contentKey}
-            className={`transition-all duration-250 ease-in-out transform ${
+            className={`transition-all duration-250 pb-10 lg:pb-0 ease-in-out transform ${
               isTransitioning 
                 ? 'opacity-0 translate-y-1 scale-[0.98]' 
                 : 'opacity-100 translate-y-0 scale-100'
@@ -502,7 +590,9 @@ function HomeContent() {
           >
             {renderContent()}
           </div>
-          <Footer />
+          <div className="hidden lg:block">
+            <Footer />
+          </div>
         </div>
       </div>
     </>

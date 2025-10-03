@@ -83,7 +83,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
         <div className="relative aspect-square overflow-hidden rounded-lg bg-[#101010]">
           <img
             src={thumbnailUrl}
-            alt={image.title || ""}
+            // alt={image.title || ""}
             className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
             onError={(e) => {
               console.warn('Profile image failed to load:', thumbnailUrl);
@@ -204,11 +204,6 @@ const ProfileImageGrid = ({ images, isOwnProfile, onImageDelete }) => {
           />
         ))}
       </div>
-      <Toaster
-        theme="dark"
-        position="top-right"
-        richColors
-      />
     </>
   );
 };

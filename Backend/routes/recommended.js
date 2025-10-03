@@ -19,6 +19,7 @@ const VIDEO_PROJECTION = {
   description: 1,
   slug: 1,
   thumbnail: 1,
+  cloudflareStreamId: 1,
   duration: 1,
   views: 1,
   likeCount: { $size: { $ifNull: ['$likedBy', []] } },

@@ -92,6 +92,7 @@ router.get('/:contentId', limiter, async (c) => {
           description: 1,
           slug: 1,
           thumbnail: 1,
+          cloudflareStreamId: 1,
           duration: 1,
           views: 1,
           likeCount: { $size: { $ifNull: ['$likedBy', []] } },

@@ -47,7 +47,7 @@ export default function RootLayout({
         className={`${poppins.variable} ${inter.variable} ${roboto.variable} antialiased`}
       >
         <GoogleOAuthProvider clientId="93231412308-nddbtq85qlh653qd40s4fsjnbtjf96si.apps.googleusercontent.com">
-          <Toaster richColors theme="dark" position="top-right" />
+          <Toaster richColors theme="dark" position="bottom-right" />
           {children}
         </GoogleOAuthProvider>
       </body>

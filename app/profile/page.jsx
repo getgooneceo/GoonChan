@@ -42,6 +42,14 @@ const ProfileContent = () => {
   const [fadeInOut, setFadeInOut] = useState(false);
   const [updateData, setUpdateData] = useState(false);
   const { avatarUrl } = useUserAvatar(profileData);
+  const [videoOffset, setVideoOffset] = useState(0);
+  const [imageOffset, setImageOffset] = useState(0);
+  const [loadingMoreVideos, setLoadingMoreVideos] = useState(false);
+  const [loadingMoreImages, setLoadingMoreImages] = useState(false);
+  const [hasMoreVideos, setHasMoreVideos] = useState(true);
+  const [hasMoreImages, setHasMoreImages] = useState(true);
+  const observerTargetVideos = useRef(null);
+  const observerTargetImages = useRef(null);
   
   const handlePictureUpload = () => {
     if (isOwnProfile) {
@@ -53,7 +61,7 @@ const ProfileContent = () => {
     if (activeTab === tabId) return;
 
     if (tabId === "admin") {
-      router.push('/something');
+      window.location.href = '/admin';
       return;
     }
 
@@ -168,7 +176,7 @@ const ProfileContent = () => {
           ...prev,
           bio: data.bio
         }));
-        toast('Bio updated successfully!');
+        toast.success('Bio updated successfully!');
       } else {
         console.error('Failed to update bio:', data.message);
         toast.error(data.message || 'Failed to update bio');
@@ -261,6 +269,100 @@ const ProfileContent = () => {
     }
   }, [isEditingUsername]);
 
+  const loadMoreVideos = async () => {
+    if (loadingMoreVideos || !hasMoreVideos || !profileData) return;
+
+    setLoadingMoreVideos(true);
+    try {
+      const token = localStorage.getItem('token');
+      const newOffset = videoOffset + 60;
+
+      const response = await fetch(`${config.url}/api/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          username: usernameParam || null,
+          videoOffset: newOffset,
+          imageOffset: 0,
+          limit: 60
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user.videos) {
+        const videosWithPercentage = data.user.videos.map(video => ({
+          ...video,
+          likePercentage: calculateLikePercentage(video.likeCount, video.dislikeCount)
+        }));
+
+        setProfileData(prev => ({
+          ...prev,
+          videos: [...prev.videos, ...videosWithPercentage],
+          totalUploads: data.user.totalUploads,
+          totalViews: data.user.totalViews,
+          totalLikes: data.user.totalLikes
+        }));
+        setVideoOffset(newOffset);
+        setHasMoreVideos(data.pagination.videos.hasMore);
+      }
+    } catch (error) {
+      console.error("Failed to load more videos:", error);
+    } finally {
+      setLoadingMoreVideos(false);
+    }
+  };
+
+  const loadMoreImages = async () => {
+    if (loadingMoreImages || !hasMoreImages || !profileData) return;
+
+    setLoadingMoreImages(true);
+    try {
+      const token = localStorage.getItem('token');
+      const newOffset = imageOffset + 60;
+
+      const response = await fetch(`${config.url}/api/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          username: usernameParam || null,
+          videoOffset: 0,
+          imageOffset: newOffset,
+          limit: 60
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.user.images) {
+        const imagesWithPercentage = data.user.images.map(image => ({
+          ...image,
+          likePercentage: calculateLikePercentage(image.likeCount, image.dislikeCount)
+        }));
+
+        setProfileData(prev => ({
+          ...prev,
+          images: [...prev.images, ...imagesWithPercentage],
+          totalUploads: data.user.totalUploads,
+          totalViews: data.user.totalViews,
+          totalLikes: data.user.totalLikes
+        }));
+        setImageOffset(newOffset);
+        setHasMoreImages(data.pagination.images.hasMore);
+      }
+    } catch (error) {
+      console.error("Failed to load more images:", error);
+    } finally {
+      setLoadingMoreImages(false);
+    }
+  };
+
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -273,6 +375,8 @@ const ProfileContent = () => {
 
         setIsLoading(true);
         setError(null);
+        setVideoOffset(0);
+        setImageOffset(0);
         
         const response = await fetch(`${config.url}/api/profile`, {
           method: 'POST',
@@ -281,7 +385,10 @@ const ProfileContent = () => {
           },
           body: JSON.stringify({ 
             token,
-            username: usernameParam || null
+            username: usernameParam || null,
+            videoOffset: 0,
+            imageOffset: 0,
+            limit: 60
           }),
         });
 
@@ -305,6 +412,12 @@ const ProfileContent = () => {
           });
           setIsOwnProfile(data.isOwnProfile);
           setBio(data.user.bio || "");
+          
+          // Set pagination states
+          if (data.pagination) {
+            setHasMoreVideos(data.pagination.videos.hasMore);
+            setHasMoreImages(data.pagination.images.hasMore);
+          }
 
           const tabParam = searchParams.get('tab');
           const validTabs = ['videos', 'images', 'subscriptions'];
@@ -331,6 +444,50 @@ const ProfileContent = () => {
 
     fetchProfileData();
   }, [usernameParam, router, updateData]);
+
+  // Intersection observer for videos infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreVideos && !loadingMoreVideos && activeTab === 'videos') {
+          loadMoreVideos();
+        }
+      },
+      { threshold: 0.7, rootMargin: '300px' }
+    );
+
+    if (observerTargetVideos.current) {
+      observer.observe(observerTargetVideos.current);
+    }
+
+    return () => {
+      if (observerTargetVideos.current) {
+        observer.unobserve(observerTargetVideos.current);
+      }
+    };
+  }, [hasMoreVideos, loadingMoreVideos, activeTab, profileData]);
+
+  // Intersection observer for images infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreImages && !loadingMoreImages && activeTab === 'images') {
+          loadMoreImages();
+        }
+      },
+      { threshold: 0.7, rootMargin: '300px' }
+    );
+
+    if (observerTargetImages.current) {
+      observer.observe(observerTargetImages.current);
+    }
+
+    return () => {
+      if (observerTargetImages.current) {
+        observer.unobserve(observerTargetImages.current);
+      }
+    };
+  }, [hasMoreImages, loadingMoreImages, activeTab, profileData]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -789,18 +946,35 @@ const ProfileContent = () => {
                     Uploaded Videos
                   </h2>
                   {profileData.videos && profileData.videos.length > 0 ? (
-                    <ProfileVideoGrid 
-                      videos={profileData.videos} 
-                      isOwnProfile={isOwnProfile}
-                      onVideoDelete={(deletedVideoId) => {
-                        setProfileData(prev => ({
-                          ...prev,
-                          videos: prev.videos.filter(video => 
-                            (video._id || video.id) !== deletedVideoId
-                          )
-                        }));
-                      }}
-                    />
+                    <>
+                      <ProfileVideoGrid 
+                        videos={profileData.videos} 
+                        isOwnProfile={isOwnProfile}
+                        onVideoDelete={(deletedVideoId) => {
+                          setProfileData(prev => ({
+                            ...prev,
+                            videos: prev.videos.filter(video => 
+                              (video._id || video.id) !== deletedVideoId
+                            ),
+                            totalUploads: prev.totalUploads - 1
+                          }));
+                        }}
+                      />
+                      {/* Loading skeleton and observer target - always visible when more content exists */}
+                      {hasMoreVideos && (
+                        <div ref={observerTargetVideos} className="mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[...Array(6)].map((_, i) => (
+                              <div key={i} className={loadingMoreVideos ? "animate-pulse" : ""}>
+                                <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-2"></div>
+                                <div className="h-4 bg-[#1a1a1a] rounded w-3/4 mb-2"></div>
+                                <div className="h-3 bg-[#1a1a1a] rounded w-1/2"></div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-16">
                       <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">
@@ -825,18 +999,35 @@ const ProfileContent = () => {
                     Uploaded Images
                   </h2>
                   {profileData.images && profileData.images.length > 0 ? (
-                    <ProfileImageGrid 
-                      images={profileData.images} 
-                      isOwnProfile={isOwnProfile}
-                      onImageDelete={(deletedImageId) => {
-                        setProfileData(prev => ({
-                          ...prev,
-                          images: prev.images.filter(image => 
-                            (image._id || image.id) !== deletedImageId
-                          )
-                        }));
-                      }}
-                    />
+                    <>
+                      <ProfileImageGrid 
+                        images={profileData.images} 
+                        isOwnProfile={isOwnProfile}
+                        onImageDelete={(deletedImageId) => {
+                          setProfileData(prev => ({
+                            ...prev,
+                            images: prev.images.filter(image => 
+                              (image._id || image.id) !== deletedImageId
+                            ),
+                            totalUploads: prev.totalUploads - 1
+                          }));
+                        }}
+                      />
+                      {/* Loading skeleton and observer target - always visible when more content exists */}
+                      {hasMoreImages && (
+                        <div ref={observerTargetImages} className="mt-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {[...Array(8)].map((_, i) => (
+                              <div key={i} className={loadingMoreImages ? "animate-pulse" : ""}>
+                                <div className="aspect-square bg-[#1a1a1a] rounded-lg mb-2"></div>
+                                <div className="h-4 bg-[#1a1a1a] rounded w-3/4 mb-2"></div>
+                                <div className="h-3 bg-[#1a1a1a] rounded w-1/2"></div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-16">
                       <div className="inline-block p-4 rounded-full bg-[#1a1a1a] mb-4">

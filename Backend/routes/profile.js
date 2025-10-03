@@ -17,7 +17,7 @@ const limiter = rateLimiter({
 
 router.post('/', limiter, async (c) => {
   try {
-    const { token, username } = await c.req.json()
+    const { token, username, videoOffset = 0, imageOffset = 0, limit = 51 } = await c.req.json()
     let usernameToFetch = username
     let isOwnProfile = false
     let authenticatedUsername = null
@@ -58,21 +58,33 @@ router.post('/', limiter, async (c) => {
       }, 404)
     }
 
+    // Get total counts for pagination
+    const totalVideos = await Video.countDocuments({ uploader: user._id })
+    const totalImages = await Image.countDocuments({ uploader: user._id })
+
     const videos = await Video.find({ uploader: user._id })
       .sort({ createdAt: -1 })
+      .skip(videoOffset)
+      .limit(limit)
 
     const images = await Image.find({ uploader: user._id })
       .sort({ createdAt: -1 })
+      .skip(imageOffset)
+      .limit(limit)
 
     const subscriptions = await User.find(
       { _id: { $in: user.subscriptions || [] } },
       { username: 1, avatar: 1, avatarColor: 1, subscriberCount: 1 }
     )
 
-    const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0) + 
-                     images.reduce((sum, image) => sum + (image.views || 0), 0)
-    const totalLikes = videos.reduce((sum, video) => sum + (video.likeCount || 0), 0) +
-                      images.reduce((sum, image) => sum + (image.likedBy?.length || 0), 0)
+    // Calculate totals from ALL videos and images, not just paginated ones
+    const allVideos = await Video.find({ uploader: user._id }, { views: 1, likedBy: 1 })
+    const allImages = await Image.find({ uploader: user._id }, { views: 1, likedBy: 1 })
+    
+    const totalViews = allVideos.reduce((sum, video) => sum + (video.views || 0), 0) + 
+                     allImages.reduce((sum, image) => sum + (image.views || 0), 0)
+    const totalLikes = allVideos.reduce((sum, video) => sum + (video.likedBy?.length || 0), 0) +
+                      allImages.reduce((sum, image) => sum + (image.likedBy?.length || 0), 0)
 
     const userResponse = {
       _id: user._id,
@@ -83,7 +95,7 @@ router.post('/', limiter, async (c) => {
       createdAt: user.createdAt,
       isAdmin: user.isAdmin || false,
       subscriberCount: user.subscriberCount || 0,
-      totalUploads: videos.length + images.length,
+      totalUploads: totalVideos + totalImages,
       totalViews,
       totalLikes,
       videos: videos.map(video => ({
@@ -91,6 +103,7 @@ router.post('/', limiter, async (c) => {
         slug: video.slug,
         title: video.title,
         thumbnail: video.thumbnail,
+        cloudflareStreamId: video.cloudflareStreamId,
         duration: video.duration,
         views: video.views || 0,
         likeCount: video.likedBy?.length || 0,
@@ -130,7 +143,21 @@ router.post('/', limiter, async (c) => {
     return c.json({
       success: true,
       user: userResponse,
-      isOwnProfile
+      isOwnProfile,
+      pagination: {
+        videos: {
+          total: totalVideos,
+          offset: videoOffset,
+          limit: limit,
+          hasMore: videoOffset + videos.length < totalVideos
+        },
+        images: {
+          total: totalImages,
+          offset: imageOffset,
+          limit: limit,
+          hasMore: imageOffset + images.length < totalImages
+        }
+      }
     }, 200)
     
   } catch (error) {

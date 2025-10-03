@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from "next/navigation";
 import config from "@/config.json";
 import { Toaster, toast } from "sonner";
+import NavBar from "@/components/NavBar";
 import { FaLink, FaPlus, FaClock, FaCheckCircle, FaExclamationTriangle, FaTrash, FaCog, FaDownload, FaUpload } from "react-icons/fa";
 import "remixicon/fonts/remixicon.css";
 import io from 'socket.io-client';
@@ -14,6 +15,7 @@ const page = () => {
   
   const [link, setLink] = useState('');
   const [queue, setQueue] = useState([]);
+  const [totalQueueCount, setTotalQueueCount] = useState(0);
   const [uploadDestination, setUploadDestination] = useState('goonchan');
   const socketRef = useRef(null);
 
@@ -41,6 +43,7 @@ const page = () => {
           const queueData = await queueRes.json();
           if (queueData.success) {
             setQueue(queueData.queue);
+            setTotalQueueCount(queueData.totalCount || 0);
           }
           setLoading(false);
         } else {
@@ -85,10 +88,12 @@ const page = () => {
         const withoutOptimistic = prev.filter(v => !(v.isOptimistic && v.link === doc.link && v.destination === doc.destination));
         return [doc, ...withoutOptimistic];
       });
+      setTotalQueueCount(prev => prev + 1);
     });
 
     socket.on('queue:removed', (id) => {
       setQueue(prev => prev.filter(v => v._id !== id));
+      setTotalQueueCount(prev => Math.max(0, prev - 1));
     });
 
     socket.on('queue:processing', ({ _id }) => setStatus(_id, 'processing'));
@@ -101,6 +106,7 @@ const page = () => {
     // Fallback full-queue updates (bootstrap or rare resyncs)
     socket.on('queue:update', (updatedQueue) => {
       setQueue(updatedQueue);
+      // Note: This doesn't update totalQueueCount as it's only the limited queue
     });
 
     socket.on('queue:error', (errorMessage) => {
@@ -208,58 +214,51 @@ const page = () => {
 
   return (
     <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen text-white">
-      <Toaster theme="dark" position="bottom-right" richColors />
+      <NavBar user={user} setUser={setUser} showCategories={false} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
-        <div className="mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent mb-2">
             Video Upload Engine
           </h1>
-          <p className="text-[#a0a0a0] text-sm sm:text-base font-medium mt-2">
-            Add Motherless links to scrape and upload videos automatically.
+          <p className="text-[#a0a0a0] text-sm font-medium">
+            Add Motherless links to scrape and upload videos automatically
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] px-6 py-4 rounded-2xl border border-[#2a2a2a]/50 shadow-xl">
-            <div className="text-[#a0a0a0] text-sm font-medium">In Queue</div>
-            <div className="text-white font-bold text-2xl mt-1">{inQueueCount}</div>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] border border-[#2a2a2a]/50 rounded-xl px-5 py-4 hover:border-[#3a3a3a] transition-all duration-300 shadow-lg">
+            <div className="text-[#a0a0a0] text-xs font-medium uppercase tracking-wider">In Queue</div>
+            <div className="text-white font-bold text-xl mt-1">{inQueueCount}</div>
           </div>
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] px-6 py-4 rounded-2xl border border-[#2a2a2a]/50 shadow-xl">
-            <div className="text-[#a0a0a0] text-sm font-medium">GoonChan Uploads</div>
-            <div className="text-white font-bold text-2xl mt-1">{goonChanUploads}</div>
-          </div>
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] px-6 py-4 rounded-2xl border border-[#2a2a2a]/50 shadow-xl">
-            <div className="text-[#a0a0a0] text-sm font-medium">GoonVideos Uploads</div>
-            <div className="text-white font-bold text-2xl mt-1">{goonVideosUploads}</div>
-          </div>
-        </div>
-        
-        <div className="mb-6">
-          <label className="block text-white font-semibold mb-3 text-sm">Upload Destination</label>
-          <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => setUploadDestination('goonchan')} className={getButtonClass('goonchan')}>GoonChan</button>
-              <button onClick={() => setUploadDestination('goonvideos')} className={getButtonClass('goonvideos')}>GoonVideos</button>
-              <button onClick={() => setUploadDestination('both')} className={getButtonClass('both')}>Both</button>
+          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] border border-[#2a2a2a]/50 rounded-xl px-5 py-4 hover:border-[#3a3a3a] transition-all duration-300 shadow-lg">
+            <div className="text-[#a0a0a0] text-xs font-medium uppercase tracking-wider">Total Videos</div>
+            <div className="text-white font-bold text-xl mt-1">{totalQueueCount}</div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mb-10 relative group">
-           {/* <div className="absolute inset-0 bg-gradient-to-r from-[#ea4197]/20 to-[#d63384]/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-all duration-500"></div> */}
-           <div className="relative flex items-center">
-            <FaLink className="absolute z-10 left-5 top-1/2 transform -translate-y-1/2 text-[#727272] group-focus-within:text-[#ea4198b0] transition-colors duration-300" />
-            <input
-              type="text"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder="Paste a Motherless.com video link here..."
-              className="w-full bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] border border-[#2a2a2a]/50 text-white rounded-2xl pl-12 pr-28 py-4 focus:outline-none focus:border-[#ea4197]/80 focus:ring-2 focus:ring-[#ea4197]/20 transition-all duration-300 placeholder-[#666] text-sm sm:text-base shadow-sm"
-            />
-            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2.5 cursor-pointer bg-[#bb156b] text-white rounded-xl transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.025]">
-              <FaPlus />
-              <span className="hidden sm:inline">Add to Queue</span>
-            </button>
-           </div>
-        </form>
+        <div className="mb-10">
+          <form onSubmit={handleSubmit} className="relative group">
+            {/* <div className="absolute inset-0 bg-gradient-to-r from-[#ea4197]/20 to-[#d63384]/20 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-all duration-500"></div> */}
+            <div className="relative flex items-center bg-gradient-to-br from-[#1a1a1a] to-[#1f1f1f] border border-[#2a2a2a]/50 rounded-xl focus-within:border-[#ea4197]/50 transition-all duration-300 shadow-lg">
+              <FaLink className="absolute left-4 text-[#727272] group-focus-within:text-[#ea4197] transition-colors duration-300" />
+              <input
+                type="text"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="Paste a Motherless.com video link here..."
+                className="w-full bg-transparent text-white pl-11 pr-32 py-4 focus:outline-none placeholder-[#666] text-sm"
+              />
+              <button 
+                type="submit" 
+                className="absolute cursor-pointer right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-[#ea4197] hover:bg-[#d63384] text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.025]"
+              >
+                <FaPlus className="text-xs" />
+                <span className="hidden sm:inline">Add</span>
+              </button>
+            </div>
+          </form>
+        </div>
 
         <div>
           <h2 className="text-2xl font-bold mb-6">Upload Queue</h2>
