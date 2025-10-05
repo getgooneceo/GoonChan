@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import NavBar from "@/components/NavBar";
+import { useNavBar } from "@/contexts/NavBarContext";
 import { Toaster, toast } from "sonner";
 import config from "@/config.json";
 import { 
@@ -95,7 +95,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const AdminPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState(null);
+  const { user, setUser, setConfig } = useNavBar();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("analytics");
   const [fadeInOut, setFadeInOut] = useState(false);
@@ -131,6 +131,11 @@ const AdminPageContent = () => {
     bannerAds: { 
       enabled: false, 
       ads: []
+    },
+    undressButton: {
+      enabled: true,
+      text: 'Undress Her',
+      url: 'https://pornworks.com/?refid=goonproject'
     }
   });
 
@@ -147,6 +152,11 @@ const AdminPageContent = () => {
       bannerAds: { 
         enabled: false, 
         ads: []
+      },
+      undressButton: {
+        enabled: true,
+        text: 'Undress Her',
+        url: 'https://pornworks.com/?refid=goonproject'
       }
     }
   });
@@ -714,6 +724,14 @@ const AdminPageContent = () => {
     checkAuth();
   }, [router, searchParams]);
 
+  // Configure navbar for admin page
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: false,
+    });
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
@@ -723,7 +741,6 @@ const AdminPageContent = () => {
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-        <NavBar user={user} setUser={setUser} showCategories={false} />
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="hidden lg:block w-64 shrink-0">
@@ -770,8 +787,6 @@ const AdminPageContent = () => {
 
   return (
     <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-      <NavBar user={user} setUser={setUser} showCategories={false} />
-
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
         <div className="flex justify-between items-center">
           {adminCategories.map((category) => (
@@ -1332,6 +1347,61 @@ const AdminPageContent = () => {
                         </div>
                       </div>
 
+                      {/* Undress Button */}
+                      <div className="bg-[#121212] rounded-xl border border-[#2a2a2a]/50 p-6 hover:border-[#2a2a2a]/80 transition-all duration-200">
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="w-8 h-8 bg-pink-500/10 rounded-lg flex items-center justify-center">
+                            <FiExternalLink className="text-pink-400 text-sm" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">Navigation Button</h3>
+                            <p className="text-xs text-white/50">Customize the promotional button in navbar</p>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-[#0f0f0f] rounded-lg border border-[#1f1f1f] p-4 hover:bg-[#111111] transition-colors">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-pink-400/60 rounded-full"></div>
+                              <span className="text-white/90 font-medium text-sm">Button Configuration</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-medium ${adSettings.undressButton.enabled ? 'text-[#ea4197]' : 'text-white/50'}`}>
+                                {adSettings.undressButton.enabled ? 'Active' : 'Inactive'}
+                              </span>
+                              <ToggleSwitch
+                                enabled={adSettings.undressButton.enabled}
+                                onToggle={() => toggleAdEnabled('undressButton')}
+                                size="small"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-white/70 text-xs font-medium mb-1.5 block">Button Text</label>
+                              <input
+                                type="text"
+                                value={adSettings.undressButton.text}
+                                onChange={(e) => updateAdUrl('undressButton', 'text', e.target.value)}
+                                placeholder="Undress Her"
+                                className="w-full bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg px-3 py-2.5 text-white/90 placeholder-white/30 focus:outline-none focus:border-[#ea4197]/50 focus:ring-1 focus:ring-[#ea4197]/20 text-sm transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-white/70 text-xs font-medium mb-1.5 block">Button URL</label>
+                              <input
+                                type="url"
+                                value={adSettings.undressButton.url}
+                                onChange={(e) => updateAdUrl('undressButton', 'url', e.target.value)}
+                                placeholder="https://example.com/?refid=yourrefid"
+                                className="w-full bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg px-3 py-2.5 text-white/90 placeholder-white/30 focus:outline-none focus:border-[#ea4197]/50 focus:ring-1 focus:ring-[#ea4197]/20 text-sm transition-all"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Banner Ads */}
                       <div className="bg-[#121212] rounded-xl border border-[#2a2a2a]/50 p-6 hover:border-[#2a2a2a]/80 transition-all duration-200">
                         <div className="flex items-center gap-3 mb-5">
@@ -1759,7 +1829,6 @@ const AdminPage = () => {
   return (
     <Suspense fallback={
       <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-        <NavBar user={null} setUser={() => {}} showCategories={false} />
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="hidden lg:block w-64 shrink-0">

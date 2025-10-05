@@ -6,7 +6,7 @@ import { RiVideoLine, RiImageLine, RiUser3Line } from "react-icons/ri";
 import { Toaster, toast } from "sonner";
 import { MdFavoriteBorder } from "react-icons/md";
 import { TbUsers } from "react-icons/tb";
-import NavBar from "../../components/NavBar";
+import { useNavBar } from "@/contexts/NavBarContext";
 import ProfileImageGrid from "../../components/ProfileImageGrid";
 import ProfileVideoGrid from "../../components/ProfileVideoGrid";
 import SubscriptionGrid from "../../components/SubscriptionGrid";
@@ -22,11 +22,11 @@ const ProfileContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const usernameParam = searchParams.get('user');
+  const { user, setUser, setConfig } = useNavBar();
   
   const [activeTab, setActiveTab] = useState("general");
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [bio, setBio] = useState("");
@@ -511,11 +511,18 @@ const ProfileContent = () => {
     categories.push({ id: "admin", label: "Admin", icon: <RiUser3Line /> });
   }
 
+  // Configure navbar
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: true,
+    });
+  }, []);
+
   if (isLoading) {
     return (
       // skelly
       <div className="min-h-screen bg-[#080808] text-white">
-        <NavBar user={user} setUser={setUser} />
         {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="flex flex-col md:flex-row gap-8">
@@ -574,7 +581,6 @@ const ProfileContent = () => {
   if (error || !profileData) {
     return (
       <div className="min-h-screen bg-[#080808] text-white">
-        <NavBar user={user} setUser={setUser} />
         <div className="flex flex-col items-center justify-center h-[80vh] px-4 max-w-md mx-auto text-center">
           <h1 className="text-3xl font-semibold text-white mb-3">Profile Not Found</h1>
           <p className="text-white/70 mb-5 leading-relaxed">
@@ -595,7 +601,6 @@ const ProfileContent = () => {
 
   return (
     <div className="min-h-screen bg-[#080808] text-white">
-      <NavBar user={user} setUser={setUser} />
       {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
@@ -615,7 +620,7 @@ const ProfileContent = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-2 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
+      <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="hidden md:block w-64 shrink-0">
             <div className="bg-[#121212] rounded-xl p-4 sticky top-24">

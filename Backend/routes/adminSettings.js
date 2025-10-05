@@ -107,7 +107,8 @@ app.get('/ads', async (c) => {
       smartAd2: { enabled: false, iframeUrl: '' },
       videoAd: { enabled: false, url: '' },
       popunderAd: { enabled: false, urls: [] },
-      bannerAds: { enabled: false, ads: [] }
+      bannerAds: { enabled: false, ads: [] },
+      undressButton: { enabled: true, text: 'Undress Her', url: 'https://pornworks.com/?refid=goonproject' }
     };
 
     return c.json({

@@ -40,6 +40,11 @@ const AdminSettingsSchema = new mongoose.Schema({
         link: { type: String, default: '' },
         gif: { type: String, default: '' }
       }]
+    },
+    undressButton: {
+      enabled: { type: Boolean, default: true },
+      text: { type: String, default: 'Undress Her' },
+      url: { type: String, default: 'https://pornworks.com/?refid=goonproject' }
     }
   }
 }, { timestamps: true });

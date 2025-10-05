@@ -5,9 +5,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import NavBar from "@/components/NavBar";
+import { useNavBar } from "@/contexts/NavBarContext";
 import "remixicon/fonts/remixicon.css";
 import VideoGrid from "@/components/VideoGrid";
 import {
@@ -154,7 +154,6 @@ const formatCount = (count: number): string => {
 const WatchPageLoading = () => {
   return (
     <div className="bg-[#080808] min-h-screen w-full">
-      <NavBar />
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
 
         <div className="mb-4 animate-pulse">
@@ -342,7 +341,7 @@ const WatchPageLoading = () => {
 const WatchPageContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const { user, setUser, setConfig } = useNavBar();
   const videoSlug = searchParams.get("v") as string;
   const [video, setVideo] = useState<VideoData | null>(null);
   const [comments, setComments] = useState<CommentData[]>([]);
@@ -1314,36 +1313,18 @@ const WatchPageContent = () => {
     }
   }, [comments]);
 
-  // Fetch ad settings
-  useEffect(() => {
-    const fetchAdSettings = async () => {
-      try {
-        const response = await fetch(`${config.url}/api/admin/settings/ads`);
-        
-        // Check if response is ok
-        if (!response.ok) {
-          console.error('Ad settings fetch failed:', response.status, response.statusText);
-          return;
-        }
+  // Ad settings will be passed from NavBar via callback
+  const handleAdSettingsLoad = useCallback((settings: any) => {
+    setAdSettings(settings);
+  }, []);
 
-        // Get response as text first to check format
-        const text = await response.text();
-        
-        // Try to parse as JSON
-        try {
-          const data = JSON.parse(text);
-          if (data.success && data.adSettings) {
-            setAdSettings(data.adSettings);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse ad settings JSON:', parseError);
-          console.error('Response text:', text);
-        }
-      } catch (error) {
-        console.error('Error fetching ad settings:', error);
-      }
-    };
-    fetchAdSettings();
+  // Configure navbar for watch page
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: true,
+      onAdSettingsLoad: handleAdSettingsLoad,
+    });
   }, []);
 
   const { avatarUrl: userAvatarUrl } = useUserAvatar(user) as {
@@ -1504,7 +1485,6 @@ const WatchPageContent = () => {
   if (error) {
     return (
       <div className="bg-[#080808] min-h-screen w-full">
-        <NavBar user={user} setUser={setUser} />
         <div className="max-w-[79rem] mx-auto px-4 pt-14 pb-8 text-white text-center py-20">
           <div className="flex justify-center text-center items-center mb-2 text-white/60">
             {error}
@@ -1524,7 +1504,6 @@ const WatchPageContent = () => {
   if (!video) {
     return (
       <div className="bg-[#080808] min-h-screen w-full">
-        <NavBar user={user} setUser={setUser} />
         <div className="max-w-[79rem] mx-auto px-4 pt-2 pb-8 text-white text-center py-20">
           <p className="text-[#a0a0a0] text-lg mb-6">Content not found</p>
           <a href="/" className="text-[#ea4197] hover:underline">
@@ -1668,7 +1647,6 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
-      <NavBar user={user} setUser={setUser} />
       <Toaster theme="dark" position="bottom-right" richColors />
       {showAuthModal && (
         <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />

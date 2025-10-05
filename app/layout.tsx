@@ -2,6 +2,8 @@
 import { Poppins, Inter, Roboto } from "next/font/google";
 import { Toaster } from "sonner";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { NavBarProvider, useNavBar } from "@/contexts/NavBarContext";
+import NavBar from "@/components/NavBar";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -21,6 +23,26 @@ const roboto = Roboto({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const { config, user, setUser } = useNavBar();
+
+  return (
+    <>
+      {config.show && (
+        <NavBar
+          user={user}
+          setUser={setUser}
+          showCategories={config.showCategories}
+          activeCategory={config.activeCategory}
+          setActiveCategory={config.setActiveCategory}
+          onAdSettingsLoad={config.onAdSettingsLoad}
+        />
+      )}
+      {children}
+    </>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -47,8 +69,10 @@ export default function RootLayout({
         className={`${poppins.variable} ${inter.variable} ${roboto.variable} antialiased`}
       >
         <GoogleOAuthProvider clientId="93231412308-nddbtq85qlh653qd40s4fsjnbtjf96si.apps.googleusercontent.com">
-          <Toaster richColors theme="dark" position="bottom-right" />
-          {children}
+          <NavBarProvider>
+            <Toaster richColors theme="dark" position="bottom-right" />
+            <LayoutContent>{children}</LayoutContent>
+          </NavBarProvider>
         </GoogleOAuthProvider>
       </body>
     </html>

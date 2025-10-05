@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import NavBar from "@/components/NavBar";
+import { useNavBar } from "@/contexts/NavBarContext";
 import { Toaster, toast } from "sonner";
 import config from "@/config.json";
 import useUserAvatar from '@/hooks/useUserAvatar';
@@ -47,7 +47,7 @@ const ReporterAvatar = ({ reporter }) => {
 
 const AdminPage = () => {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { user, setUser, setConfig } = useNavBar();
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +84,14 @@ const AdminPage = () => {
     if (diffDays < 30) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
+
+  // Configure navbar
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: false,
+    });
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -200,7 +208,6 @@ const AdminPage = () => {
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-        <NavBar user={user} setUser={setUser} showCategories={false} />
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="space-y-8">
             <div className="space-y-4">
@@ -233,8 +240,6 @@ const AdminPage = () => {
 
   return (
     <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-      <NavBar user={user} setUser={setUser} showCategories={false} />
-
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">

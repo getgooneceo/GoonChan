@@ -273,6 +273,21 @@ interface VideoCardProps {
     stopPreview();
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isHoveringRef.current && video.cloudflareStreamId) {
+      e.preventDefault();
+      isHoveringRef.current = true;
+      setIsHovering(true);
+      startPreview();
+
+      setTimeout(() => {
+        if (isHoveringRef.current) {
+          handleMouseLeave();
+        }
+      }, 10000);
+    }
+  };
+
   React.useEffect(() => {
     previewCallbacks.set(videoId, stopPreview);
 
@@ -350,6 +365,7 @@ interface VideoCardProps {
         href={videoUrl}
         className="block group cursor-pointer"
         onClick={handleVideoClick}
+        onTouchStart={handleTouchStart}
       >
         <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
           <img 

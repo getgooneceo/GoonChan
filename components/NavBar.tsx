@@ -16,12 +16,13 @@ import { useRouter } from "next/navigation";
 import config from "../config.json";
 import useUserAvatar from '../hooks/useUserAvatar';
 
-const NavBar = ({user, setUser, showCategories = true, activeCategory, setActiveCategory}: {
+const NavBar = ({user, setUser, showCategories = true, activeCategory, setActiveCategory, onAdSettingsLoad}: {
   user?: any; 
   setUser?: (user: any) => void; 
   showCategories?: boolean;
   activeCategory?: string;
   setActiveCategory?: (category: string) => void;
+  onAdSettingsLoad?: (adSettings: any) => void;
 }) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
@@ -32,13 +33,15 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const { avatarUrl } = useUserAvatar(user) as { avatarUrl: string; isLoading: boolean };
+  const { avatarUrl, isLoading: avatarLoading } = useUserAvatar(user) as { avatarUrl: string; isLoading: boolean };
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showStickyNav, setShowStickyNav] = useState(false);
   const [stickyNavOpacity, setStickyNavOpacity] = useState(0);
+  const [adSettings, setAdSettings] = useState<any>(null);
+  const [adSettingsLoading, setAdSettingsLoading] = useState(true);
 
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY;
@@ -124,11 +127,50 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     router.prefetch("/search");
   }, [router]);
 
+  // Fetch ad settings
+  useEffect(() => {
+    const fetchAdSettings = async () => {
+      setAdSettingsLoading(true);
+      try {
+        const response = await fetch(`${config.url}/api/admin/settings/ads`);
+        
+        if (!response.ok) {
+          console.error('Ad settings fetch failed:', response.status, response.statusText);
+          setAdSettingsLoading(false);
+          return;
+        }
+
+        const text = await response.text();
+        
+        try {
+          const data = JSON.parse(text);
+          if (data.success && data.adSettings) {
+            setAdSettings(data.adSettings);
+            // Call callback if provided (for watch page)
+            if (onAdSettingsLoad) {
+              onAdSettingsLoad(data.adSettings);
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse ad settings JSON:', parseError);
+          console.error('Response text:', text);
+        }
+      } catch (error) {
+        console.error('Error fetching ad settings:', error);
+      } finally {
+        setAdSettingsLoading(false);
+      }
+    };
+    fetchAdSettings();
+  }, [onAdSettingsLoad]);
+
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
     };
 
+    // Set initial value on mount
     handleResize();
 
     window.addEventListener("resize", handleResize);
@@ -183,12 +225,14 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   }, [isAuthChecking, user]);
 
   const handleUndressNavigation = useCallback(() => {
-    window.open("https://pornworks.com/?refid=goonproject", "_blank");
-  }, []);
+    const url = adSettings?.undressButton?.url || "https://pornworks.com/?refid=goonproject";
+    window.open(url, "_blank");
+  }, [adSettings]);
 
   const handleSearchSubmit = useCallback((searchTerm: string) => {
     if (searchTerm.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+      // router.push(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+      window.location.href = `/search?q=${encodeURIComponent(searchTerm.trim())}`;
     }
   }, [router]);
 
@@ -302,9 +346,9 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
 
   const NavbarContent = React.memo(({ isSticky = false }: { isSticky?: boolean }) => (
     <div className="max-w-[79rem] px-4 lg:px-2 mx-auto">
-      {isMobile ? (
-        <div className="flex flex-col md:hidden">
-          <div className="relative h-[4rem] flex justify-between items-center">
+      {/* Mobile Layout - Always rendered but hidden with CSS on desktop */}
+      <div className="flex flex-col md:hidden">
+        <div className="relative h-[4rem] flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <FiMenu 
                 size={24} 
@@ -336,7 +380,12 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 className="text-[#c2c2c2] cursor-pointer"
                 onClick={handleUploadNavigation}
               />
-              {user && (user.avatar || avatarUrl) ? (
+              {(isAuthChecking || avatarLoading) && user ? (
+                // Skeleton loader for mobile profile picture
+                <div className="animate-pulse">
+                  <div className="w-[25px] h-[25px] bg-[#2a2a2a] rounded-full"></div>
+                </div>
+              ) : user && (user.avatar || avatarUrl) ? (
                 <div 
                   className="cursor-pointer" 
                   onClick={handleProfileNavigation}
@@ -366,10 +415,10 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             isSticky={false}
             onSubmit={handleSearchSubmit}
           />
-        </div>
-      ) : (
-        // Desktop Layout
-        <div className="hidden md:flex flex-col">
+      </div>
+      
+      {/* Desktop Layout - Always rendered but hidden with CSS on mobile */}
+      <div className="hidden md:flex flex-col">
           <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
             <Link href={"/"} prefetch={true} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
               <img
@@ -391,15 +440,27 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             />
 
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <button 
-                onClick={handleUndressNavigation}
-                className="flex items-center cursor-pointer justify-center bg-[#d97b00] hover:bg-[#e68200] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
-              >
-                <FaMagic size={18} />
-                <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
-                  Undress Her
-                </span>
-              </button>
+              {adSettingsLoading ? (
+                // Skeleton loader for the button
+                <div className="animate-pulse">
+                  <div className="bg-[#2a2a2a] rounded-full p-2 sm:py-2 sm:px-4 flex items-center">
+                    <div className="w-[18px] h-[18px] bg-[#3a3a3a] rounded"></div>
+                    <div className="hidden sm:ml-2 md:block w-20 h-4 bg-[#3a3a3a] rounded"></div>
+                  </div>
+                </div>
+              ) : (
+                adSettings?.undressButton?.enabled !== false && (
+                  <button 
+                    onClick={handleUndressNavigation}
+                    className="flex items-center cursor-pointer justify-center bg-[#d97b00] hover:bg-[#e68200] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+                  >
+                    <FaMagic size={18} />
+                    <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
+                      {adSettings?.undressButton?.text || "Undress Her"}
+                    </span>
+                  </button>
+                )
+              )}
 
               <button 
                 onClick={handleUploadNavigation}
@@ -411,27 +472,34 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 </span>
               </button>
 
-              <div 
-                className="cursor-pointer" 
-                onClick={handleProfileNavigation}
-                onMouseEnter={() => router.prefetch("/profile")}
-              >
-                <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && (user.avatar || avatarUrl) ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
-                  {user && (user.avatar || avatarUrl) ? (
-                    <img
-                      src={user.avatar || avatarUrl}
-                      alt={user.username || "User Avatar"}
-                      className="rounded-full object-cover"
-                      style={{ width: '41px', height: '41px' }}
-                    />
-                  ) : (
-                    <FaUserAlt
-                      size={18}
-                      className="text-[#c2c2c2] group-hover:text-[#cfcfcf]"
-                    />
-                  )}
+              {(isAuthChecking || avatarLoading) && user ? (
+                // Skeleton loader for profile picture while loading
+                <div className="animate-pulse">
+                  <div className="w-[45px] h-[45px] bg-[#2a2a2a] rounded-full border-2 border-[#323232]"></div>
                 </div>
-              </div>
+              ) : (
+                <div 
+                  className="cursor-pointer" 
+                  onClick={handleProfileNavigation}
+                  onMouseEnter={() => router.prefetch("/profile")}
+                >
+                  <div className={`group hover:scale-[1.05] transition-scale bg-[#181818] ${user && (user.avatar || avatarUrl) ? "border-2 border-[#323232]" : "p-[0.55rem] border-2 border-[#595959]"} rounded-full flex items-center justify-center overflow-hidden`}>
+                    {user && (user.avatar || avatarUrl) ? (
+                      <img
+                        src={user.avatar || avatarUrl}
+                        alt={user.username || "User Avatar"}
+                        className="rounded-full object-cover"
+                        style={{ width: '41px', height: '41px' }}
+                      />
+                    ) : (
+                      <FaUserAlt
+                        size={18}
+                        className="text-[#c2c2c2] group-hover:text-[#cfcfcf]"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -474,8 +542,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   ));
 
@@ -607,16 +674,28 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                     <FaUserAlt className="text-lg mr-4" />
                     <span className="font-medium">Profile</span>
                   </button>
-                  <button 
-                    onClick={() => {
-                      handleUndressNavigation();
-                      setIsSidebarOpen(false);
-                    }}
-                    className="flex items-center p-3 rounded-lg text-[#ff9000] hover:bg-[#ff9000]/20 hover:text-[#ffab33] transition-all duration-200"
-                  >
-                    <FaMagic className="text-lg mr-4" />
-                    <span className="font-medium">Undress Her</span>
-                  </button>
+                  {adSettingsLoading ? (
+                    // Skeleton loader for sidebar button
+                    <div className="animate-pulse">
+                      <div className="flex items-center p-3 rounded-lg bg-[#1a1a1a]">
+                        <div className="w-[18px] h-[18px] bg-[#2a2a2a] rounded mr-4"></div>
+                        <div className="w-24 h-4 bg-[#2a2a2a] rounded"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    adSettings?.undressButton?.enabled !== false && (
+                      <button 
+                        onClick={() => {
+                          handleUndressNavigation();
+                          setIsSidebarOpen(false);
+                        }}
+                        className="flex items-center p-3 rounded-lg text-[#ff9000] hover:bg-[#ff9000]/20 hover:text-[#ffab33] transition-all duration-200"
+                      >
+                        <FaMagic className="text-lg mr-4" />
+                        <span className="font-medium">{adSettings?.undressButton?.text || "Undress Her"}</span>
+                      </button>
+                    )
+                  )}
                   <button 
                     onClick={() => {
                       handleUploadNavigation();

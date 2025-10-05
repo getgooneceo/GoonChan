@@ -264,6 +264,21 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
     stopPreview();
   };
 
+  const handleTouchStart = (e) => {
+    if (!isHoveringRef.current && video.cloudflareStreamId && !isProcessing) {
+      e.preventDefault();
+      isHoveringRef.current = true;
+      setIsHovering(true);
+      startPreview();
+
+      setTimeout(() => {
+        if (isHoveringRef.current) {
+          handleMouseLeave();
+        }
+      }, 10000);
+    }
+  };
+
   React.useEffect(() => {
     // Register stop callback for this video
     previewCallbacks.set(videoId, stopPreview);
@@ -374,7 +389,11 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
             </div>
           </div>
         ) : (
-          <Link href={`/watch?v=${video.slug}`} className="block group cursor-pointer">
+          <Link 
+            href={`/watch?v=${video.slug}`} 
+            className="block group cursor-pointer"
+            onTouchStart={handleTouchStart}
+          >
             <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
               <img
                 src={currentThumbnail}

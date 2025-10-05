@@ -1,15 +1,21 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import NavBar from '../../components/NavBar';
+import { useNavBar } from '@/contexts/NavBarContext';
 import Footer from '../../components/Footer';
 
 const DmcaNotice = () => {
-  const [user, setUser] = useState(null);
+  const { setConfig } = useNavBar();
+
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: false,
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#080808] text-white font-inter">
-      <NavBar user={user} setUser={setUser} showCategories={false} />
 
       <main className="max-w-4xl mx-auto px-5 sm:px-8 py-10 sm:py-14">
         <div className="text-center mb-10 sm:mb-14">

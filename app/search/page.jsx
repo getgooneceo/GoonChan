@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import NavBar from '@/components/NavBar';
+import { useNavBar } from '@/contexts/NavBarContext';
 import { FiFilter, FiSearch } from 'react-icons/fi';
 import config from '@/config.json';
 import { FaPlay, FaImage } from 'react-icons/fa';
@@ -10,8 +10,7 @@ import { FaPlay, FaImage } from 'react-icons/fa';
 const SearchContent = () => {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q');
-
-  const [user, setUser] = useState(null);
+  const { user, setUser, setConfig } = useNavBar();
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(!!initialQuery);
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,8 +24,18 @@ const SearchContent = () => {
     sortBy: 'relevance', // 'relevance', 'recent', 'views', 'hot'
     dateRange: 'all', // 'all', 'today', 'week', 'month', 'year'
   });
+  const [isBlockedSearch, setIsBlockedSearch] = useState(false);
+  const [blockedKeyword, setBlockedKeyword] = useState('');
 
   const resultsPerPage = 20;
+
+  // Configure navbar
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: false,
+    });
+  }, []);
 
   useEffect(() => {
     const query = searchParams.get('q');
@@ -41,6 +50,8 @@ const SearchContent = () => {
     
     setIsLoading(true);
     setCurrentPage(page);
+    setIsBlockedSearch(false);
+    setBlockedKeyword('');
     
     try {
       const params = new URLSearchParams({
@@ -76,17 +87,19 @@ const SearchContent = () => {
       }
 
       const response = await fetch(`${config.url}/api/search?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data = await response.json();
 
       if (data.success) {
         setSearchResults(data.results || []);
         setTotalPages(data.pagination?.totalPages || 1);
         setTotalResults(data.pagination?.totalResults || 0);
+      } else if (data.blocked) {
+        // Search was blocked due to keyword
+        setIsBlockedSearch(true);
+        setBlockedKeyword(data.blockedKeyword || 'restricted term');
+        setSearchResults([]);
+        setTotalPages(1);
+        setTotalResults(0);
       } else {
         console.error('Search failed:', data.message);
         setSearchResults([]);
@@ -166,7 +179,7 @@ const SearchContent = () => {
           <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
             <img
               src={result.thumbnail}
-              alt={result.title}
+              // alt={result.title}
               className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-300 ease-in-out"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
@@ -223,12 +236,6 @@ const SearchContent = () => {
 
   return (
     <div className="min-h-screen bg-[#080808] text-white">
-      <NavBar 
-        user={user} 
-        setUser={setUser} 
-        showCategories={false}
-      />
-      
       <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-6 pb-8">
         {searchQuery && (
           <div className="mb-8">
@@ -429,6 +436,30 @@ const SearchContent = () => {
               </div>
             )}
           </>
+        ) : isBlockedSearch ? (
+          <div className="text-center py-20">
+            <div className="mb-6">
+              <div className="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+                <svg 
+                  className="w-8 h-8 text-red-500" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-white mb-2">Search Blocked</h2>
+              <p className="text-[#aaa] max-w-md mx-auto mb-4">
+                Your search contains a blocked keyword: <span className="text-red-400 font-medium">"{blockedKeyword}"</span>
+              </p>
+            </div>
+          </div>
         ) : searchQuery && !isLoading ? (
           <div className="text-center py-20">
             <div className="mb-6">

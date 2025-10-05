@@ -4,5 +4,5 @@
     "version": "1.0.0",
     "author": "Goonchan Team",
     "license": "MIT",
-    "url": "https://api.goonchan.org"
+    "url": "http://localhost:3001"
 }

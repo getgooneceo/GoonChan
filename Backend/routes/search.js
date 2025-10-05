@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import Video from '../models/Video.js'
 import Image from '../models/Image.js'
 import { rateLimiter } from 'hono-rate-limiter'
+import settingsManager from '../services/settingsManager.js'
 
 const router = new Hono()
 
@@ -81,6 +82,23 @@ router.get('/', limiter, async (c) => {
       dateFrom,
       dateTo
     } = c.req.query();
+
+    // Check for blocked keywords
+    if (query && query.trim()) {
+      const blockedKeywords = settingsManager.getBlockedKeywords();
+      const queryLower = query.toLowerCase();
+      
+      for (const keyword of blockedKeywords) {
+        if (queryLower.includes(keyword.toLowerCase())) {
+          return c.json({
+            success: false,
+            blocked: true,
+            blockedKeyword: keyword,
+            message: `Search blocked: Your search contains a blocked keyword "${keyword}"`
+          }, 403);
+        }
+      }
+    }
 
     const limitNum = Math.min(parseInt(limit) || 20, 50);
     const pageNum = parseInt(page) || 1;

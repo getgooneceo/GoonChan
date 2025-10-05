@@ -3,14 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from "next/navigation";
 import config from "@/config.json";
 import { Toaster, toast } from "sonner";
-import NavBar from "@/components/NavBar";
+import { useNavBar } from "@/contexts/NavBarContext";
 import { FaLink, FaPlus, FaClock, FaCheckCircle, FaExclamationTriangle, FaTrash, FaCog, FaDownload, FaUpload } from "react-icons/fa";
 import "remixicon/fonts/remixicon.css";
 import io from 'socket.io-client';
 
 const page = () => {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { user, setUser, setConfig } = useNavBar();
   const [loading, setLoading] = useState(true);
   
   const [link, setLink] = useState('');
@@ -18,6 +18,14 @@ const page = () => {
   const [totalQueueCount, setTotalQueueCount] = useState(0);
   const [uploadDestination, setUploadDestination] = useState('goonchan');
   const socketRef = useRef(null);
+
+  // Configure navbar
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: false,
+    });
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -214,7 +222,6 @@ const page = () => {
 
   return (
     <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen text-white">
-      <NavBar user={user} setUser={setUser} showCategories={false} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
 
         <div className="mb-8">

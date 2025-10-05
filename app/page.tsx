@@ -2,18 +2,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import React, { useState, useEffect, Suspense } from "react";
-import NavBar from "@/components/NavBar";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import VideoCard from "@/components/VideoGrid";
 import ImageGrid from "@/components/ImageGrid";
 import Footer from "@/components/Footer";
 import { useRouter, useSearchParams } from "next/navigation";
 import config from "../config.json"
 import BannerAds from "@/components/BannerAds";
+import { useNavBar } from "@/contexts/NavBarContext";
 // import PopUnderAd from "@/components/PopUnderAd";
 
 function HomeContent() {
-  const [user, setUser] = useState(null);
+  const { user, setUser, setConfig } = useNavBar();
   const [activeCategory, setActiveCategory] = useState("discover");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [contentKey, setContentKey] = useState(0);
@@ -52,33 +52,21 @@ function HomeContent() {
     }
   }, [activeCategory]);
 
-  // Fetch ad settings
-  useEffect(() => {
-    const fetchAdSettings = async () => {
-      try {
-        const response = await fetch(`${config.url}/api/admin/settings/ads`);
-        
-        if (!response.ok) {
-          console.error('Ad settings fetch failed:', response.status, response.statusText);
-          return;
-        }
-
-        const text = await response.text();
-        
-        try {
-          const data = JSON.parse(text);
-          if (data.success && data.adSettings) {
-            setAdSettings(data.adSettings);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse ad settings JSON:', parseError);
-        }
-      } catch (error) {
-        console.error('Error fetching ad settings:', error);
-      }
-    };
-    fetchAdSettings();
+  // Ad settings will be passed from NavBar via callback
+  const handleAdSettingsLoad = useCallback((settings: any) => {
+    setAdSettings(settings);
   }, []);
+
+  // Configure navbar for home page
+  useEffect(() => {
+    setConfig({
+      show: true,
+      showCategories: true,
+      activeCategory: activeCategory,
+      setActiveCategory: handleCategoryChange,
+      onAdSettingsLoad: handleAdSettingsLoad,
+    });
+  }, [activeCategory]);
 
   useEffect(() => {
     setViewedVideoIds(new Set());
@@ -572,13 +560,6 @@ function HomeContent() {
     <>
       {/* <PopUnderAd /> */}
       <div className="bg-[#080808] min-h-screen w-full">
-        <NavBar 
-          user={user} 
-          setUser={setUser} 
-          showCategories={true}
-          activeCategory={activeCategory}
-          setActiveCategory={handleCategoryChange}
-        />
         <div className="max-w-[79rem] mx-auto px-4 lg:px-2 pt-1 pb-8 relative overflow-hidden">
           <div
             key={contentKey}
