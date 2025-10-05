@@ -54,11 +54,11 @@ export default function RootLayout({
       <head>
         <title>Goonchan</title>
         {/* <meta name="description" content="Adult content platform" /> */}
-        <script
+        {/* <script
           src="https://chaturbate.com/affiliates/promotools/popup/H5o9o/popchaturbaterevshare.js"
           type="text/javascript"
           defer
-        ></script>
+        ></script> */}
         <script
           defer
           src="https://cloud.umami.is/script.js"
