@@ -969,7 +969,7 @@ const ProfileContent = () => {
                       {hasMoreVideos && (
                         <div ref={observerTargetVideos} className="mt-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(6)].map((_, i) => (
+                            {[...Array(typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 6 : window.innerWidth >= 640 ? 4 : 1) : 6)].map((_, i) => (
                               <div key={i} className={loadingMoreVideos ? "animate-pulse" : ""}>
                                 <div className="aspect-video bg-[#1a1a1a] rounded-lg mb-2"></div>
                                 <div className="h-4 bg-[#1a1a1a] rounded w-3/4 mb-2"></div>
@@ -1022,7 +1022,7 @@ const ProfileContent = () => {
                       {hasMoreImages && (
                         <div ref={observerTargetImages} className="mt-4">
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {[...Array(8)].map((_, i) => (
+                            {[...Array(typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 8 : window.innerWidth >= 640 ? 6 : 1) : 8)].map((_, i) => (
                               <div key={i} className={loadingMoreImages ? "animate-pulse" : ""}>
                                 <div className="aspect-square bg-[#1a1a1a] rounded-lg mb-2"></div>
                                 <div className="h-4 bg-[#1a1a1a] rounded w-3/4 mb-2"></div>

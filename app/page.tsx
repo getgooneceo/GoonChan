@@ -8,7 +8,7 @@ import ImageGrid from "@/components/ImageGrid";
 import Footer from "@/components/Footer";
 import { useRouter, useSearchParams } from "next/navigation";
 import config from "../config.json"
-import BannerAds from "@/components/BannerAds";
+// import BannerAds from "@/components/BannerAds";
 import { useNavBar } from "@/contexts/NavBarContext";
 // import PopUnderAd from "@/components/PopUnderAd";
 
@@ -29,7 +29,6 @@ function HomeContent() {
   const [videoPagination, setVideoPagination] = useState<any>(null);
   const [imagePagination, setImagePagination] = useState<any>(null);
   const [adSettings, setAdSettings] = useState<any>(null);
-  const observerTargetVideos = React.useRef(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,28 +75,6 @@ function HomeContent() {
     setVideoPagination(null);
     setImagePagination(null);
   }, [activeCategory]);
-
-  // Intersection observer for videos infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && videoPagination?.hasNextPage && !loading && !loadingMore && activeCategory !== 'images') {
-          loadMoreVideos();
-        }
-      },
-      { threshold: 0.7, rootMargin: '300px' }
-    );
-
-    if (observerTargetVideos.current) {
-      observer.observe(observerTargetVideos.current);
-    }
-
-    return () => {
-      if (observerTargetVideos.current) {
-        observer.unobserve(observerTargetVideos.current);
-      }
-    };
-  }, [videoPagination, loading, loadingMore, activeCategory, videoData]);
 
   const fetchVideosForCategory = async (category: string, page: number = 1, excludeIds: string[] = []) => {
     try {
@@ -319,12 +296,14 @@ function HomeContent() {
   const handleCategoryChange = (newCategory: string) => {
     if (newCategory === activeCategory) return;
     
+    // Batch all state updates together to prevent flickering
     setIsTransitioning(true);
     setLoading(true);
-    setVideoData([]);
-    setImageData([]);
     setError(null);
     
+    // Clear all data immediately
+    setVideoData([]);
+    setImageData([]);
     setViewedVideoIds(new Set());
     setViewedImageIds(new Set());
     setCurrentVideoPage(1);
@@ -332,13 +311,12 @@ function HomeContent() {
     setVideoPagination(null);
     setImagePagination(null);
 
+    // Use a single timeout to change category and reset transition
     setTimeout(() => {
       setActiveCategory(newCategory);
       setContentKey(prev => prev + 1);
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 25);
-    }, 30);
+      setIsTransitioning(false);
+    }, 50); // Slightly longer delay for smoother transition
   };
 
   const renderVideoSkeletons = () => (
@@ -395,7 +373,11 @@ function HomeContent() {
 
   const renderContent = () => {
     if (isTransitioning) {
-      return <div className="w-full h-64"></div>;
+      return (
+        <div className="w-full">
+          {activeCategory === "images" ? renderImageSkeletons() : renderVideoSkeletons()}
+        </div>
+      );
     }
 
     const isCurrentlyLoading = loading;
@@ -506,35 +488,25 @@ function HomeContent() {
               ))}
             </div>
             {videoPagination && videoPagination.hasNextPage && (
-              <div ref={observerTargetVideos} className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-                  {Array.from({ length: typeof window !== 'undefined' ? (window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : window.innerWidth >= 640 ? 2 : 1) : 4 }, (_, index) => (
-                    <div key={`loading-skeleton-${index}`} className="">
-                      <div className={`relative aspect-video overflow-hidden rounded-lg bg-[#101010] ${loadingMore ? 'animate-pulse' : ''}`}>
-                        <div className="w-full h-full bg-[#1a1a1a]"></div>
-                      </div>
-
-                      <div className="flex mt-3 gap-3">
-                        <div className="flex-shrink-0">
-                          <div className={`w-9 h-9 rounded-full bg-[#1a1a1a] ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                        </div>
-
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="space-y-1">
-                            <div className={`h-4 bg-[#1a1a1a] rounded w-full ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                            <div className={`h-4 bg-[#1a1a1a] rounded w-3/4 ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <div className={`h-3 bg-[#1a1a1a] rounded w-16 ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                            <div className={`h-3 bg-[#1a1a1a] rounded w-12 ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                            <div className={`h-3 bg-[#1a1a1a] rounded w-8 ${loadingMore ? 'animate-pulse' : ''}`}></div>
-                          </div>
-                        </div>
-                      </div>
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={loadMoreVideos}
+                  disabled={loadingMore}
+                  className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                    loadingMore 
+                      ? 'bg-[#1a1a1a] text-white/40 cursor-not-allowed' 
+                      : 'bg-[#c40f6c] hover:bg-[#ff0084d0] cursor-pointer text-white text-lg font-pop shadow-lg hover:shadow-[#ea4197]/20'
+                  }`}
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white/60 rounded-full animate-spin"></div>
+                      Loading...
                     </div>
-                  ))}
-                </div>
+                  ) : (
+                    'Load More Videos'
+                  )}
+                </button>
               </div>
             )}
           </>
@@ -571,7 +543,7 @@ function HomeContent() {
           >
             {renderContent()}
           </div>
-          <div className="hidden lg:block">
+          <div className="">
             <Footer />
           </div>
         </div>

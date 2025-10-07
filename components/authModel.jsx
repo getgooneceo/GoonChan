@@ -33,6 +33,10 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+  const [acceptedTos, setAcceptedTos] = useState(false);
+  const [isAbove18, setIsAbove18] = useState(false);
+  const [tosError, setTosError] = useState(false);
+  const [ageError, setAgeError] = useState(false);
 
   const modalContentRef = useRef(null);
   const otpInputRefs = useRef([]);
@@ -112,6 +116,10 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
         setEmailError(false);
         setPasswordError(false);
         setUsernameError(false);
+        setAcceptedTos(false);
+        setIsAbove18(false);
+        setTosError(false);
+        setAgeError(false);
         setScreenTransition(false);
       }, 300);
     }
@@ -441,6 +449,16 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
 
       if (!password || password.length < 6) {
         setPasswordError(true);
+        hasError = true;
+      }
+
+      if (!acceptedTos) {
+        setTosError(true);
+        hasError = true;
+      }
+
+      if (!isAbove18) {
+        setAgeError(true);
         hasError = true;
       }
 
@@ -827,7 +845,7 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isForgotPassword, forgotPasswordStep, isOtpVerification, email, password, username, otpValues, newPassword, confirmPassword, isVerifying]);
+  }, [isForgotPassword, forgotPasswordStep, isOtpVerification, email, password, username, otpValues, newPassword, confirmPassword, isVerifying, acceptedTos, isAbove18]);
 
   return (
     <div
@@ -1409,11 +1427,53 @@ const AuthModel = ({ setShowAuthModel, setUser }) => {
                   } absolute right-6 text-xl top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer`}
                 ></button>
               </div>
-              {/* {passwordError && (
-                <p className="text-red-500 text-xs mt-1 ml-2">
-                  Password must be at least 6 characters
-                </p>
-              )} */}
+
+              {!isLogin && (
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="tos-checkbox"
+                      checked={acceptedTos}
+                      onChange={(e) => {
+                        setAcceptedTos(e.target.checked);
+                        setTosError(false);
+                      }}
+                      className={`mt-1 w-4 h-4 rounded cursor-pointer ${
+                        tosError ? 'accent-red-500' : 'accent-white'
+                      }`}
+                    />
+                    <label htmlFor="tos-checkbox" className={`text-sm cursor-pointer ${tosError ? 'text-red-500' : 'text-[#cccccc]'}`}>
+                      I accept the{' '}
+                      <a href="/terms-of-service" target="_blank" className="text-white hover:underline">
+                        Terms of Service
+                      </a>{' '}
+                      and{' '}
+                      <a href="/privacy-policy" target="_blank" className="text-white hover:underline">
+                        Privacy Policy
+                      </a>
+                    </label>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="age-checkbox"
+                      checked={isAbove18}
+                      onChange={(e) => {
+                        setIsAbove18(e.target.checked);
+                        setAgeError(false);
+                      }}
+                      className={`mt-1 w-4 h-4 rounded cursor-pointer ${
+                        ageError ? 'accent-red-500' : 'accent-white'
+                      }`}
+                    />
+                    <label htmlFor="age-checkbox" className={`text-sm cursor-pointer ${ageError ? 'text-red-500' : 'text-[#cccccc]'}`}>
+                      I confirm that I am 18 years of age or older
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handleEmailAuth}

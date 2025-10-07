@@ -127,7 +127,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     router.prefetch("/search");
   }, [router]);
 
-  // Fetch ad settings
+  // Fetch ad settings (only once on mount)
   useEffect(() => {
     const fetchAdSettings = async () => {
       setAdSettingsLoading(true);
@@ -146,10 +146,6 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
           const data = JSON.parse(text);
           if (data.success && data.adSettings) {
             setAdSettings(data.adSettings);
-            // Call callback if provided (for watch page)
-            if (onAdSettingsLoad) {
-              onAdSettingsLoad(data.adSettings);
-            }
           }
         } catch (parseError) {
           console.error('Failed to parse ad settings JSON:', parseError);
@@ -162,7 +158,14 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
       }
     };
     fetchAdSettings();
-  }, [onAdSettingsLoad]);
+  }, []); // Only fetch once on mount
+
+  // Call callback when adSettings or callback changes (without refetching)
+  useEffect(() => {
+    if (adSettings && onAdSettingsLoad) {
+      onAdSettingsLoad(adSettings);
+    }
+  }, [adSettings, onAdSettingsLoad]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -362,17 +365,32 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               />
             </div>
 
-            <Link href="/" prefetch={true} className="absolute left-1/2 transform -translate-x-1/2 flex items-center cursor-pointer">
-              <img
-                src="/logo.webp"
-                alt="GoonChan Logo"
-                className="rounded-full opacity-95"
-                style={{ width: '30px', height: '30px' }}
-              />
-              <h1 className="font-inter text-xl font-semibold text-white ml-[0.42rem]">
-                Goon<span className="text-[#ea4197]">Chan</span>
-              </h1>
-            </Link>
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
+              <Link href="/" prefetch={true} className="flex items-center cursor-pointer">
+                <img
+                  src="/logo.webp"
+                  alt="GoonChan Logo"
+                  className="rounded-full opacity-95"
+                  style={{ width: '30px', height: '30px' }}
+                />
+                <h1 className="font-inter text-xl font-semibold text-white ml-[0.42rem]">
+                  Goon<span className="text-[#ea4197]">Chan</span>
+                </h1>
+              </Link>
+              <a 
+                href="https://theporndude.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center"
+              >
+                <img
+                  src="/TPD-Favicon-Big-1654px.png"
+                  alt="TPD"
+                  className="opacity-90 hover:opacity-100 transition-opacity"
+                  style={{ width: '26px', height: '26px' }}
+                />
+              </a>
+            </div>
 
             <div className="flex items-center space-x-5">
               <RiVideoUploadLine 
@@ -420,17 +438,19 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
       {/* Desktop Layout - Always rendered but hidden with CSS on mobile */}
       <div className="hidden md:flex flex-col">
           <div className="relative mt-[1.6rem] mb-[0.95rem] flex justify-between items-center">
-            <Link href={"/"} prefetch={true} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
-              <img
-                src="/logo.webp"
-                alt="GoonChan Logo"
-                className="rounded-full opacity-95"
-                style={{ width: '34px', height: '34px' }}
-              />
-              <h1 className="font-inter text-2xl font-semibold text-white hidden sm:block">
-                Goon<span className="text-[#ea4197]">Chan</span>
-              </h1>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href={"/"} prefetch={true} className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-out space-x-2">
+                <img
+                  src="/logo.webp"
+                  alt="GoonChan Logo"
+                  className="rounded-full opacity-95"
+                  style={{ width: '34px', height: '34px' }}
+                />
+                <h1 className="font-inter text-2xl font-semibold text-white hidden sm:block">
+                  Goon<span className="text-[#ea4197]">Chan</span>
+                </h1>
+              </Link>
+            </div>
 
             <SearchInput 
               isMobile={false}
@@ -439,7 +459,21 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
               onSubmit={handleSearchSubmit}
             />
 
-            <div className="flex items-center space-x-3 sm:space-x-4">
+            <a 
+              href="https://theporndude.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hidden md:block hover:opacity-90 transition-opacity"
+            >
+              <img
+                src="/TPD-Logo-Small-250px.png"
+                alt="TPD Banner"
+                className="opacity-95"
+                style={{ height: '25px', width: 'auto' }}
+              />
+            </a>
+
+            <div className="flex items-center lg:ml-3 md:ml-2 space-x-2 sm:space-x-2">
               {adSettingsLoading ? (
                 // Skeleton loader for the button
                 <div className="animate-pulse">
@@ -452,7 +486,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
                 adSettings?.undressButton?.enabled !== false && (
                   <button 
                     onClick={handleUndressNavigation}
-                    className="flex items-center cursor-pointer justify-center bg-[#d97b00] hover:bg-[#e68200] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
+                    className="flex lg:flex md:hidden items-center cursor-pointer justify-center bg-[#d97b00] hover:bg-[#e68200] hover:scale-[1.03] duration-200 transition-all ease-out text-[#202020] group rounded-full p-2 sm:py-2 sm:px-4"
                   >
                     <FaMagic size={18} />
                     <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
