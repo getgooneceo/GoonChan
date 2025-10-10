@@ -249,11 +249,8 @@ interface VideoCardProps {
     previewIndexRef.current = 0;
 
     const originalThumbnail = originalThumbnailRef.current;
-    if (originalThumbnail.includes('/public')) {
-      setCurrentThumbnail(isHighQualityLoaded ? originalThumbnail : getReducedQualityUrl(originalThumbnail));
-    } else {
-      setCurrentThumbnail(originalThumbnail);
-    }
+    // Always return to the original high-quality thumbnail, not reduced
+    setCurrentThumbnail(originalThumbnail);
 
     if (currentPreviewingVideo === videoId) {
       currentPreviewingVideo = null;
