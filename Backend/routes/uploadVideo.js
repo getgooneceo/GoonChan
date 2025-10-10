@@ -118,16 +118,25 @@ const checkVideoProcessingStatus = async (cloudflareStreamId, videoDbId, hasCust
 // Background function to handle Cloudflare upload
 const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile, clientDuration) => {
   let tempPath = null;
+  let lastLoggedPercent = 0;
   
   try {
     console.log(`[BACKGROUND] Starting Cloudflare upload for video ${videoDbId}`);
+    console.log(`[BACKGROUND] Video file: ${videoFile.name}`);
     
     // Save video to temp file
     tempPath = path.join(os.tmpdir(), `${Date.now()}-${videoFile.name}`);
     const buffer = Buffer.from(await videoFile.arrayBuffer());
+    const bufferSizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
+    console.log(`[BACKGROUND] Video buffer size: ${bufferSizeMB} MB`);
+    
+    console.log(`[BACKGROUND] Writing video to temp file: ${tempPath}`);
     fs.writeFileSync(tempPath, buffer);
 
     const fileSize = fs.statSync(tempPath).size;
+    const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+    console.log(`[BACKGROUND] Video file size: ${fileSizeMB} MB (${fileSize} bytes)`);
+    
     const readStream = fs.createReadStream(tempPath);
 
     let uploadedVideoId = null;
@@ -146,32 +155,45 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
           filetype: "video/mp4",
         },
         onError(error) {
-          console.error("[BACKGROUND] TUS upload failed:", error);
+          console.error(`[BACKGROUND] TUS upload failed for video ${videoDbId}:`, error);
           reject(error);
         },
         onProgress(bytesUploaded, bytesTotal) {
-          // Progress tracking removed for production
+          const percent = Math.round((bytesUploaded / bytesTotal) * 100);
+          const uploadedMB = (bytesUploaded / (1024 * 1024)).toFixed(2);
+          const totalMB = (bytesTotal / (1024 * 1024)).toFixed(2);
+          
+          // Log every 10% or when upload completes
+          if (percent >= lastLoggedPercent + 10 || percent === 100) {
+            console.log(`[UPLOAD-PROGRESS] Video ${videoDbId}: ${percent}% (${uploadedMB}MB / ${totalMB}MB)`);
+            lastLoggedPercent = percent;
+          }
         },
         onAfterResponse(req, res) {
           const mediaIdHeader = res.getHeader("stream-media-id");
           if (mediaIdHeader) {
             uploadedVideoId = mediaIdHeader;
+            console.log(`[BACKGROUND] Received Cloudflare Stream ID: ${mediaIdHeader}`);
           }
           return Promise.resolve();
         },
         onSuccess() {
+          console.log(`[BACKGROUND] TUS upload completed successfully for video ${videoDbId}`);
           resolve(uploadedVideoId);
         },
       });
 
+      console.log(`[BACKGROUND] Starting TUS upload for video ${videoDbId}...`);
       upload.start();
     });
 
     uploadedVideoId = await uploadPromise;
     
+    console.log(`[BACKGROUND] Cleaning up temp file for video ${videoDbId}...`);
     // Clean up temp file
     if (tempPath && fs.existsSync(tempPath)) {
       fs.unlinkSync(tempPath);
+      console.log(`[BACKGROUND] Temp file deleted: ${tempPath}`);
       tempPath = null;
     }
 
@@ -179,6 +201,7 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
     let defaultStreamThumbnail = null;
 
     // Fetch default thumbnail
+    console.log(`[BACKGROUND] Fetching default thumbnail for video ${videoDbId}...`);
     try {
       const response = await axios.get(
         `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${cloudflareStreamId}`,
@@ -187,12 +210,14 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
         }
       );
       defaultStreamThumbnail = response.data?.result?.thumbnail || null;
+      console.log(`[BACKGROUND] Default thumbnail URL: ${defaultStreamThumbnail}`);
     } catch (error) {
       console.error(`[BACKGROUND] Could not fetch default thumbnail:`, error.message);
     }
 
     // Set random thumbnail timestamp
     const randomThumbnailTimestamp = 0.1 + (Math.random() * 0.8);
+    console.log(`[BACKGROUND] Setting random thumbnail timestamp (${(randomThumbnailTimestamp * 100).toFixed(1)}%) for video ${videoDbId}...`);
     try {
       await axios.post(
         `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/${cloudflareStreamId}`,
@@ -204,6 +229,7 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
           },
         }
       );
+      console.log(`[BACKGROUND] Thumbnail timestamp set successfully`);
     } catch (error) {
       console.error('[BACKGROUND] Error setting thumbnail timestamp:',
         error.response ? JSON.stringify(error.response.data) : error.message);
@@ -212,19 +238,28 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
     // Upload custom thumbnail if provided
     let finalThumbnailUrl = defaultStreamThumbnail;
     if (customThumbnailFile instanceof File && customThumbnailFile.size > 0) {
-      // console.log(`[BACKGROUND] Custom thumbnail detected, size: ${customThumbnailFile.size} bytes`);
+      const thumbnailSizeKB = (customThumbnailFile.size / 1024).toFixed(2);
+      console.log(`[BACKGROUND] Custom thumbnail detected for video ${videoDbId}`);
+      console.log(`[BACKGROUND] Thumbnail size: ${thumbnailSizeKB} KB`);
+      console.log(`[BACKGROUND] Thumbnail filename: ${customThumbnailFile.name}`);
+      
       const imageFormData = new FormDataNode();
       const imageBuffer = await customThumbnailFile.arrayBuffer();
 
       try {
+        console.log(`[BACKGROUND] Converting thumbnail to WebP format...`);
         const webpBuffer = await sharp(Buffer.from(imageBuffer))
           .webp()
           .toBuffer();
+        
+        const webpSizeKB = (webpBuffer.length / 1024).toFixed(2);
+        console.log(`[BACKGROUND] WebP conversion complete, size: ${webpSizeKB} KB`);
 
         const originalFileName = customThumbnailFile.name;
         const webpFileName = originalFileName.substring(0, originalFileName.lastIndexOf('.')) + '.webp';
         imageFormData.append('file', webpBuffer, webpFileName);
 
+        console.log(`[BACKGROUND] Requesting Cloudflare Images direct upload URL...`);
         const directUploadForm = new FormDataNode();
         directUploadForm.append('requireSignedURLs', 'false');
 
@@ -244,17 +279,21 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
           console.error('[BACKGROUND] Missing uploadURL or imageId:', directUploadResponse.data);
           throw new Error('Failed to get Cloudflare image direct upload URL.');
         }
+        console.log(`[BACKGROUND] Upload URL obtained, image ID: ${imageId}`);
 
+        console.log(`[BACKGROUND] Uploading thumbnail to Cloudflare Images...`);
         const thumbHeadersForAxios = imageFormData.getHeaders();
         await axios.post(uploadURL, imageFormData, {
           headers: thumbHeadersForAxios,
         });
 
         finalThumbnailUrl = `https://imagedelivery.net/${CLOUDFLARE_ACCOUNT_HASH}/${imageId}/public`;
-        // console.log(`[BACKGROUND] Custom thumbnail uploaded successfully: ${finalThumbnailUrl}`);
+        console.log(`[BACKGROUND] ✅ Custom thumbnail uploaded successfully`);
+        console.log(`[BACKGROUND] Thumbnail URL: ${finalThumbnailUrl}`);
       } catch (error) {
         console.error('[BACKGROUND] Error uploading custom thumbnail:',
           error.response ? JSON.stringify(error.response.data) : error.message);
+        console.log(`[BACKGROUND] Falling back to default Cloudflare thumbnail`);
         finalThumbnailUrl = defaultStreamThumbnail;
       }
     } else {
@@ -262,6 +301,7 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
     }
 
     // Update video with Cloudflare data
+    console.log(`[BACKGROUND] Updating database for video ${videoDbId}...`);
     const updateData = {
       videoUrl: `https://customer-${CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${cloudflareStreamId}/iframe`,
       cloudflareStreamId,
@@ -272,7 +312,10 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
 
     await Video.findByIdAndUpdate(videoDbId, updateData);
     
-    console.log(`[BACKGROUND] Cloudflare upload completed for video ${videoDbId}, stream ID: ${cloudflareStreamId}`);
+    console.log(`[BACKGROUND] ✅ Upload complete for video ${videoDbId}`);
+    console.log(`[BACKGROUND] Stream ID: ${cloudflareStreamId}`);
+    console.log(`[BACKGROUND] Video URL: ${updateData.videoUrl}`);
+    console.log(`[BACKGROUND] Duration: ${updateData.duration}s`);
 
     // Start processing status check
     const hasCustomThumbnail = customThumbnailFile instanceof File && customThumbnailFile.size > 0;
@@ -281,12 +324,16 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
     });
 
   } catch (error) {
-    console.error(`[BACKGROUND] Upload failed for video ${videoDbId}:`, error);
+    console.error(`[BACKGROUND] ❌ Upload failed for video ${videoDbId}`);
+    console.error(`[BACKGROUND] Error details:`, error.message);
+    console.error(`[BACKGROUND] Stack trace:`, error.stack);
     
     // Clean up temp file if it exists
     if (tempPath && fs.existsSync(tempPath)) {
       try {
+        console.log(`[BACKGROUND] Cleaning up temp file after error...`);
         fs.unlinkSync(tempPath);
+        console.log(`[BACKGROUND] Temp file deleted: ${tempPath}`);
       } catch (cleanupError) {
         console.error('[BACKGROUND] Error cleaning up temp file:', cleanupError);
       }
@@ -294,8 +341,9 @@ const handleCloudflareUpload = async (videoDbId, videoFile, customThumbnailFile,
     
     // Delete the video from database on upload failure
     try {
+      console.log(`[BACKGROUND] Removing failed video ${videoDbId} from database...`);
       await Video.findByIdAndDelete(videoDbId);
-      console.log(`[BACKGROUND] Deleted video ${videoDbId} from database due to upload failure`);
+      console.log(`[BACKGROUND] Video ${videoDbId} removed from database due to upload failure`);
     } catch (deleteError) {
       console.error(`[BACKGROUND] Error deleting video ${videoDbId}:`, deleteError);
     }
@@ -380,12 +428,20 @@ router.post('/', async (c) => {
     const newVideo = new Video(videoData);
     await newVideo.save();
 
-    console.log(`[UPLOAD] Video metadata saved with ID: ${newVideo._id}, starting background upload...`);
+    const videoSizeMB = (videoFile.size / (1024 * 1024)).toFixed(2);
+    console.log(`[UPLOAD] ✅ Video metadata saved successfully`);
+    console.log(`[UPLOAD] Video ID: ${newVideo._id}`);
+    console.log(`[UPLOAD] Title: "${title}"`);
+    console.log(`[UPLOAD] Video size: ${videoSizeMB} MB`);
+    console.log(`[UPLOAD] Uploader: ${user.username} (${user.email})`);
+    console.log(`[UPLOAD] Starting background upload process...`);
 
     // Trigger background upload (fire and forget)
     handleCloudflareUpload(newVideo._id, videoFile, customThumbnailFile, clientDuration).catch(error => {
       console.error('[UPLOAD] Error in background upload handler:', error);
     });
+
+    console.log(`[UPLOAD] Request completed, client can navigate away`);
 
     // Return immediately to user
     return c.json({
