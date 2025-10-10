@@ -150,7 +150,16 @@ const ProfileContent = () => {
   const handleBioSubmit = async () => {
     if (!isOwnProfile) return;
     
-    setIsEditingBio(false);
+    // Blur the textarea to remove focus styling before closing
+    if (bioTextareaRef.current) {
+      bioTextareaRef.current.blur();
+    }
+    
+    // Small delay to allow blur to complete
+    setTimeout(() => {
+      setIsEditingBio(false);
+    }, 50);
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -192,7 +201,16 @@ const ProfileContent = () => {
   const handleUsernameSubmit = async () => {
     if (!isOwnProfile) return;
     
-    setIsEditingUsername(false);
+    // Blur the input to remove focus styling before closing
+    if (usernameInputRef.current) {
+      usernameInputRef.current.blur();
+    }
+    
+    // Small delay to allow blur to complete
+    setTimeout(() => {
+      setIsEditingUsername(false);
+    }, 50);
+    
     const trimmedUsername = username.trim();
     if (!trimmedUsername) {
       toast.error('Username cannot be empty');
@@ -524,46 +542,46 @@ const ProfileContent = () => {
       // skelly
       <div className="min-h-screen bg-[#080808] text-white">
         {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="hidden md:block w-64 shrink-0">
-              <div className="bg-[#121212] rounded-xl p-4">
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
                 {[...Array(5)].map((_, index) => (
                   <div 
                     key={index} 
-                    className="h-10 bg-[#1a1a1a] rounded-lg mb-1 animate-pulse"
+                    className="h-10 bg-white/5 rounded-lg mb-1 animate-pulse"
                   ></div>
                 ))}
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 mb-6 overflow-hidden">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  <div className="w-24 h-24 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+                  <div className="w-24 h-24 rounded-full bg-white/5 border-4 border-[#1a1a1a] animate-pulse"></div>
 
                   <div className="flex-1 w-full">
-                    <div className="h-8 bg-[#1a1a1a] rounded-lg w-40 mb-4 animate-pulse"></div>
+                    <div className="h-8 bg-white/5 rounded-lg w-40 mb-4 animate-pulse"></div>
                     <div className="flex gap-4 mb-4">
-                      <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
-                      <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                      <div className="h-5 bg-white/5 rounded w-24 animate-pulse"></div>
+                      <div className="h-5 bg-white/5 rounded w-20 animate-pulse"></div>
                     </div>
-                    <div className="h-28 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
+                    <div className="h-24 bg-white/5 rounded-lg animate-pulse"></div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-16">
-                <div className="h-8 bg-[#1a1a1a] rounded-lg w-48 mb-6 animate-pulse"></div>
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 mb-16">
+                <div className="h-8 bg-white/5 rounded-lg w-48 mb-6 animate-pulse"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[...Array(2)].map((_, index) => (
-                    <div key={index} className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
-                      <div className="h-6 bg-[#1a1a1a] rounded w-32 mb-4 animate-pulse"></div>
+                    <div key={index} className="bg-[#0a0a0a] rounded-lg p-5 border border-[#1a1a1a]">
+                      <div className="h-6 bg-white/5 rounded w-32 mb-4 animate-pulse"></div>
                       <div className="space-y-4">
                         {[...Array(3)].map((_, i) => (
                           <div key={i} className="flex justify-between">
-                            <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
-                            <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                            <div className="h-5 bg-white/5 rounded w-24 animate-pulse"></div>
+                            <div className="h-5 bg-white/5 rounded w-20 animate-pulse"></div>
                           </div>
                         ))}
                       </div>
@@ -603,18 +621,18 @@ const ProfileContent = () => {
     <div className="min-h-screen bg-[#080808] text-white">
       {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121212] shadow-lg z-40 border-t border-[#2a2a2a]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f] border-t border-[#1f1f1f] z-40">
         <div className="flex justify-between items-center">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => handleTabChange(category.id)}
-              className={`flex flex-col items-center py-2 flex-1 ${
-                activeTab === category.id ? "text-[#ea4197]" : "text-white/70"
+              className={`flex flex-col items-center py-3 flex-1 transition-colors ${
+                activeTab === category.id ? "text-[#ea4197]" : "text-white/60"
               }`}
             >
               <span className="text-xl mb-1">{category.icon}</span>
-              <span className="text-sm font-roboto">{category.label}</span>
+              <span className="text-xs font-roboto font-medium">{category.label}</span>
             </button>
           ))}
         </div>
@@ -623,7 +641,7 @@ const ProfileContent = () => {
       <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="hidden md:block w-64 shrink-0">
-            <div className="bg-[#121212] rounded-xl p-4 sticky top-24">
+            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4 sticky top-24">
               <div className={`space-y-1 ${isOwnProfile ? "pb-2.5" : ""}`}>
                 {categories.map((category) => (
                   <button
@@ -631,7 +649,7 @@ const ProfileContent = () => {
                     onClick={() => handleTabChange(category.id)}
                     className={`flex items-center cursor-pointer w-full px-4 py-2.5 rounded-lg transition-colors ${
                       activeTab === category.id
-                        ? "bg-[#ea419730] text-[#ea4197]"
+                        ? "bg-[#ea419715] text-[#ea4197]"
                         : "text-white/80 hover:bg-white/5"
                     }`}
                   >
@@ -658,7 +676,7 @@ const ProfileContent = () => {
           </div>
 
           <div className="flex-1">
-            <div className="relative bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+            <div className="relative bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 mb-6 overflow-hidden">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-1 md:gap-6 relative">
                 <div
                   className={`relative ${isOwnProfile ? 'cursor-pointer' : ''}`}
@@ -666,7 +684,7 @@ const ProfileContent = () => {
                   onMouseLeave={() => isOwnProfile && setIsHoveringPfp(false)}
                   onClick={isOwnProfile ? handlePictureUpload : undefined}
                 >
-                  <div className="w-26 h-26 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-[#1f1f1f] bg-[#1f1f1f] relative">
+                  <div className="w-26 h-26 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-[#1a1a1a] bg-[#1a1a1a] relative">
                     {(profileData.avatar || avatarUrl) ? (
                       <img
                         src={profileData.avatar || avatarUrl}
@@ -710,39 +728,51 @@ const ProfileContent = () => {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     {/* Username display/edit */}
                     {isEditingUsername ? (
-                      <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-auto">
-                        <span className="text-2xl font-pop font-bold text-white">@</span>
+                      <div className="flex items-center justify-center md:justify-start gap-2 w-full md:w-auto animate-in fade-in duration-200">
+                        <span className="text-2xl font-pop font-bold text-white/70">@</span>
                         <input
                           ref={usernameInputRef}
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          className="text-2xl font-pop font-bold bg-[#1a1a1a] text-white border border-[#3a3a3a] focus:border-[#ea4197] focus:outline-none rounded-md px-2 py-1 min-w-0 flex-1"
+                          className="text-2xl font-pop font-bold bg-transparent text-white border-b-2 border-[#2a2a2a] focus:border-[#ea4197] focus:outline-none px-1 py-0.5 min-w-0 flex-1 transition-colors duration-150"
                           placeholder="Enter username"
                           maxLength={16}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               handleUsernameSubmit();
                             } else if (e.key === 'Escape') {
-                              setUsername(profileData.username);
-                              setIsEditingUsername(false);
+                              if (usernameInputRef.current) {
+                                usernameInputRef.current.blur();
+                              }
+                              setTimeout(() => {
+                                setUsername(profileData.username);
+                                setIsEditingUsername(false);
+                              }, 50);
                             }
                           }}
                         />
-                        <div className="flex gap-1 ml-2">
+                        <div className="flex gap-1.5 ml-2">
                           <button
                             onClick={() => {
-                              setUsername(profileData.username);
-                              setIsEditingUsername(false);
+                              if (usernameInputRef.current) {
+                                usernameInputRef.current.blur();
+                              }
+                              setTimeout(() => {
+                                setUsername(profileData.username);
+                                setIsEditingUsername(false);
+                              }, 50);
                             }}
-                            className="px-2 py-1 text-sm bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-md transition-colors"
+                            className="w-7 h-7 cursor-pointer flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 rounded-md transition-all duration-200"
+                            title="Cancel (Esc)"
                           >
-                            ✕
+                            <span className="text-base">✕</span>
                           </button>
                           <button
                             onClick={handleUsernameSubmit}
-                            className="px-2 py-1 text-sm bg-[#ea4197] hover:bg-[#d03884] rounded-md transition-colors"
+                            className="w-7 h-7 cursor-pointer flex items-center justify-center text-[#ea4197] hover:text-white hover:bg-[#ea4197] rounded-md transition-all duration-200"
+                            title="Save (Enter)"
                           >
-                            ✓
+                            <span className="text-base">✓</span>
                           </button>
                         </div>
                       </div>
@@ -756,16 +786,14 @@ const ProfileContent = () => {
                           setIsEditingUsername(true);
                         } : undefined}
                       >
-                        <h1 className="text-2xl font-pop font-bold text-white">
+                        <h1 className="text-2xl font-pop font-bold text-white transition-colors duration-200">
                           @{profileData.username}
                         </h1>
                         {isOwnProfile && (
-                          <>
-                            <div className={`hidden md:flex items-center gap-1 transition-opacity duration-200 ${isHoveringUsername ? 'opacity-100' : 'opacity-0'}`}>
-                              <FiEdit2 size={16} className="text-white/60 group-hover:text-white/90" />
-                              <span className="text-xs text-white/60 group-hover:text-white/90">Edit Username</span>
-                            </div>
-                          </>
+                          <div className={`hidden md:flex items-center gap-1.5 transition-all duration-300 ${isHoveringUsername ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-1'}`}>
+                            <FiEdit2 size={14} className="text-white/50" />
+                            <span className="text-xs text-white/50 font-medium">Edit</span>
+                          </div>
                         )}
                       </div>
                     )}
@@ -788,168 +816,231 @@ const ProfileContent = () => {
 
                   {/* Bio section with edit functionality */}
                   <div className="relative w-full max-w-full">
-                    {isEditingBio ? (
+                      {isEditingBio && (
                       <div className="mt-1 w-full">
-                        <textarea
-                          ref={bioTextareaRef}
-                          value={bio}
-                          onChange={(e) => setBio(e.target.value)}
-                          className="w-full p-3 bg-[#1a1a1a] rounded-lg text-white/90 border border-[#3a3a3a] focus:border-[#ea4197] focus:outline-none min-h-[100px] resize-none"
-                          placeholder="Write something about yourself..."
-                          maxLength={300}
-                        />
-                        <div className="flex justify-between items-center mt-2">
-                          <span className="text-white/50 text-xs -translate-y-1.5">
+                        <div className="relative">
+                          <textarea
+                            ref={bioTextareaRef}
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                            className="w-full p-3 bg-[#0c0c0c] rounded-lg text-white/90 border border-[#2a2a2a] focus:border-[#ea4197] focus:outline-none min-h-[100px] resize-none transition-colors duration-150"
+                            placeholder="Write something about yourself..."
+                            maxLength={300}
+                          />
+                          <span className="absolute bottom-2.5 right-2.5 text-white/30 text-[10px] pointer-events-none font-medium">
                             {bio.length}/300
                           </span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
+                        </div>
+                        <div className="flex justify-end items-center gap-2 mt-2">
+                          <button
+                            onClick={() => {
+                              if (bioTextareaRef.current) {
+                                bioTextareaRef.current.blur();
+                              }
+                              setTimeout(() => {
                                 setBio(profileData.bio);
                                 setIsEditingBio(false);
-                              }}
-                              className="px-3 py-1 text-sm bg-[#2a2a2a] hover:bg-[#3a3a3a] rounded-md transition-colors"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleBioSubmit}
-                              className="px-3 py-1 text-sm bg-[#ea4197] hover:bg-[#d03884] rounded-md transition-colors"
-                            >
-                              Save
-                            </button>
-                          </div>
+                              }, 50);
+                            }}
+                            className="px-3 py-1.5 cursor-pointer text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md transition-all duration-200 font-medium"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleBioSubmit}
+                            className="px-3 py-1.5 cursor-pointer text-xs text-white bg-[#ea4197] hover:bg-[#d03884] rounded-md transition-all duration-200 font-medium"
+                          >
+                            Save
+                          </button>
                         </div>
                       </div>
-                    ) : (
-                      <div
-                        className={`p-3 bg-[#1a1a1a] border border-[#2a2a2a] border-dashed rounded-lg ${isOwnProfile ? 'hover:border-[#3a3a3a] cursor-text' : ''}`}
-                        onClick={isOwnProfile ? () => setIsEditingBio(true) : undefined}
-                      >
-                        {profileData.bio ? (
-                          <p className="text-white/80 text-sm md:text-base">
-                            {profileData.bio}
-                          </p>
-                        ) : (
-                          <p className="text-white/40 text-sm md:text-base italic">
-                            {isOwnProfile ? "Add a bio to your profile..." : "No bio available."}
-                          </p>
+                    )}
+                    {!isEditingBio && (
+                      <div>
+                        <div
+                          className={`p-3 bg-[#0c0c0c] border border-[#1a1a1a] rounded-lg transition-all duration-200 ${isOwnProfile ? 'hover:border-[#2a2a2a] cursor-text group' : ''}`}
+                          onClick={isOwnProfile ? () => setIsEditingBio(true) : undefined}
+                        >
+                          {profileData.bio ? (
+                            <p className="text-white/80 text-sm md:text-base leading-relaxed">
+                              {profileData.bio}
+                            </p>
+                          ) : (
+                            <p className="text-white/40 text-sm md:text-base">
+                              {isOwnProfile ? "Add a bio to your profile..." : "No bio available."}
+                            </p>
+                          )}
+                        </div>
+                        {isOwnProfile && (
+                          <div className="flex items-center justify-end mt-2 gap-3">
+                            {/* Mobile edit buttons */}
+                            <div className="flex md:hidden items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  setUsername(profileData.username);
+                                  setIsEditingUsername(true);
+                                }}
+                                className="flex items-center gap-1 text-[11px] text-white/50 hover:text-white/90 transition-all duration-200 font-medium"
+                              >
+                                <FiEdit2 size={11} />
+                                Edit Username
+                              </button>
+                              <button
+                                onClick={() => setIsEditingBio(true)}
+                                className="flex items-center gap-1 text-[11px] text-white/50 hover:text-white/90 transition-all duration-200 font-medium"
+                              >
+                                <FiEdit2 size={11} />
+                                Edit Bio
+                              </button>
+                            </div>
+                            
+                            {/* Desktop edit button */}
+                            <button
+                              onClick={() => setIsEditingBio(true)}
+                              className="hidden md:flex items-center gap-1 text-[11px] text-white/50 hover:text-white/80 transition-all duration-200 font-medium"
+                            >
+                              <FiEdit2 size={11} />
+                              Edit
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-end mt-2.5 gap-4">
-                      {!isEditingBio && isOwnProfile && (
-                        <>
-                          {/* Mobile edit buttons - show both together */}
-                          <div className="flex md:hidden items-center gap-4">
-                            <button
-                              onClick={() => {
-                                setUsername(profileData.username);
-                                setIsEditingUsername(true);
-                              }}
-                              className="flex items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
-                            >
-                              <FiEdit2 size={12} />
-                              Edit Username
-                            </button>
-                            <button
-                              onClick={() => setIsEditingBio(true)}
-                              className="flex items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
-                            >
-                              <FiEdit2 size={12} />
-                              Edit Bio
-                            </button>
-                          </div>
-                          
-                          {/* Desktop edit bio button only */}
-                          <button
-                            onClick={() => setIsEditingBio(true)}
-                            className="hidden md:flex cursor-pointer items-center gap-1 text-xs text-white/60 hover:text-white/90 transition-colors"
-                          >
-                            <FiEdit2 size={12} />
-                            Edit bio
-                          </button>
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Tab Content */}
-            <div className={`bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 ${activeTab=="general" && isOwnProfile ? "mb-0" : "mb-16"}`}>
-              {activeTab === "general" && (
-                <div className={`space-y-6 transition-opacity duration-200 ease-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
-                  <h2 className="text-xl font-pop font-semibold mb-4 text-white/90">
-                    Account Overview
-                  </h2>
+            {activeTab === "general" ? (
+              <div className={`transition-opacity duration-200 ease-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
-                      <h3 className="text-lg font-medium mb-3 text-[#ea4197]">
-                        Activity
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Total Views</span>
-                          <span className="text-white font-medium">
-                            {profileData.totalViews.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Total Likes</span>
-                          <span className="text-white font-medium">
-                            {profileData.totalLikes.toLocaleString()}
-                          </span>
-                        </div>
-                        {isOwnProfile && profileData.email && (
-                          <div className="flex justify-between">
-                            <span className="text-white/70">Uploads</span>
-                            <span className="text-white font-medium">
-                              {profileData.totalUploads}
-                            </span>
-                          </div>
-                        )}
+                {/* Mobile: Single card with stacked sections */}
+                <div className="md:hidden bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl py-6 px-6">
+                  {/* Activity Section */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium mb-4 text-white/50 uppercase tracking-wide">
+                      Activity
+                    </h3>
+                    <div className="space-y-0">
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Total Views</span>
+                        <span className="text-white font-medium tabular-nums">
+                          {profileData.totalViews.toLocaleString()}
+                        </span>
                       </div>
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Total Likes</span>
+                        <span className="text-white font-medium tabular-nums">
+                          {profileData.totalLikes.toLocaleString()}
+                        </span>
+                      </div>
+                      {isOwnProfile && profileData.email && (
+                        <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                          <span className="text-white/70 text-sm font-pop">Uploads</span>
+                          <span className="text-white font-medium tabular-nums">
+                            {profileData.totalUploads}
+                          </span>
+                        </div>
+                      )}
                     </div>
+                  </div>
 
-                    <div className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
-                      <h3 className="text-lg font-medium mb-3 text-[#ea4197]">
-                        Account Info
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Username</span>
-                          <span className="text-white font-medium">
-                            @{profileData.username}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/70">Member Since</span>
-                          <span className="text-white font-medium">
-                            {formatDate(profileData.createdAt)}
-                          </span>
-                        </div>
-                        {isOwnProfile && profileData.email && (
-                          <div className="flex justify-between">
-                            <span className="text-white/70">Email</span>
-                            <span className="text-white font-medium">
-                              {profileData.email}
-                            </span>
-                          </div>
-                        )}
+                  {/* Account Info Section */}
+                  <div>
+                    <h3 className="text-sm font-medium mb-4 text-white/50 uppercase tracking-wide">
+                      Account Info
+                    </h3>
+                    <div className="space-y-0">
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Username</span>
+                        <span className="text-white font-medium">
+                          @{profileData.username}
+                        </span>
                       </div>
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Member Since</span>
+                        <span className="text-white font-medium">
+                          {formatDate(profileData.createdAt)}
+                        </span>
+                      </div>
+                      {isOwnProfile && profileData.email && (
+                        <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                          <span className="text-white/70 text-sm font-pop">Email</span>
+                          <span className="text-white font-medium truncate ml-4">
+                            {profileData.email}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
 
-              {activeTab === "videos" && (
+                {/* Desktop: Two separate cards side by side */}
+                <div className="hidden md:grid md:grid-cols-2 gap-6">
+                  {/* Activity Card */}
+                  <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl py-6 px-7">
+                    <h3 className="text-sm font-medium mb-4 text-white/50 uppercase tracking-wide">
+                      Activity
+                    </h3>
+                    <div className="space-y-0">
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Total Views</span>
+                        <span className="text-white font-medium  tabular-nums">
+                          {profileData.totalViews.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Total Likes</span>
+                        <span className="text-white font-medium tabular-nums">
+                          {profileData.totalLikes.toLocaleString()}
+                        </span>
+                      </div>
+                      {isOwnProfile && profileData.email && (
+                        <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                          <span className="text-white/70 text-sm font-pop">Uploads</span>
+                          <span className="text-white font-medium tabular-nums">
+                            {profileData.totalUploads}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Account Info Card */}
+                  <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl py-6 px-7">
+                    <h3 className="text-sm font-medium mb-4 text-white/50 uppercase tracking-wide">
+                      Account Info
+                    </h3>
+                    <div className="space-y-0">
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Username</span>
+                        <span className="text-white font-medium">
+                          @{profileData.username}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                        <span className="text-white/70 text-sm font-pop">Member Since</span>
+                        <span className="text-white font-medium">
+                          {formatDate(profileData.createdAt)}
+                        </span>
+                      </div>
+                      {isOwnProfile && profileData.email && (
+                        <div className="flex items-center justify-between py-3 border-b border-[#1a1a1a] last:border-b-0">
+                          <span className="text-white/70 text-sm font-pop">Email</span>
+                          <span className="text-white font-medium truncate ml-4">
+                            {profileData.email}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 ${activeTab=="general" && isOwnProfile ? "mb-0" : "mb-16"}`}>
+                {activeTab === "videos" && (
                 <div className={`transition-opacity duration-300 ease-in-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
-                  <h2 className="text-xl font-semibold mb-4 text-white/90">
-                    Uploaded Videos
-                  </h2>
                   {profileData.videos && profileData.videos.length > 0 ? (
                     <>
                       <ProfileVideoGrid 
@@ -1000,9 +1091,6 @@ const ProfileContent = () => {
 
               {activeTab === "images" && (
                 <div className={`transition-opacity duration-300 ease-in-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
-                  <h2 className="text-xl font-semibold mb-4 text-white/90">
-                    Uploaded Images
-                  </h2>
                   {profileData.images && profileData.images.length > 0 ? (
                     <>
                       <ProfileImageGrid 
@@ -1053,9 +1141,6 @@ const ProfileContent = () => {
 
               {activeTab === "subscriptions" && (
                 <div className={`transition-opacity duration-300 ease-in-out ${fadeInOut ? "opacity-0" : "opacity-100"}`}>
-                  <h2 className="text-xl font-semibold mb-4 text-white/90">
-                    Subscriptions
-                  </h2>
                   {profileData.subscriptions && profileData.subscriptions.length > 0 ? (
                     <SubscriptionGrid subscriptions={profileData.subscriptions} />
                   ) : (
@@ -1096,17 +1181,18 @@ const ProfileContent = () => {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Logout button at the bottom on mobile */}
             {isOwnProfile && activeTab=="general" && (
               <div className="md:hidden mt-6 mb-20">
                 <button
-                  className="flex items-center justify-center w-full gap-2 px-4 py-3 rounded-lg text-red-400 bg-[#1a1a1a] hover:bg-[#252525]"
+                  className="flex items-center justify-center w-full cursor-pointer gap-2 px-4 py-3 rounded-lg text-red-400/90 bg-[#0f0f0f] border border-[#1a1a1a] hover:bg-red-500/10 transition-colors"
                   onClick={handleLogout}
                 >
                   <FiLogOut className="mr-1" />
-                  Logout
+                  <span className="font-medium">Logout</span>
                 </button>
               </div>
             
@@ -1122,45 +1208,45 @@ const ProfilePage = () => {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#080808] text-white">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="container mx-auto px-4 md:py-8 py-2 max-w-7xl pb-16 md:pb-8">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="hidden md:block w-64 shrink-0">
-              <div className="bg-[#121212] rounded-xl p-4">
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4">
                 {[...Array(5)].map((_, index) => (
                   <div 
                     key={index} 
-                    className="h-10 bg-[#1a1a1a] rounded-lg mb-1 animate-pulse"
+                    className="h-10 bg-white/5 rounded-lg mb-1 animate-pulse"
                   ></div>
                 ))}
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-6 overflow-hidden">
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 mb-6 overflow-hidden">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  <div className="w-24 h-24 rounded-full bg-[#1a1a1a] animate-pulse"></div>
+                  <div className="w-24 h-24 rounded-full bg-white/5 border-4 border-[#1a1a1a] animate-pulse"></div>
                   <div className="flex-1 w-full">
-                    <div className="h-8 bg-[#1a1a1a] rounded-lg w-40 mb-4 animate-pulse"></div>
+                    <div className="h-8 bg-white/5 rounded-lg w-40 mb-4 animate-pulse"></div>
                     <div className="flex gap-4 mb-4">
-                      <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
-                      <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                      <div className="h-5 bg-white/5 rounded w-24 animate-pulse"></div>
+                      <div className="h-5 bg-white/5 rounded w-20 animate-pulse"></div>
                     </div>
-                    <div className="h-28 bg-[#1a1a1a] rounded-lg animate-pulse"></div>
+                    <div className="h-24 bg-white/5 rounded-lg animate-pulse"></div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#0e0e0e] border border-[#2b2b2b] rounded-xl p-6 mb-16">
-                <div className="h-8 bg-[#1a1a1a] rounded-lg w-48 mb-6 animate-pulse"></div>
+              <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 mb-16">
+                <div className="h-8 bg-white/5 rounded-lg w-48 mb-6 animate-pulse"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[...Array(2)].map((_, index) => (
-                    <div key={index} className="bg-[#151515] rounded-lg p-5 border border-[#272727]">
-                      <div className="h-6 bg-[#1a1a1a] rounded w-32 mb-4 animate-pulse"></div>
+                    <div key={index} className="bg-[#0a0a0a] rounded-lg p-5 border border-[#1a1a1a]">
+                      <div className="h-6 bg-white/5 rounded w-32 mb-4 animate-pulse"></div>
                       <div className="space-y-4">
                         {[...Array(3)].map((_, i) => (
                           <div key={i} className="flex justify-between">
-                            <div className="h-5 bg-[#1a1a1a] rounded w-24 animate-pulse"></div>
-                            <div className="h-5 bg-[#1a1a1a] rounded w-20 animate-pulse"></div>
+                            <div className="h-5 bg-white/5 rounded w-24 animate-pulse"></div>
+                            <div className="h-5 bg-white/5 rounded w-20 animate-pulse"></div>
                           </div>
                         ))}
                       </div>

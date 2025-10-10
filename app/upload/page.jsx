@@ -15,10 +15,35 @@ import { Toaster, toast } from "sonner";
 
 const UploadPageLoading = () => {
   return (
-    <div className="md:py-14 py-7 flex justify-center items-center min-h-[60vh]">
-      <div className="text-center">
-        <div className="inline-block w-8 h-8 border-4 border-t-[#ea4197] border-r-[#ea4197] border-b-transparent border-l-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-white font-medium">Loading upload page...</p>
+    <div className="min-h-screen py-6 md:py-12">
+      <div className="max-w-6xl mx-auto px-4 mb-6 md:mb-8">
+        <div className="h-8 bg-white/5 rounded-lg w-48 mb-2 animate-pulse"></div>
+        <div className="h-4 bg-white/5 rounded-lg w-64 animate-pulse"></div>
+      </div>
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column Skeleton */}
+          <div className="space-y-4">
+            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-3">
+              <div className="flex gap-2">
+                <div className="h-10 bg-white/5 rounded-lg w-24 animate-pulse"></div>
+                <div className="h-10 bg-white/5 rounded-lg w-24 animate-pulse"></div>
+              </div>
+            </div>
+            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4 md:p-6">
+              <div className="aspect-video bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
+          {/* Right Column Skeleton */}
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-4 md:p-6">
+            <div className="space-y-5">
+              <div className="h-20 bg-white/5 rounded-lg animate-pulse"></div>
+              <div className="h-32 bg-white/5 rounded-lg animate-pulse"></div>
+              <div className="h-12 bg-white/5 rounded-lg animate-pulse"></div>
+              <div className="h-12 bg-white/5 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -218,7 +243,7 @@ const UploadPageContent = () => {
       };
       reader.readAsDataURL(newFile);
 
-      toast.success("Image replaced successfully");
+      toast.info("Image replaced successfully");
     } else if (uploadType === "video") {
       const videoFile = files.find((file) => file.type.startsWith("video/"));
       if (!videoFile) {
@@ -240,7 +265,7 @@ const UploadPageContent = () => {
       const objectUrl = URL.createObjectURL(videoFile);
       setFilePreview(objectUrl);
 
-      toast.success("Video replaced successfully");
+      toast.info("Video replaced successfully");
     }
 
     e.target.value = '';
@@ -261,7 +286,7 @@ const UploadPageContent = () => {
     }
 
     setThumbnailFile(file);
-    toast.success("Thumbnail selected successfully");
+    toast.info("Thumbnail selected successfully");
   };
 
   const handleDragOver = (e) => {
@@ -484,7 +509,7 @@ const UploadPageContent = () => {
       const result = await response.json();
 
       if (result.success) {
-        toast.success(`${uploadType === "photo" ? "Images" : "Video"} uploaded successfully!`, {
+        toast.success(`${uploadType === "photo" ? "Images" : "Video"} will be uploaded shortly!`, {
           id: "upload-toast",
           duration: 3000,
         });
@@ -506,124 +531,37 @@ const UploadPageContent = () => {
   };
 
   return (
-    <div className="md:py-14 py-7">
-
-
-      <div className="mb-8 max-w-[79rem] lg:px-0 px-4 mx-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="md:text-3xl text-2xl font-bold text-white flex items-center">
-            <TypeIcon className="mr-3 text-[#ea4197] sm:text-4xl text-3xl" />
-            {pageTitle}
-          </h1>
+    <div className="min-h-screen py-6 md:py-7 mb-12">
+      {/* Header */}
+      <div className="max-w-[79rem] mx-auto px-4 mb-6 md:mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <TypeIcon className="text-[#ea4197] text-2xl" />
+            <h1 className="text-2xl font-semibold text-white">
+              {pageTitle}
+            </h1>
+          </div>
           <Link
             href="/"
-            className="flex items-center text-[#cccccc] hover:text-white transition-colors"
+            className="sm:flex hidden items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
           >
-            <RiArrowGoBackLine className="mr-2" />
+            <RiArrowGoBackLine className="text-base" />
             Back
           </Link>
         </div>
-        <p className="text-[#a0a0a0] text-sm sm:text-base mt-1.5 sm:mt-2">
+        <p className="text-white/50 text-sm">
           {uploadType === "photo"
-            ? "Share your photos with the GoonChan community"
-            : "Share your videos with the GoonChan community"}
+            ? "Share your photos with the community"
+            : "Share your videos with the community"}
         </p>
       </div>
 
-      <div className="max-w-[79rem] lg:px-0 px-3 mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          <div
-            className={`
-              relative aspect-video rounded-xl overflow-hidden
-              ${
-                !filePreview
-                  ? "border-2 border-dashed border-[#3a3a3a] bg-[#1a1a1aba] hover:border-[#ea4197] cursor-pointer transition-colors"
-                  : ""
-              }
-              ${
-                isDragging && !filePreview
-                  ? "border-[#ea4197] bg-[#1e1e1e]"
-                  : ""
-              }
-            `}
-            onClick={() => !filePreview && fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {filePreview ? (
-              <>
-                {uploadType === "photo" ? (
-                  <img
-                    src={filePreview}
-                    alt="Preview"
-                    className="w-full h-full object-contain bg-[#1a1a1a]"
-                  />
-                ) : (
-                  <video
-                    src={filePreview}
-                    controls
-                    className="w-full h-full object-contain bg-[#1a1a1a]"
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                )}
-
-                <div className="absolute right-3 top-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      replaceInputRef.current?.click();
-                    }}
-                    className="bg-[#2a2a2a] font-inter hover:bg-[#3a3a3a] text-[#f9f9f9] py-2 px-4 rounded-full transition-colors text-sm"
-                  >
-                    Replace
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                <TypeIcon className="text-[#929292] sm:text-6xl text-7xl mb-2" />
-                <h3 className="md:text-xl font-semibold text-white mb-1">
-                  {uploadType === "photo"
-                    ? "Click or drag to upload a photo"
-                    : "Click or drag to upload a video"}
-                </h3>
-                <p className="text-[#a0a0a0] text-sm mb-4">
-                  {uploadType === "photo"
-                    ? "JPG, PNG, GIF, WebP up to 30MB"
-                    : "MP4, WebM, MOV up to 1GB"}
-                </p>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white py-2 px-6 rounded-full transition-colors"
-                >
-                  Select File
-                </button>
-              </div>
-            )}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple={uploadType === "photo"}
-            accept={uploadType === "photo" ? "image/*" : "video/*"}
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          <input
-            ref={replaceInputRef}
-            type="file"
-            accept={uploadType === "photo" ? "image/*" : "video/*"}
-            onChange={handleFileReplace}
-            className="hidden"
-          />
-
-          <div className="md:mt-6 mt-3.5 p-4 bg-[#1a1a1ac2] rounded-xl border border-[#2a2a2a]">
-            <h3 className="text-white font-medium mb-3">Switch Upload Type</h3>
-            <div className="grid grid-cols-2 gap-3 font-inter font-medium">
+      {/* Main Content */}
+      <div className="max-w-[79rem] mx-auto px-4">
+        {/* Upload Type Switcher - Mobile Only */}
+        <div className="md:hidden mb-4">
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   if (uploadType !== "photo") {
@@ -631,16 +569,15 @@ const UploadPageContent = () => {
                     router.push("/upload?type=photo");
                   }
                 }}
-                className={`flex items-center cursor-pointer justify-center md:p-3 p-[10px] rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 justify-center cursor-pointer ${
                   uploadType === "photo"
-                    ? "bg-[#e42a8a] text-white"
-                    : "bg-[#2a2a2a] text-[#cccccc] hover:bg-[#3a3a3a] hover:text-white"
+                    ? "bg-white/10 text-white"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/5"
                 }`}
               >
-                <RiImageAddLine className="mr-2 text-lg" />
+                <RiImageAddLine className="text-base" />
                 Photo
               </button>
-
               <button
                 onClick={() => {
                   if (uploadType !== "video") {
@@ -648,207 +585,336 @@ const UploadPageContent = () => {
                     router.push("/upload?type=video");
                   }
                 }}
-                className={`flex items-center cursor-pointer justify-center md:p-3 p-[10px] rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 justify-center cursor-pointer ${
                   uploadType === "video"
-                    ? "bg-[#e42a8a] text-white"
-                    : "bg-[#2a2a2a] text-[#cccccc] hover:bg-[#3a3a3a] hover:text-white"
+                    ? "bg-white/10 text-white"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/5"
                 }`}
               >
-                <RiVideoAddLine className="mr-2 text-lg" />
+                <RiVideoAddLine className="text-base" />
                 Video
               </button>
             </div>
           </div>
         </div>
-        <div className="bg-[#1a1a1abb] md:p-[26px] p-[24px] rounded-xl border border-[#2a2a2a]">
-          <h2 className="text-xl font-semibold text-white mb-5">
-            Upload Details
-          </h2>
 
-          <div className="space-y-1">
-            <div>
-              <label
-                htmlFor="title"
-                className="block text-[#cccccc] mb-2 text-sm"
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Preview */}
+          <div className="space-y-4">
+            {/* Desktop Upload Type Switcher */}
+            <div className="hidden md:block bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (uploadType !== "photo") {
+                      resetFormData();
+                      router.push("/upload?type=photo");
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    uploadType === "photo"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                  }`}
+                >
+                  <RiImageAddLine className="text-base" />
+                  Photo
+                </button>
+                <button
+                  onClick={() => {
+                    if (uploadType !== "video") {
+                      resetFormData();
+                      router.push("/upload?type=video");
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    uploadType === "video"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                  }`}
+                >
+                  <RiVideoAddLine className="text-base" />
+                  Video
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Area */}
+            <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl py-4 px-5 md:py-6 md:px-6">
+              <div
+                className={`
+                  relative aspect-video rounded-lg overflow-hidden
+                  ${
+                    !filePreview
+                      ? "border-2 border-dashed border-white/10 bg-[#0d0d0d] hover:border-[#ea4197]/50 cursor-pointer transition-all"
+                      : "border border-[#1a1a1a] bg-[#0a0a0a]"
+                  }
+                  ${
+                    isDragging && !filePreview
+                      ? "border-[#ea4197] bg-[#0a0a0a]"
+                      : ""
+                  }
+                `}
+                onClick={() => !filePreview && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                Title <span className="text-[#ea4197]">*</span>
-              </label>
+                {filePreview ? (
+                  <>
+                    {uploadType === "photo" ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <video
+                        src={filePreview}
+                        controls
+                        className="w-full h-full object-contain"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+
+                    <div className="absolute right-3 top-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          replaceInputRef.current?.click();
+                        }}
+                        className="bg-black/60 backdrop-blur-sm hover:bg-black/80 text-white py-2 px-4 rounded-lg transition-all text-sm font-medium border border-white/10 cursor-pointer"
+                      >
+                        Replace
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col cursor-pointer items-center justify-center h-full p-6 text-center">
+                    <TypeIcon className="text-white/20 text-5xl mb-4" />
+                    <h3 className="text-base font-medium text-white mb-2">
+                      {uploadType === "photo"
+                        ? "Click or drag to upload photos"
+                        : "Click or drag to upload a video"}
+                    </h3>
+                    <p className="text-white/40 text-sm mb-6">
+                      {uploadType === "photo"
+                        ? "JPG, PNG, GIF, WebP up to 30MB"
+                        : "MP4, WebM, MOV up to 1GB"}
+                    </p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-[#f7f7f7] cursor-pointer text-black hover:bg-white/90 py-2 px-6 rounded-lg transition-all text-sm font-medium"
+                    >
+                      Select File
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <input
-                type="text"
-                id="title"
-                value={title}
-                onChange={handleTitleChange}
-                placeholder={`Enter a title for your ${uploadType}`}
-                className="w-full bg-[#101010] text-white py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ea4197] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-all"
-                required
-                maxLength={TITLE_MAX_LENGTH}
+                ref={fileInputRef}
+                type="file"
+                multiple={uploadType === "photo"}
+                accept={uploadType === "photo" ? "image/*" : "video/*"}
+                onChange={handleFileChange}
+                className="hidden"
               />
-              <div className="flex justify-end mt-1.5">
-                <span
-                  className={`text-xs ${
-                    title.length >= TITLE_MAX_LENGTH * 0.9
-                      ? "text-[#ea4197]"
-                      : "text-[#707070]"
-                  }`}
-                >
-                  {title.length}/{TITLE_MAX_LENGTH}
-                </span>
-              </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="description"
-                className="block text-[#cccccc] mb-2 text-sm"
-              >
-                Description <span className="text-[#ea4197]">*</span>
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={handleDescriptionChange}
-                placeholder="Tell viewers about your content..."
-                rows={5}
-                className="w-full bg-[#101010] text-white py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ea4197] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-all resize-none"
-                maxLength={DESCRIPTION_MAX_LENGTH}
-              />
-              <div className="flex justify-end mt-1.5">
-                <span
-                  className={`text-xs ${
-                    description.length >= DESCRIPTION_MAX_LENGTH * 0.9
-                      ? "text-[#ea4197]"
-                      : "text-[#707070]"
-                  }`}
-                >
-                  {description.length}/{DESCRIPTION_MAX_LENGTH}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="tags"
-                className="block text-[#cccccc] mb-2 text-sm"
-              >
-                Tags (space separated)
-              </label>
               <input
-                type="text"
-                id="tags"
-                value={tags}
-                onChange={handleTagsChange}
-                placeholder="e.g. funny cute gaming"
-                className="w-full bg-[#101010] text-white py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ea4197] border border-[#2a2a2a] hover:border-[#3a3a3a] transition-all"
+                ref={replaceInputRef}
+                type="file"
+                accept={uploadType === "photo" ? "image/*" : "video/*"}
+                onChange={handleFileReplace}
+                className="hidden"
               />
-              <div className="flex justify-end mt-1.5">
-                <span
-                  className={`text-xs ${
-                    tags.split(" ").filter((tag) => tag !== "").length >=
-                    MAX_TAGS * 0.9
-                      ? "text-[#ea4197]"
-                      : "text-[#707070]"
-                  }`}
-                >
-                  {tags.split(" ").filter((tag) => tag !== "").length}/
-                  {MAX_TAGS} tags
-                </span>
-              </div>
             </div>
+          </div>
 
-            {uploadType === "video" && (
+          {/* Right Column - Form */}
+          <div className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl py-4 px-5 md:py-7 md:px-6">
+            <div className="space-y-5">
               <div>
                 <label
-                  htmlFor="thumbnail"
-                  className="block text-[#cccccc] mb-2 text-sm"
+                  htmlFor="title"
+                  className="block text-white/70 mb-2 text-sm font-medium"
                 >
-                  Thumbnail
+                  Title <span className="text-[#ea4197]">*</span>
                 </label>
-                <div className="border border-[#2a2a2a] rounded-lg p-4 bg-[#101010]">
-                  {!thumbnailFile && (
-                    <p className="text-sm text-[#a0a0a0] mb-3">
-                      A thumbnail will be generated automatically, or you can
-                      upload a custom one.
-                    </p>
-                  )}
+                <input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={handleTitleChange}
+                  placeholder={`Enter a title for your ${uploadType}`}
+                  className="w-full bg-[#0a0a0a] text-white py-2.5 px-3.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-white/20 border border-white/10 hover:border-white/20 transition-all placeholder:text-white/30"
+                  required
+                  maxLength={TITLE_MAX_LENGTH}
+                />
+                <div className="flex justify-end mt-1.5">
+                  <span
+                    className={`text-xs ${
+                      title.length >= TITLE_MAX_LENGTH * 0.9
+                        ? "text-[#ea4197]"
+                        : "text-white/40"
+                    }`}
+                  >
+                    {title.length}/{TITLE_MAX_LENGTH}
+                  </span>
+                </div>
+              </div>
 
-                  {thumbnailFile ? (
-                    <div className="mb-3 flex items-center space-x-3">
-                      <div className="relative w-24 h-14 bg-[#151515] rounded overflow-hidden flex-shrink-0">
-                        <img
-                          src={URL.createObjectURL(thumbnailFile)}
-                          alt="Thumbnail preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs text-[#9ce67b] font-medium flex items-center mb-1">
-                          <span className="inline-block mr-1">✓</span> Custom
-                          thumbnail selected
-                        </p>
-                        <p className="text-xs text-[#a0a0a0] truncate">
-                          {thumbnailFile.name}
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-white/70 mb-2 text-sm font-medium"
+                >
+                  Description <span className="text-[#ea4197]">*</span>
+                </label>
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={handleDescriptionChange}
+                  placeholder="Tell viewers about your content..."
+                  rows={4}
+                  className="w-full bg-[#0a0a0a] text-white py-2.5 px-3.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-white/20 border border-white/10 hover:border-white/20 transition-all resize-none placeholder:text-white/30"
+                  maxLength={DESCRIPTION_MAX_LENGTH}
+                />
+                <div className="flex justify-end mt-1.5">
+                  <span
+                    className={`text-xs ${
+                      description.length >= DESCRIPTION_MAX_LENGTH * 0.9
+                        ? "text-[#ea4197]"
+                        : "text-white/40"
+                    }`}
+                  >
+                    {description.length}/{DESCRIPTION_MAX_LENGTH}
+                  </span>
+                </div>
+              </div>
 
-                  <div className="flex items-center gap-3">
+              <div>
+                <label
+                  htmlFor="tags"
+                  className="block text-white/70 mb-2 text-sm font-medium"
+                >
+                  Tags <span className="text-white/40 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  id="tags"
+                  value={tags}
+                  onChange={handleTagsChange}
+                  placeholder="e.g. sexy hot boobs etc."
+                  className="w-full bg-[#0a0a0a] text-white py-2.5 px-3.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-white/20 border border-white/10 hover:border-white/20 transition-all placeholder:text-white/30"
+                />
+                <div className="flex justify-end mt-1.5">
+                  <span
+                    className={`text-xs ${
+                      tags.split(" ").filter((tag) => tag !== "").length >=
+                      MAX_TAGS * 0.9
+                        ? "text-[#ea4197]"
+                        : "text-white/40"
+                    }`}
+                  >
+                    {tags.split(" ").filter((tag) => tag !== "").length}/
+                    {MAX_TAGS} tags
+                  </span>
+                </div>
+              </div>
+
+              {uploadType === "video" && (
+                <div>
+                  <label
+                    htmlFor="thumbnail"
+                    className="block text-white/70 mb-2 text-sm font-medium"
+                  >
+                    Thumbnail <span className="text-white/40 font-normal">(optional)</span>
+                  </label>
+                  <div className="border border-white/10 rounded-lg p-4 bg-[#0a0a0a]">
+                    {!thumbnailFile && (
+                      <p className="text-sm text-white/50 mb-3">
+                        A thumbnail will be generated automatically, or upload a custom one
+                      </p>
+                    )}
+
+                    {thumbnailFile ? (
+                      <div className="mb-3 flex items-center space-x-3">
+                        <div className="relative w-24 h-14 bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={URL.createObjectURL(thumbnailFile)}
+                            alt="Thumbnail preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-green-400 font-medium flex items-center mb-1">
+                            <span className="inline-block mr-1">✓</span> Custom
+                            thumbnail selected
+                          </p>
+                          <p className="text-xs text-white/40 truncate">
+                            {thumbnailFile.name}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="flex items-center gap-2">
                     <button
                       onClick={() => thumbnailInputRef.current?.click()}
-                      className="bg-[#2a2a2a] cursor-pointer hover:bg-[#3a3a3a] text-white py-2 px-4 rounded-lg transition-colors text-sm"
+                      className="bg-white/10 hover:bg-white/15 text-white py-2 px-4 rounded-lg transition-all text-sm font-medium border border-white/10 cursor-pointer"
                     >
-                      {thumbnailFile ? "Change Thumbnail" : "Upload Thumbnail"}
+                      {thumbnailFile ? "Change" : "Upload Thumbnail"}
                     </button>
 
                     {thumbnailFile && (
                       <button
                         onClick={() => setThumbnailFile(null)}
-                        className="bg-[#2a2a2a40] cursor-pointer hover:bg-[#3a3a3a] text-[#cccccc] py-2 px-4 rounded-lg transition-colors text-sm"
+                        className="bg-transparent hover:bg-white/5 text-white/60 hover:text-white py-2 px-4 rounded-lg transition-all text-sm font-medium cursor-pointer"
                       >
                         Remove
                       </button>
                     )}
+                    </div>
+
+                    <input
+                      ref={thumbnailInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                      className="hidden"
+                    />
                   </div>
-
-                  <input
-                    ref={thumbnailInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleThumbnailChange}
-                    className="hidden"
-                  />
                 </div>
-              </div>
-            )}
+              )}
 
-            {uploadType === "photo" && (
-              <div>
-                <div className="mt-4">
+              {uploadType === "photo" && galleryFiles.length > 0 && (
+                <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-white font-medium">Gallery Images ({galleryFiles.length}/{MAX_GALLERY_FILES})</h3>
-                    {galleryFiles.length > 0 && (
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="text-xs bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white py-1.5 px-3 rounded transition-colors flex items-center gap-1"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          Add More
-                        </button>
-                      </div>
-                    )}
+                    <label className="block text-white/70 text-sm font-medium">
+                      Gallery Images ({galleryFiles.length}/{MAX_GALLERY_FILES})
+                    </label>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs bg-white/10 hover:bg-white/15 text-white py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 font-medium border border-white/10 cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add More
+                    </button>
                   </div>
                   
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {galleryFiles.map((file, index) => (
                       <div 
                         key={index} 
-                        className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 ${
+                        className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer border ${
                           selectedThumbnailIndex === index 
-                            ? 'border-[#ea4197] scale-[1.03] shadow-md' 
-                            : 'border-transparent hover:border-[#ea419780] hover:scale-[1.02]'
+                            ? 'border-[#ea4197] ring-1 ring-[#ea4197]/50' 
+                            : 'border-white/10 hover:border-white/30'
                         } transition-all duration-150`}
                         onClick={() => {
                           setFileSelected(file);
@@ -891,53 +957,67 @@ const UploadPageContent = () => {
                               setSelectedThumbnailIndex(selectedThumbnailIndex - 1);
                             }
                           }}
-                          className="absolute top-1 right-1 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-1 transition-all"
+                          className="absolute top-1.5 right-1.5 bg-black/70 backdrop-blur-sm hover:bg-black/90 text-white rounded-full p-1 transition-all border border-white/20 cursor-pointer"
                         >
                           <RiCloseLine className="h-3.5 w-3.5" />
                         </button>
+                        
+                        {selectedThumbnailIndex === index && (
+                          <div className="absolute bottom-1.5 left-1.5 bg-[#ea4197] text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                            Thumbnail
+                          </div>
+                        )}
                       </div>
                     ))}
                     
                     {galleryFiles.length < MAX_GALLERY_FILES && (
                       <div 
-                        className="aspect-square rounded-md border-2 border-dashed border-[#3a3a3a] flex flex-col items-center justify-center cursor-pointer hover:border-[#ea4197] hover:bg-[#1f1f1f] transition-all"
+                        className="aspect-square rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:border-white/40 hover:bg-white/5 transition-all"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-[#5a5a5a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        <span className="text-[0.65rem] text-[#7a7a7a] mt-1 px-1 text-center">Add Images</span>
+                        <span className="text-[0.65rem] text-white/40 mt-1 px-1 text-center font-medium">Add</span>
                       </div>
                     )}
                   </div>
                   
-                  {galleryFiles.length > 0 && (
-                    <p className="mt-3 text-[#a0a0a0] text-xs">
-                      Click on an image to select it as the thumbnail. 
-                      {galleryFiles.length > 1 ? ` Currently using image ${selectedThumbnailIndex + 1} as thumbnail.` : ''}
+                  {galleryFiles.length > 1 && (
+                    <p className="mt-3 text-white/40 text-xs">
+                      Click on an image to set it as the thumbnail
                     </p>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            <button
-              onClick={handleUpload}
-              disabled={isUploading}
-              className={`
-                w-full py-3 px-6 rounded-lg flex items-center justify-center font-medium text-base mt-4
-                ${
-                  isUploading
-                    ? "bg-[#4a4a4a] text-[#a0a0a0] cursor-not-allowed"
-                    : isUploadReady()
-                    ? "bg-[#ea4197] hover:bg-[#f54da7] text-white transition-all duration-200"
-                    : "bg-[#4a4a4a] text-[#a0a0a0] cursor-pointer hover:bg-[#5a5a5a] transition-all duration-200"
-                }
-              `}
-            >
-              <RiUpload2Line size={20} className="mr-2" />
-              {isUploading ? "Uploading..." : "Upload Now"}
-            </button>
+              <button
+                onClick={handleUpload}
+                disabled={isUploading || !isUploadReady()}
+                className={`
+                  w-full py-2.5 px-6 rounded-lg flex items-center cursor-pointer justify-center font-medium text-sm
+                  ${
+                    isUploading
+                      ? "bg-white/10 text-white/50 cursor-not-allowed"
+                      : isUploadReady()
+                      ? "bg-[#ea4197] text-white hover:bg-[#ea4197]/90 transition-all duration-200"
+                      : "bg-white/10 text-white/40 cursor-not-allowed"
+                  }
+                `}
+              >
+                {isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <RiUpload2Line size={18} className="mr-2" />
+                    Upload {uploadType === "photo" ? "Photos" : "Video"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

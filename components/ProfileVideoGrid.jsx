@@ -143,6 +143,7 @@ const getOriginalQualityUrl = (url) => {
 const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const getInitialThumbnail = () => {
     const thumb = video.thumbnail || '';
@@ -325,6 +326,14 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
     };
   }, [video.thumbnail]);
 
+  const handleCloseModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowDeleteConfirm(false);
+      setIsClosing(false);
+    }, 150);
+  };
+
   const handleDelete = async () => {
     if (!isOwnProfile) return;
 
@@ -352,7 +361,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
       toast.error('Failed to delete video');
     } finally {
       setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      handleCloseModal();
     }
   };
 
@@ -427,7 +436,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
                     e.stopPropagation();
                     setShowDeleteConfirm(true);
                   }}
-                  className={`absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full transition-all duration-200 ease-in-out z-10 transform hover:scale-110 ${isHovering ? 'opacity-100' : 'opacity-100 md:opacity-0'}`}
+                  className={`absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full transition-all duration-200 ease-in-out z-10 transform hover:scale-110 cursor-pointer ${isHovering ? 'opacity-100' : 'opacity-100 md:opacity-0'}`}
                   title="Delete video"
                 >
                   <FiTrash2 size={14} />
@@ -463,38 +472,43 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
 
       {showDeleteConfirm && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
-          onClick={(e) => e.target === e.currentTarget && setShowDeleteConfirm(false)}
+          className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-150 ${
+            isClosing ? 'opacity-0' : 'opacity-100'
+          }`}
+          onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
         >
-          <div className="bg-[#1a1a1a] rounded-xl p-6 max-w-sm w-full border border-[#333] shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center gap-3 mb-4">
-              <div className=" flex items-center justify-center">
-                <FiTrash2 className="text-red-400" size={18} />
+          <div className={`bg-[#1a1a1a] rounded-2xl p-6 max-w-md w-full border border-[#2a2a2a] shadow-2xl transition-all duration-150 ${
+            isClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+          }`}>
+            <div className="flex items-start gap-4 mb-5">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                <FiTrash2 className="text-red-400" size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-white">Delete Video</h3>
+              <div className="flex-1 pt-0.5">
+                <h3 className="text-lg font-semibold text-white mb-1.5">Delete Video?</h3>
+                <p className="text-white/60 text-sm leading-relaxed">
+                  This will permanently delete <span className="text-white font-medium">"{video.title}"</span>
+                </p>
+              </div>
             </div>
             
-            <p className="text-white/70 mb-6 leading-relaxed">
-              Are you sure you want to delete <span className="text-white font-medium">"{video.title}"</span>? This action cannot be undone.
-            </p>
-            
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 px-4 cursor-pointer bg-[#333] hover:bg-[#444] text-white rounded-lg transition-all duration-200 font-medium"
+                onClick={handleCloseModal}
+                className="flex-1 py-2.5 px-4 cursor-pointer bg-[#2a2a2a] hover:bg-[#333] text-white/90 rounded-lg transition-colors duration-150 font-medium text-sm"
                 disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 py-2.5 px-4 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 py-2.5 px-4 cursor-pointer bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
                 disabled={isDeleting}
               >
                 {isDeleting ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Deleting...
+                    <span>Deleting...</span>
                   </div>
                 ) : (
                   'Delete'
