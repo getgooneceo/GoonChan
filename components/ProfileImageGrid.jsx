@@ -29,10 +29,11 @@ const formatDate = (dateString) => {
   });
 };
 
-const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
+const ProfileImageCard = ({ image, isOwnProfile, isAdmin, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const canDelete = isOwnProfile || isAdmin;
 
   const likePercentage = calculateLikePercentage(
     image.likeCount || 0,
@@ -52,7 +53,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
   };
 
   const handleDelete = async () => {
-    if (!isOwnProfile) return;
+    if (!canDelete) return;
 
     setIsDeleting(true);
     try {
@@ -102,7 +103,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
 
-          {isOwnProfile && (
+          {canDelete && (
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -110,7 +111,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
                 setShowDeleteConfirm(true);
               }}
               className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 z-10 transform hover:scale-110 cursor-pointer"
-              title="Delete image"
+              title={isAdmin && !isOwnProfile ? "Delete image (Admin)" : "Delete image"}
             >
               <FiTrash2 size={14} />
             </button>
@@ -159,6 +160,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
                 <h3 className="text-lg font-semibold text-white mb-1.5">Delete Image?</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
                   This will permanently delete <span className="text-white font-medium">"{image.title}"</span>
+                  {isAdmin && !isOwnProfile && <span className="text-red-400"> (Admin action)</span>}
                 </p>
               </div>
             </div>
@@ -193,7 +195,7 @@ const ProfileImageCard = ({ image, isOwnProfile, onDelete }) => {
   );
 };
 
-const ProfileImageGrid = ({ images, isOwnProfile, onImageDelete }) => {
+const ProfileImageGrid = ({ images, isOwnProfile, isAdmin, onImageDelete }) => {
   const handleImageDelete = (deletedImageId) => {
     onImageDelete && onImageDelete(deletedImageId);
   };
@@ -214,6 +216,7 @@ const ProfileImageGrid = ({ images, isOwnProfile, onImageDelete }) => {
             key={image._id || image.id} 
             image={image} 
             isOwnProfile={isOwnProfile}
+            isAdmin={isAdmin}
             onDelete={handleImageDelete}
           />
         ))}

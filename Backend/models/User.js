@@ -17,6 +17,10 @@ const UserSchema = new mongoose.Schema({
   isDummy: { type: Boolean, default: false },
   subscriberCount: { type: Number, default: 0 },
   subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  pendingUploads: [{
+    streamId: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });

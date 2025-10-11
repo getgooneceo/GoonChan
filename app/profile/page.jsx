@@ -1046,6 +1046,7 @@ const ProfileContent = () => {
                       <ProfileVideoGrid 
                         videos={profileData.videos} 
                         isOwnProfile={isOwnProfile}
+                        isAdmin={user?.isAdmin || false}
                         onVideoDelete={(deletedVideoId) => {
                           setProfileData(prev => ({
                             ...prev,
@@ -1096,6 +1097,7 @@ const ProfileContent = () => {
                       <ProfileImageGrid 
                         images={profileData.images} 
                         isOwnProfile={isOwnProfile}
+                        isAdmin={user?.isAdmin || false}
                         onImageDelete={(deletedImageId) => {
                           setProfileData(prev => ({
                             ...prev,

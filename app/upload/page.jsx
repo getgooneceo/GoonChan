@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import config from "../../config.json";
 import { Toaster, toast } from "sonner";
+import * as tus from "tus-js-client";
 
 const UploadPageLoading = () => {
   return (
@@ -69,6 +70,9 @@ const UploadPageContent = () => {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [videoDuration, setVideoDuration] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState(''); // 'requesting', 'uploading', 'completing'
+  const [currentUpload, setCurrentUpload] = useState(null); // TUS upload instance
 
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState(0);
@@ -449,7 +453,59 @@ const UploadPageContent = () => {
         toast.error("Please write a description for your upload");
         return;
       }
+
+      setIsUploading(true);
+      toast.loading("Uploading your images...", {
+        id: "upload-toast",
+        duration: Infinity,
+      });
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("tags", tags);
+      formData.append("token", token);
+      formData.append("thumbnailIndex", selectedThumbnailIndex.toString());
+      
+      galleryFiles.forEach((file, index) => {
+        formData.append(`imageFile${index}`, file);
+      });
+
+      try {
+        const response = await fetch(`${config.url}/api/uploadImage`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: "Unknown error during upload." }));
+          throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          toast.success("Images will be uploaded shortly!", {
+            id: "upload-toast",
+            duration: 3000,
+          });
+          setTimeout(() => {
+            router.push("/");
+          }, 1000);
+        } else {
+          throw new Error(result.message || "Upload failed. Please try again.");
+        }
+      } catch (error) {
+        console.error("Upload failed:", error);
+        toast.error(`Upload failed: ${error.message}`, {
+          id: "upload-toast",
+          duration: 5000,
+        });
+      } finally {
+        setIsUploading(false);
+      }
     } else if (uploadType === "video") {
+      // New secure direct upload flow for videos
       if (!fileSelected) {
         toast.error("Please select a video file to upload");
         return;
@@ -462,71 +518,150 @@ const UploadPageContent = () => {
         toast.error("Please write a description for your video");
         return;
       }
-    }
 
-    setIsUploading(true);
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadStage('requesting');
 
-    toast.loading("Uploading your content...", {
-      id: "upload-toast",
-      duration: Infinity,
-    });
-
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("tags", tags);
-    formData.append("token", token);
-
-    if (uploadType === "video") {
-      formData.append("videoFile", fileSelected);
-      if (videoDuration !== null) {
-        formData.append("duration", videoDuration.toString());
-      }
-      if (thumbnailFile) {
-        formData.append("thumbnailFile", thumbnailFile);
-      }
-    } else if (uploadType === "photo") {
-      formData.append("thumbnailIndex", selectedThumbnailIndex.toString());
-      
-      galleryFiles.forEach((file, index) => {
-        formData.append(`imageFile${index}`, file);
-      });
-    }
-
-    try {
-      const apiEndpoint = uploadType === "photo" ? "/api/uploadImage" : "/api/uploadVideo";
-      
-      const response = await fetch(`${config.url}${apiEndpoint}`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error during upload." }));
-        throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(`${uploadType === "photo" ? "Images" : "Video"} will be uploaded shortly!`, {
-          id: "upload-toast",
-          duration: 3000,
-        });
-        setTimeout(() => {
-          router.push("/");
-        }, 1000);
-      } else {
-        throw new Error(result.message || "Upload failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error(`Upload failed: ${error.message}`, {
+      toast.loading("Requesting upload URL...", {
         id: "upload-toast",
-        duration: 5000,
+        duration: Infinity,
       });
-    } finally {
-      setIsUploading(false);
+
+      try {
+        // Step 1: Request upload URL from server with content validation (keeps API key secure)
+        // Server checks for blocked keywords BEFORE allowing upload to save time and bandwidth
+        const urlResponse = await fetch(`${config.url}/api/requestVideoUploadUrl`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token,
+            fileName: fileSelected.name,
+            fileSize: fileSelected.size,
+            title: title.trim(),
+            description: description.trim(),
+            tags: tags,
+          }),
+        });
+
+        if (!urlResponse.ok) {
+          const errorData = await urlResponse.json().catch(() => ({ message: "Failed to get upload URL." }));
+          throw new Error(errorData.message || "Failed to get upload URL from server.");
+        }
+
+        const urlResult = await urlResponse.json();
+        if (!urlResult.success || !urlResult.uploadUrl || !urlResult.uid) {
+          throw new Error("Invalid response from server when requesting upload URL.");
+        }
+
+        const { uploadUrl, uid: cloudflareStreamId } = urlResult;
+
+        setUploadStage('uploading');
+        toast.loading("Uploading video...", {
+          id: "upload-toast",
+          duration: Infinity,
+        });
+
+        await new Promise((resolve, reject) => {
+          const upload = new tus.Upload(fileSelected, {
+            endpoint: uploadUrl,
+            retryDelays: [0, 3000, 5000, 10000, 20000],
+            chunkSize: 50 * 1024 * 1024, // 50 MB chunks
+            metadata: {
+              filename: fileSelected.name,
+              filetype: fileSelected.type || 'video/mp4',
+            },
+            onError(error) {
+              console.error('[CLIENT] TUS upload failed:', error);
+              reject(error);
+            },
+            onProgress(bytesUploaded, bytesTotal) {
+              const percent = Math.round((bytesUploaded / bytesTotal) * 100);
+              setUploadProgress(percent);
+              
+              const uploadedMB = (bytesUploaded / (1024 * 1024)).toFixed(1);
+              const totalMB = (bytesTotal / (1024 * 1024)).toFixed(1);
+              
+              toast.loading(`Uploading: ${percent}% (${uploadedMB}MB / ${totalMB}MB)`, {
+                id: "upload-toast",
+                duration: Infinity,
+              });
+            },
+            onSuccess() {
+              resolve();
+            },
+          });
+
+          setCurrentUpload(upload);
+          upload.start();
+        });
+
+        setUploadStage('completing');
+        setUploadProgress(100);
+        toast.loading("Finalizing upload...", {
+          id: "upload-toast",
+          duration: Infinity,
+        });
+
+        const completeFormData = new FormData();
+        completeFormData.append("token", token);
+        completeFormData.append("cloudflareStreamId", cloudflareStreamId);
+        completeFormData.append("title", title);
+        completeFormData.append("description", description);
+        completeFormData.append("tags", tags);
+        if (videoDuration !== null) {
+          completeFormData.append("duration", videoDuration.toString());
+        }
+        if (thumbnailFile) {
+          completeFormData.append("thumbnailFile", thumbnailFile);
+        }
+
+        const completeResponse = await fetch(`${config.url}/api/completeVideoUpload`, {
+          method: "POST",
+          body: completeFormData,
+        });
+
+        if (!completeResponse.ok) {
+          const errorData = await completeResponse.json().catch(() => ({ message: "Failed to complete upload." }));
+          throw new Error(errorData.message || "Failed to finalize upload on server.");
+        }
+
+        const completeResult = await completeResponse.json();
+
+        if (completeResult.success) {
+
+          toast.success("Video uploaded successfully! Processing...", {
+            id: "upload-toast",
+            duration: 3000,
+          });
+          setTimeout(() => {
+            router.push("/");
+          }, 1000);
+        } else {
+          throw new Error(completeResult.message || "Failed to complete upload.");
+        }
+      } catch (error) {
+        console.error('[CLIENT] Upload failed:', error);
+        toast.error(`Upload failed: ${error.message}`, {
+          id: "upload-toast",
+          duration: 5000,
+        });
+        
+        if (currentUpload) {
+          try {
+            currentUpload.abort();
+          } catch (abortError) {
+            console.error('[CLIENT] Error aborting upload:', abortError);
+          }
+        }
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadStage('');
+        setCurrentUpload(null);
+      }
     }
   };
 
@@ -991,6 +1126,33 @@ const UploadPageContent = () => {
                 </div>
               )}
 
+              {/* Upload Progress Bar - Only for video uploads */}
+              {uploadType === "video" && isUploading && uploadProgress > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-white/70 font-medium">
+                      {uploadStage === 'uploading' ? 'Uploading to Server...' : 
+                       uploadStage === 'completing' ? 'Finalizing...' : 
+                       'Processing...'}
+                    </span>
+                    {/* <span className="text-[#ea4197] font-semibold">{uploadProgress}%</span> */}
+                  </div>
+                  <div className="w-full bg-[#0a0a0a] rounded-full h-3 overflow-hidden border border-white/10">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#ea4197] to-[#d4357a] transition-all duration-300 ease-out rounded-full relative overflow-hidden"
+                      style={{ width: `${uploadProgress}%` }}
+                    >
+                      {/* Animated shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-xs text-white/50">
+                    {/* <div className="w-1.5 h-1.5 rounded-full bg-[#ea4197] animate-pulse"></div> */}
+                    <span>Please keep this page open until upload completes</span>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleUpload}
                 disabled={isUploading || !isUploadReady()}
@@ -1008,7 +1170,7 @@ const UploadPageContent = () => {
                 {isUploading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin mr-2"></div>
-                    Uploading...
+                    {uploadType === "video" && uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : "Uploading..."}
                   </>
                 ) : (
                   <>

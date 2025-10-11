@@ -140,10 +140,11 @@ const getOriginalQualityUrl = (url) => {
   return url;
 };
 
-const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
+const ProfileVideoCard = ({ video, isOwnProfile, isAdmin, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const canDelete = isOwnProfile || isAdmin;
 
   const getInitialThumbnail = () => {
     const thumb = video.thumbnail || '';
@@ -332,7 +333,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
   };
 
   const handleDelete = async () => {
-    if (!isOwnProfile) return;
+    if (!canDelete) return;
 
     setIsDeleting(true);
     try {
@@ -383,12 +384,27 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
         onMouseLeave={handleMouseLeave}
       >
         {isProcessing ? (
-          <div className="block cursor-pointer" onClick={handleProcessingClick}>
+          <div className="block cursor-pointer group" onClick={handleProcessingClick}>
             <div className="relative aspect-video overflow-hidden rounded-lg bg-[#101010]">
               <div className="w-full h-full bg-[#1a1a1a] animate-pulse flex items-center justify-center">
                 <div className="text-white/80 font-roboto text-sm font-medium">Processing...</div>
               </div>
               <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
+
+              {canDelete && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full transition-all duration-200 ease-in-out z-10 transform hover:scale-110 cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100"
+                  title={isAdmin && !isOwnProfile ? "Delete video (Admin)" : "Delete processing video"}
+                >
+                  <FiTrash2 size={14} />
+                </button>
+              )}
+
               <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">
                 {formatDuration(video.duration)}
               </div>
@@ -405,7 +421,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
                 src={currentThumbnail}
                 // alt={video.title || ""}
                 className={`object-contain w-full h-full transition-all duration-300 ease-in-out ${
-                  isHovering ? 'scale-[1.02]' : 'scale-100'
+                  isHovering ? 'scale-[1]' : 'scale-100'
                 } ${
                   !isHighQualityLoaded && !thumbnailError ? 'blur-[0.5px] brightness-95' : ''
                 }`}
@@ -426,7 +442,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
 
               <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-[#00000059] opacity-95"></div>
 
-              {isOwnProfile && (
+              {canDelete && (
                 <button
                   onClick={(e) => {
                     e.preventDefault();
@@ -434,7 +450,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
                     setShowDeleteConfirm(true);
                   }}
                   className={`absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white p-1.5 rounded-full transition-all duration-200 ease-in-out z-10 transform hover:scale-110 cursor-pointer ${isHovering ? 'opacity-100' : 'opacity-100 md:opacity-0'}`}
-                  title="Delete video"
+                  title={isAdmin && !isOwnProfile ? "Delete video (Admin)" : "Delete video"}
                 >
                   <FiTrash2 size={14} />
                 </button>
@@ -485,6 +501,8 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
                 <h3 className="text-lg font-semibold text-white mb-1.5">Delete Video?</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
                   This will permanently delete <span className="text-white font-medium">"{video.title}"</span>
+                  {isProcessing && <span className="text-yellow-400"> (currently processing)</span>}
+                  {isAdmin && !isOwnProfile && <span className="text-red-400"> (Admin action)</span>}
                 </p>
               </div>
             </div>
@@ -519,7 +537,7 @@ const ProfileVideoCard = ({ video, isOwnProfile, onDelete }) => {
   );
 };
 
-const ProfileVideoGrid = ({ videos, isOwnProfile, onVideoDelete }) => {
+const ProfileVideoGrid = ({ videos, isOwnProfile, isAdmin, onVideoDelete }) => {
   const handleVideoDelete = (deletedVideoId) => {
     onVideoDelete && onVideoDelete(deletedVideoId);
   };
@@ -540,6 +558,7 @@ const ProfileVideoGrid = ({ videos, isOwnProfile, onVideoDelete }) => {
             key={video.id || video._id} 
             video={video} 
             isOwnProfile={isOwnProfile}
+            isAdmin={isAdmin}
             onDelete={handleVideoDelete}
           />
         ))}

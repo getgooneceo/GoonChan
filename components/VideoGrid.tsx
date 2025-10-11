@@ -369,7 +369,7 @@ interface VideoCardProps {
             src={currentThumbnail} 
             // alt={video.title || ''}
             className={`object-contain w-full h-full transition-all duration-300 ease-in-out ${
-              isHovering ? 'scale-[1.02]' : 'scale-100'
+              isHovering ? 'scale-[1]' : 'scale-100'
             } ${
               !isHighQualityLoaded && !thumbnailError ? 'blur-[0.5px] brightness-95' : ''
             }`}
