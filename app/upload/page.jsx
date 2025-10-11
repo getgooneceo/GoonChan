@@ -834,14 +834,14 @@ const UploadPageContent = () => {
                         ? "Click or drag to upload photos"
                         : "Click or drag to upload a video"}
                     </h3>
-                    <p className="text-white/40 text-sm mb-6">
+                    <p className="text-white/40 text-sm mb-4">
                       {uploadType === "photo"
                         ? "JPG, PNG, GIF, WebP up to 30MB"
                         : "MP4, WebM, MOV up to 1GB"}
                     </p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="bg-[#f7f7f7] cursor-pointer text-black hover:bg-white/90 py-2 px-6 rounded-lg transition-all text-sm font-medium"
+                      className="bg-[#d6d6d6] cursor-pointer font-pop text-black hover:bg-white/90 py-2 px-6 rounded-lg transition-all text-sm font-medium"
                     >
                       Select File
                     </button>
