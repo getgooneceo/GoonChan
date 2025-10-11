@@ -126,21 +126,19 @@ async function downloadVideo(url, videoId, proxy) {
 
 async function processVideo({ proxy, targetUrl, videoId }) {
     try {
-        parentPort.postMessage({ status: 'info', proxy, message: `Scraping video data from ${targetUrl}...` });
         const videoData = await scrapeVideoData(targetUrl, proxy);
-        parentPort.postMessage({ status: 'success', proxy, message: `Scraped video metadata: "${videoData.title}"` });
         
-        parentPort.postMessage({ status: 'download_started', proxy, message: `Downloading video...` });
+        parentPort.postMessage({ status: 'download_started', proxy, message: `Downloading: ${videoData.title}` });
         const filePath = await downloadVideo(videoData.videoUrl, videoId, proxy);
         parentPort.postMessage({ 
             status: 'download_finished', 
             proxy, 
-            message: `Video downloaded and saved to ${filePath}`,
+            message: `Downloaded: ${videoData.title}`,
             data: { filePath, videoData }
         });
 
     } catch (error) {
-        parentPort.postMessage({ status: 'fail', proxy, message: `Error: ${error.message.substring(0, 200)}` });
+        parentPort.postMessage({ status: 'fail', proxy, message: `Error: ${error.message.substring(0, 100)}` });
     }
 }
 

@@ -45,20 +45,18 @@ class AnalyticsManager {
       const existingSnapshot = await Analytics.findOne({ date: todayStart });
       
       if (existingSnapshot) {
-        console.log('[ANALYTICS] Snapshot for today already exists, skipping...');
         return;
       }
 
       const lastSnapshot = await Analytics.findOne().sort({ date: -1 });
 
       if (!lastSnapshot) {
-        console.log('[ANALYTICS] Creating first snapshot...');
         const stats = await this.getCurrentStats();
         await Analytics.create({
           date: todayStart,
           ...stats
         });
-        console.log('[ANALYTICS] First snapshot created successfully');
+        console.log('[ANALYTICS] First snapshot created');
         return;
       }
 
@@ -66,15 +64,12 @@ class AnalyticsManager {
       const hoursSinceLastSnapshot = (now - lastSnapshotDate) / (1000 * 60 * 60);
 
       if (hoursSinceLastSnapshot >= 24) {
-        console.log('[ANALYTICS] 24+ hours since last snapshot, creating new one...');
         const stats = await this.getCurrentStats();
         await Analytics.create({
           date: todayStart,
           ...stats
         });
-        console.log('[ANALYTICS] New snapshot created successfully');
-      } else {
-        console.log(`[ANALYTICS] Only ${hoursSinceLastSnapshot.toFixed(1)} hours since last snapshot, waiting...`);
+        console.log('[ANALYTICS] Daily snapshot created');
       }
     } catch (error) {
       console.error('[ANALYTICS] Error in checkAndSaveSnapshot:', error);
@@ -82,22 +77,17 @@ class AnalyticsManager {
   }
 
   async start() {
-    console.log('[ANALYTICS] Starting analytics manager...');
-
     await this.checkAndSaveSnapshot();
 
     this.checkInterval = setInterval(() => {
       this.checkAndSaveSnapshot();
     }, this.checkIntervalMs);
-    
-    console.log('[ANALYTICS] Analytics manager started, checking every hour');
   }
 
   stop() {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('[ANALYTICS] Analytics manager stopped');
     }
   }
 }

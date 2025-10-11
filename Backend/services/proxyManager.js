@@ -20,15 +20,11 @@ class ProxyManager {
     async start(hooks = {}) {
         this.onCheckStart = hooks.onCheckStart || (() => {});
         this.onCheckEnd = hooks.onCheckEnd || (() => {});
-        console.log('[PROXY MANAGER] Starting proxy manager...');
         await this.initFromCacheOrCheck();
         
         this.refreshInterval = setInterval(async () => {
-            console.log('[PROXY MANAGER] Hourly refresh triggered...');
             await this.checkProxies();
         }, 60 * 60 * 1000);
-        
-        console.log('[PROXY MANAGER] Proxy manager started with hourly refresh cycle.');
     }
 
     async initFromCacheOrCheck() {
@@ -46,17 +42,15 @@ class ProxyManager {
 
                 if (isFresh && isComplete) {
                     this.workingProxies = cache.working;
-                    console.log(`[PROXY MANAGER] Using cached proxies (${this.workingProxies.length}) from ${cache.storedAt}.`);
+                    console.log(`[PROXY MANAGER] Loaded ${this.workingProxies.length} cached proxies`);
                     return;
                 }
 
                 if (isFresh && !isComplete) {
-                    console.log(`[PROXY MANAGER] Cache is fresh but incomplete (${checked}/${total}). Starting check...`);
                     await this.checkProxies();
                     return;
                 }
 
-                console.log('[PROXY MANAGER] Cache is stale or invalid. Starting a fresh check...');
                 await this.checkProxies();
                 return;
             }
@@ -89,32 +83,25 @@ class ProxyManager {
 
     async checkProxies() {
         if (this.isChecking) {
-            console.log('[PROXY MANAGER] Already checking proxies, skipping...');
             return;
         }
 
         this.isChecking = true;
         this.onCheckStart();
-        console.log('[PROXY MANAGER] Started checking proxies...');
+        console.log('[PROXY MANAGER] Checking proxies...');
 
         try {
-            // Download proxy list
-            console.log('[PROXY MANAGER] Downloading proxy list...');
             const response = await axios.get('https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/http.txt');
             const proxies = response.data.split('\n').map(p => p.trim()).filter(p => p !== '');
-            
-            console.log(`[PROXY MANAGER] Downloaded ${proxies.length} proxies.`);
-            console.log('[PROXY MANAGER] Starting proxy test with 100 workers...');
 
             const storedAt = new Date().toISOString();
-            // Initialize cache file for progress tracking
             await this.saveCache({ storedAt, total: proxies.length, checked: 0, complete: false, working: [] });
 
             const newWorkingProxies = await this.testProxiesWithQueue(proxies, 100, storedAt);
             
             this.workingProxies = newWorkingProxies;
             await this.saveCache({ storedAt, total: proxies.length, checked: proxies.length, complete: true, working: this.workingProxies });
-            console.log(`[PROXY MANAGER] Ended checking with ${this.workingProxies.length} live proxies`);
+            console.log(`[PROXY MANAGER] Found ${this.workingProxies.length} working proxies`);
             
         } catch (error) {
             console.error('[PROXY MANAGER] Error during proxy check:', error.message);
@@ -131,10 +118,8 @@ class ProxyManager {
         let nextIndex = 0;
 
         const progressInterval = setInterval(() => {
-            process.stdout.write(`\r[PROXY MANAGER] Progress: ${processed}/${totalProxies}`);
-            // Persist incremental progress once per second
             this.saveCache({ storedAt, total: totalProxies, checked: processed, complete: false, working: workingProxies });
-        }, 1000);
+        }, 5000);
 
         const worker = async () => {
             while (true) {
@@ -143,7 +128,6 @@ class ProxyManager {
                 const proxy = proxies[current];
                 const isWorking = await this.checkSingleProxy(proxy);
                 if (isWorking) {
-                    console.log(`\n[PROXY MANAGER] Found working proxy (${workingProxies.length + 1}): ${proxy}`);
                     workingProxies.push(proxy);
                 }
                 processed++;
@@ -156,8 +140,6 @@ class ProxyManager {
         }
         await Promise.all(workers);
         clearInterval(progressInterval);
-        console.log(`\n[PROXY MANAGER] Progress: ${processed}/${totalProxies}`);
-        // Final progress write (not complete yet, caller will mark complete)
         await this.saveCache({ storedAt, total: totalProxies, checked: processed, complete: false, working: workingProxies });
 
         return workingProxies;
@@ -227,7 +209,6 @@ class ProxyManager {
             clearInterval(this.refreshInterval);
             this.refreshInterval = null;
         }
-        console.log('[PROXY MANAGER] Proxy manager stopped.');
     }
 }
 

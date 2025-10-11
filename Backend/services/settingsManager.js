@@ -25,11 +25,9 @@ class SettingsManager {
 
   async initialize() {
     try {
-      
       let settings = await AdminSettings.findById('admin_settings');
 
       if (!settings) {
-        console.log('[SETTINGS] No settings found, creating default settings...');
         settings = await AdminSettings.create({
           _id: 'admin_settings',
           ...this.getDefaultSettings()
@@ -71,8 +69,6 @@ class SettingsManager {
 
   async updateSettings(newSettings) {
     try {
-      console.log('[SETTINGS] Updating settings...');
-      
       const updated = await AdminSettings.findByIdAndUpdate(
         'admin_settings',
         {
@@ -82,14 +78,12 @@ class SettingsManager {
         { new: true, upsert: true }
       );
       
-      // Update cache
       this.cachedSettings = {
         blockedKeywords: updated.blockedKeywords,
         adSettings: updated.adSettings
       };
       
       this.lastSync = new Date();
-      console.log('[SETTINGS] Settings updated successfully');
       
       return this.cachedSettings;
     } catch (error) {
@@ -122,7 +116,6 @@ class SettingsManager {
     this.syncInterval = setInterval(() => {
       this.syncWithDatabase();
     }, this.syncIntervalMs);
-
   }
 
   stopPeriodicSync() {
@@ -139,7 +132,6 @@ class SettingsManager {
 
   stop() {
     this.stopPeriodicSync();
-    console.log('[SETTINGS] Settings manager stopped');
   }
 
   getStatus() {
