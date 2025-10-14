@@ -50,6 +50,7 @@ const ProfileContent = () => {
   const [hasMoreImages, setHasMoreImages] = useState(true);
   const observerTargetVideos = useRef(null);
   const observerTargetImages = useRef(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   const handlePictureUpload = () => {
     if (isOwnProfile) {
@@ -270,6 +271,10 @@ const ProfileContent = () => {
   };
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
     router.push('/');
@@ -620,6 +625,38 @@ const ProfileContent = () => {
   return (
     <div className="min-h-screen bg-[#080808] text-white">
       {/* <Toaster theme="dark" position="bottom-right" richColors /> */}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div 
+            className="bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-2 text-white">Log out?</h3>
+            <p className="text-white/60 text-sm mb-6">
+              Are you sure you want to log out of your account?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-[#222] text-white/90 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0f0f0f] border-t border-[#1f1f1f] z-40">
         <div className="flex justify-between items-center">
