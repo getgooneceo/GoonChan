@@ -44,17 +44,16 @@ app.post('/', async (c) => {
 
     const dailyViewsData = [];
     
-    if (snapshots.length >= 2) {
-      for (let i = 1; i < snapshots.length; i++) {
-        const previous = snapshots[i - 1];
-        const current = snapshots[i];
-        
-        const dailyViews = current.totalViews - previous.totalViews;
+    if (snapshots.length >= 1) {
+      for (const snapshot of snapshots) {
+        // Use the stored daily views instead of calculating from differences
+        // This prevents deletions from affecting historical data
+        const dailyViews = snapshot.dailyTotalViews || 0;
         
         dailyViewsData.push({
-          date: current.date,
-          views: Math.max(0, dailyViews),
-          fullDate: new Date(current.date).toLocaleDateString('en-US', { 
+          date: snapshot.date,
+          views: dailyViews,
+          fullDate: new Date(snapshot.date).toLocaleDateString('en-US', { 
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -76,7 +75,7 @@ app.post('/', async (c) => {
           imageViews
         },
         dailyViews: dailyViewsData,
-        hasData: snapshots.length >= 2
+        hasData: snapshots.length >= 1
       }
     });
 

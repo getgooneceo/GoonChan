@@ -7,7 +7,10 @@ const AnalyticsSchema = new mongoose.Schema({
   totalVideos: { type: Number, required: true, default: 0 },
   totalImages: { type: Number, required: true, default: 0 },
   videoViews: { type: Number, required: true, default: 0 },
-  imageViews: { type: Number, required: true, default: 0 }
+  imageViews: { type: Number, required: true, default: 0 },
+  dailyVideoViews: { type: Number, default: 0 },
+  dailyImageViews: { type: Number, default: 0 },
+  dailyTotalViews: { type: Number, default: 0 }
 }, { timestamps: true });
 
 // Index for efficient querying

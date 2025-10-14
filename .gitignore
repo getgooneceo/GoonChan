@@ -19,6 +19,8 @@ node_modules*
 
 # production
 /build
+# proxy cache
+proxy-cache.json
 
 # misc
 .DS_Store

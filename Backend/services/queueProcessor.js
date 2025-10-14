@@ -75,7 +75,7 @@ async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken)
                 contentType: thumbResponse.headers['content-type'] || 'image/jpeg'
             });
         } catch (error) {
-            // Thumbnail download failed, continue without it
+            console.warn(`Could not download thumbnail from ${thumbnailUrl}:`, error.message);
         }
     }
 
@@ -95,6 +95,8 @@ async function uploadViaApiRoute(filePath, title, tags, thumbnailUrl, userToken)
         if (!response.data.success) {
             throw new Error(`API upload failed: ${response.data.message}`);
         }
+        
+        console.log(`Successfully submitted video to upload API for: ${title}`);
     } catch (error) {
         const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
         console.error('Error calling uploadVideo API route:', errorMessage);
@@ -108,6 +110,8 @@ async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
     if (workingProxies.length === 0) {
         throw new Error('No working proxies available');
     }
+
+    console.log(`[QUEUE PROCESSOR] Starting download with ${Math.min(5, workingProxies.length)} threads using working proxies...`);
 
     return new Promise((resolve, reject) => {
         let settled = false;
@@ -154,6 +158,8 @@ async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
             allWorkers.push(worker);
 
             worker.on('message', async (message) => {
+                console.log(`[QUEUE PROCESSOR] [${message.proxy}] ${message.message}`);
+                
                 switch (message.status) {
                     case 'download_started':
                         if (!downloadStarted) {
@@ -188,6 +194,7 @@ async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
                         } catch (e) {
                             console.error('Emit on download_finished failed:', e.message);
                         }
+                        console.log(`[QUEUE PROCESSOR] Download completed successfully!`);
                         terminateOthers(null);
                         resolveOnce(message.data);
                         break;
@@ -196,6 +203,7 @@ async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
                             return;
                         }
                         if (activeWorker && worker === activeWorker) {
+                            console.log(`[QUEUE PROCESSOR] Active worker with proxy ${message.proxy} failed. Retrying...`);
                             activeWorker = null;
                             downloadStarted = false;
                         }
@@ -222,6 +230,9 @@ async function downloadVideoWithProxies(pageUrl, videoId, queueDocId) {
 }
 
 async function processQueue() {
+    // DISABLED: Old queue processing loop is replaced by orchestrator in server.js
+    // This function is kept as a no-op for compatibility but does nothing
+    console.log('[QUEUE PROCESSOR] Old processQueue called but disabled - using server.js orchestrator instead');
     return;
 }
 
@@ -295,5 +306,6 @@ export async function processOneById(id) {
 }
 
 export async function startQueueProcessor() {
+    console.log('[QUEUE PROCESSOR] Old startQueueProcessor called but disabled - using server.js orchestrator instead');
     return;
 } 

@@ -49,12 +49,16 @@ class AnalyticsManager {
       }
 
       const lastSnapshot = await Analytics.findOne().sort({ date: -1 });
+      const stats = await this.getCurrentStats();
 
       if (!lastSnapshot) {
-        const stats = await this.getCurrentStats();
+        // First snapshot: daily views = 0 (no previous day to compare)
         await Analytics.create({
           date: todayStart,
-          ...stats
+          ...stats,
+          dailyVideoViews: 0,
+          dailyImageViews: 0,
+          dailyTotalViews: 0
         });
         console.log('[ANALYTICS] First snapshot created');
         return;
@@ -64,10 +68,17 @@ class AnalyticsManager {
       const hoursSinceLastSnapshot = (now - lastSnapshotDate) / (1000 * 60 * 60);
 
       if (hoursSinceLastSnapshot >= 24) {
-        const stats = await this.getCurrentStats();
+        // Calculate daily increments based on difference from previous snapshot
+        const dailyVideoViews = Math.max(0, stats.videoViews - lastSnapshot.videoViews);
+        const dailyImageViews = Math.max(0, stats.imageViews - lastSnapshot.imageViews);
+        const dailyTotalViews = Math.max(0, stats.totalViews - lastSnapshot.totalViews);
+
         await Analytics.create({
           date: todayStart,
-          ...stats
+          ...stats,
+          dailyVideoViews,
+          dailyImageViews,
+          dailyTotalViews
         });
         console.log('[ANALYTICS] Daily snapshot created');
       }
