@@ -823,9 +823,18 @@ const ProfileContent = () => {
                           setIsEditingUsername(true);
                         } : undefined}
                       >
-                        <h1 className="text-2xl font-pop font-bold text-white transition-colors duration-200">
-                          @{profileData.username}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-2xl font-pop font-bold text-white transition-colors duration-200">
+                            @{profileData.username}
+                          </h1>
+                          {profileData.isAdmin && (
+                            <span title="Admin">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0" style={{ color: '#fbbf24' }}>
+                                <path d="M2.00488 19H22.0049V21H2.00488V19ZM2.00488 5L7.00488 8L12.0049 2L17.0049 8L22.0049 5V17H2.00488V5Z"></path>
+                              </svg>
+                            </span>
+                          )}
+                        </div>
                         {isOwnProfile && (
                           <div className={`hidden md:flex items-center gap-1.5 transition-all duration-300 ${isHoveringUsername ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-1'}`}>
                             <FiEdit2 size={14} className="text-white/50" />
@@ -862,10 +871,10 @@ const ProfileContent = () => {
                             onChange={(e) => setBio(e.target.value)}
                             className="w-full p-3 bg-[#0c0c0c] rounded-lg text-white/90 border border-[#2a2a2a] focus:border-[#ea4197] focus:outline-none min-h-[100px] resize-none transition-colors duration-150"
                             placeholder="Write something about yourself..."
-                            maxLength={300}
+                            maxLength={120}
                           />
                           <span className="absolute bottom-2.5 right-2.5 text-white/30 text-[10px] pointer-events-none font-medium">
-                            {bio.length}/300
+                            {bio.length}/120
                           </span>
                         </div>
                         <div className="flex justify-end items-center gap-2 mt-2">

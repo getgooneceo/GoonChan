@@ -3,6 +3,8 @@ import Report from '../models/Report.js'
 import User from '../models/User.js'
 import Video from '../models/Video.js'
 import Image from '../models/Image.js'
+import Message from '../models/Message.js'
+import Conversation from '../models/Conversation.js'
 import jwt from 'jsonwebtoken'
 import { rateLimiter } from 'hono-rate-limiter'
 
@@ -58,7 +60,7 @@ router.post('/', limiter, async (c) => {
       }, 400)
     }
 
-    if (!['video', 'image'].includes(contentType)) {
+    if (!['video', 'image', 'message'].includes(contentType)) {
       return c.json({ 
         success: false, 
         message: 'Invalid content type' 
@@ -70,23 +72,49 @@ router.post('/', limiter, async (c) => {
 
     if (contentType === 'video') {
       content = await Video.findById(contentId).populate('uploader', 'username');
-    } else {
+      if (!content) {
+        return c.json({ 
+          success: false, 
+          message: 'Content not found' 
+        }, 404)
+      }
+      contentSnapshot = {
+        title: content.title,
+        slug: content.slug,
+        uploaderUsername: content.uploader?.username || 'Unknown',
+        uploadedAt: content.createdAt || content.uploadDate
+      };
+    } else if (contentType === 'image') {
       content = await Image.findById(contentId).populate('uploader', 'username');
+      if (!content) {
+        return c.json({ 
+          success: false, 
+          message: 'Content not found' 
+        }, 404)
+      }
+      contentSnapshot = {
+        title: content.title,
+        slug: content.slug,
+        uploaderUsername: content.uploader?.username || 'Unknown',
+        uploadedAt: content.createdAt || content.uploadDate
+      };
+    } else if (contentType === 'message') {
+      content = await Message.findById(contentId).populate('sender', 'username');
+      if (!content) {
+        return c.json({ 
+          success: false, 
+          message: 'Content not found' 
+        }, 404)
+      }
+      const conversation = await Conversation.findById(content.conversationId).populate('participants', 'username');
+      contentSnapshot = {
+        messageContent: content.content,
+        senderUsername: content.sender?.username || 'Unknown',
+        conversationId: content.conversationId.toString(),
+        conversationName: conversation?.name || `Chat with ${conversation?.participants?.map(p => p.username).join(', ')}` || 'Unknown',
+        uploadedAt: content.createdAt
+      };
     }
-
-    if (!content) {
-      return c.json({ 
-        success: false, 
-        message: 'Content not found' 
-      }, 404)
-    }
-
-    contentSnapshot = {
-      title: content.title,
-      slug: content.slug,
-      uploaderUsername: content.uploader?.username || 'Unknown',
-      uploadedAt: content.createdAt || content.uploadDate
-    };
 
     const existingReport = await Report.findOne({
       reporter: user._id,

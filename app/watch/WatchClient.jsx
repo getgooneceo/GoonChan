@@ -2,8 +2,6 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @next/next/no-html-link-for-pages */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -29,92 +27,7 @@ import BannerAds from "@/components/BannerAds";
 import ChatHeadAd from "@/components/ChatHeadAd";
 // import PrestitialAd from "@/components/PrestitialAd";
 
-interface VideoUploader {
-  _id: string;
-  username: string;
-  avatar?: string;
-  avatarColor?: string;
-  subscriberCount: number;
-}
-
-interface VideoData {
-  _id: string;
-  id: string;
-  title: string;
-  description?: string;
-  slug: string;
-  videoUrl: string;
-  thumbnail?: string;
-  duration: string;
-  views: number;
-  likedBy: string[];
-  dislikedBy: string[];
-  tags?: string[];
-  cloudflareStreamId: string;
-  createdAt: string;
-  uploader: VideoUploader;
-  comments?: CommentData[];
-  contentType?: string; // 'video' or 'image'
-  imageUrls?: string[];
-  thumbnailIndex?: number;
-}
-
-interface CommentUser {
-  _id: string;
-  username: string;
-  avatar?: string;
-  avatarColor?: string;
-}
-
-interface ReplyData {
-  _id: string;
-  user: string;
-  username: string;
-  avatar?: string;
-  avatarColor?: string;
-  content: string;
-  likeCount: number;
-  dislikeCount: number;
-  createdAt: string;
-  isLiked?: boolean;
-  isDisliked?: boolean;
-}
-
-interface CommentData {
-  _id: string;
-  user: string;
-  username: string;
-  avatar?: string;
-  avatarColor?: string;
-  content: string;
-  likeCount: number;
-  dislikeCount: number;
-  replyCount: number;
-  createdAt: string;
-  replies?: ReplyData[];
-  isLiked?: boolean;
-  isDisliked?: boolean;
-}
-
-interface BannerAdData {
-  link: string;
-  gif: string;
-}
-
-interface CommentsResponse {
-  success: boolean;
-  comments: CommentData[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalComments: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-    limit: number;
-  };
-}
-
-const getRelativeTimeFromDate = (dateString: string): string => {
+const getRelativeTimeFromDate = (dateString) => {
   const date = new Date(dateString);
   const now = new Date();
 
@@ -141,7 +54,7 @@ const getRelativeTimeFromDate = (dateString: string): string => {
   }
 };
 
-const formatCount = (count: number): string => {
+const formatCount = (count) => {
   if (count >= 1000000) {
     return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   } else if (count >= 1000) {
@@ -342,46 +255,30 @@ const WatchPageContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, setUser, setConfig } = useNavBar();
-  const videoSlug = searchParams.get("v") as string;
-  const [video, setVideo] = useState<VideoData | null>(null);
-  const [comments, setComments] = useState<CommentData[]>([]);
+  const videoSlug = searchParams.get("v");
+  const [video, setVideo] = useState(null);
+  const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsPage, setCommentsPage] = useState(1);
   const [totalComments, setTotalComments] = useState(0);
   const [hasMoreComments, setHasMoreComments] = useState(true);
-  const [commentSort, setCommentSort] = useState<
-    "recent" | "popular" | "oldest"
-  >("recent");
+  const [commentSort, setCommentSort] = useState("recent");
   const [newComment, setNewComment] = useState("");
   const [isPostingComment, setIsPostingComment] = useState(false);
-  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
-  );
-  const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
-  const [isPostingReply, setIsPostingReply] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [showReplyBox, setShowReplyBox] = useState<{ [key: string]: boolean }>(
-    {}
-  );
-  const [commentActionCooldown, setCommentActionCooldown] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [relatedVideos, setRelatedVideos] = useState<VideoData[]>([]);
-  const [recommendedVideos, setRecommendedVideos] = useState<VideoData[]>([]);
-  const [activeTab, setActiveTab] = useState<"related" | "recommended">(
-    "related"
-  );
+  const [expandedReplies, setExpandedReplies] = useState(new Set());
+  const [replyText, setReplyText] = useState({});
+  const [isPostingReply, setIsPostingReply] = useState({});
+  const [showReplyBox, setShowReplyBox] = useState({});
+  const [commentActionCooldown, setCommentActionCooldown] = useState({});
+  const [relatedVideos, setRelatedVideos] = useState([]);
+  const [recommendedVideos, setRecommendedVideos] = useState([]);
+  const [activeTab, setActiveTab] = useState("related");
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [loadingRecommended, setLoadingRecommended] = useState(false);
   const [loadingMoreRelated, setLoadingMoreRelated] = useState(false);
   const [loadingMoreRecommended, setLoadingMoreRecommended] = useState(false);
-  const [viewedRelatedIds, setViewedRelatedIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [viewedRecommendedIds, setViewedRecommendedIds] = useState<Set<string>>(
-    new Set()
-  );
+  const [viewedRelatedIds, setViewedRelatedIds] = useState(new Set());
+  const [viewedRecommendedIds, setViewedRecommendedIds] = useState(new Set());
   const [relatedHasMore, setRelatedHasMore] = useState(true);
   const [recommendedHasMore, setRecommendedHasMore] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
@@ -391,23 +288,20 @@ const WatchPageContent = () => {
   const [dislikeCount, setDislikeCount] = useState(0);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [likeDislikeCooldown, setLikeDislikeCooldown] = useState(false);
   const [subscribeCooldown, setSubscribeCooldown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const commentsRef = useRef<HTMLDivElement>(null);
-  const [uploaderProfile, setUploaderProfile] = useState<any>(null);
-  const [adSettings, setAdSettings] = useState<any>(null);
+  const commentsRef = useRef(null);
+  const [uploaderProfile, setUploaderProfile] = useState(null);
+  const [adSettings, setAdSettings] = useState(null);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentThumbnailPage, setCurrentThumbnailPage] = useState(0);
 
-  const streamContainerRef = useRef<HTMLDivElement>(null);
+  const streamContainerRef = useRef(null);
   const [loadingMessage, setLoadingMessage] = useState("Loading video...");
-  const { avatarUrl: uploaderAvatarUrl } = useUserAvatar(uploaderProfile) as {
-    avatarUrl: string;
-    isLoading: boolean;
-  };
+  const { avatarUrl: uploaderAvatarUrl } = useUserAvatar(uploaderProfile);
 
   const isCurrentUserUploader =
     user && video?.uploader?._id && user._id === video.uploader._id;
@@ -419,12 +313,12 @@ const WatchPageContent = () => {
       : THUMBNAILS_PER_PAGE_MOBILE;
   };
 
-  const getTotalPages = (imageUrls: string[]) => {
+  const getTotalPages = (imageUrls) => {
     const thumbnailsPerPage = getThumbnailsPerPage();
     return Math.ceil(imageUrls.length / thumbnailsPerPage);
   };
 
-  const getCurrentPageThumbnails = (imageUrls: string[]) => {
+  const getCurrentPageThumbnails = (imageUrls) => {
     const thumbnailsPerPage = getThumbnailsPerPage();
     const startIndex = currentThumbnailPage * thumbnailsPerPage;
     return imageUrls.slice(startIndex, startIndex + thumbnailsPerPage);
@@ -452,8 +346,8 @@ const WatchPageContent = () => {
   };
 
   const fetchRelatedVideos = async (
-    videoId: string,
-    isLoadMore: boolean = false
+    videoId,
+    isLoadMore = false
   ) => {
     try {
       if (isLoadMore) {
@@ -484,7 +378,7 @@ const WatchPageContent = () => {
 
         setViewedRelatedIds((prev) => {
           const newSet = new Set(prev);
-          data.videos.forEach((video: VideoData) => newSet.add(video._id));
+          data.videos.forEach((video) => newSet.add(video._id));
           return newSet;
         });
 
@@ -513,8 +407,8 @@ const WatchPageContent = () => {
   };
 
   const fetchRecommendedVideos = async (
-    excludeId?: string,
-    isLoadMore: boolean = false
+    excludeId,
+    isLoadMore = false
   ) => {
     try {
       if (isLoadMore) {
@@ -549,7 +443,7 @@ const WatchPageContent = () => {
 
         setViewedRecommendedIds((prev) => {
           const newSet = new Set(prev);
-          data.videos.forEach((video: VideoData) => newSet.add(video._id));
+          data.videos.forEach((video) => newSet.add(video._id));
           return newSet;
         });
 
@@ -594,7 +488,7 @@ const WatchPageContent = () => {
         if (data.success && data.content) {
           const contentType = data.type;
 
-          const mappedContent: VideoData = {
+          const mappedContent = {
             ...data.content,
             id: data.content._id,
             uploader: data.content.uploader || {},
@@ -682,7 +576,7 @@ const WatchPageContent = () => {
   }, [videoSlug]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event) => {
       if (
         video?.contentType === "image" &&
         video.imageUrls &&
@@ -691,12 +585,12 @@ const WatchPageContent = () => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
           setCurrentImageIndex((prev) =>
-            prev === 0 ? video.imageUrls!.length - 1 : prev - 1
+            prev === 0 ? video.imageUrls.length - 1 : prev - 1
           );
         } else if (event.key === "ArrowRight") {
           event.preventDefault();
           setCurrentImageIndex((prev) =>
-            prev === video.imageUrls!.length - 1 ? 0 : prev + 1
+            prev === video.imageUrls.length - 1 ? 0 : prev + 1
           );
         }
       }
@@ -706,7 +600,7 @@ const WatchPageContent = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [video?.contentType, video?.imageUrls]);
 
-  const fetchUploaderProfile = async (username: string) => {
+  const fetchUploaderProfile = async (username) => {
     try {
       const response = await fetch(`${config.url}/api/profile`, {
         method: "POST",
@@ -886,9 +780,9 @@ const WatchPageContent = () => {
   };
 
   const fetchComments = async (
-    page: number = 1,
-    sort: string = "recent",
-    reset: boolean = false
+    page = 1,
+    sort = "recent",
+    reset = false
   ) => {
     if (!video?._id) return;
 
@@ -909,7 +803,7 @@ const WatchPageContent = () => {
       }
 
       const response = await fetch(url.toString());
-      const data: CommentsResponse = await response.json();
+      const data = await response.json();
 
       if (data.success) {
         if (reset || page === 1) {
@@ -971,7 +865,7 @@ const WatchPageContent = () => {
     }
   };
 
-  const handlePostReply = async (commentId: string) => {
+  const handlePostReply = async (commentId) => {
     const content = replyText[commentId];
     if (!content?.trim() || isPostingReply[commentId]) return;
 
@@ -1031,9 +925,9 @@ const WatchPageContent = () => {
 
   // Handle comment/reply actions (like, dislike, delete) with optimistic updates
   const handleCommentAction = async (
-    action: "like" | "dislike" | "delete",
-    commentId: string,
-    replyId?: string
+    action,
+    commentId,
+    replyId
   ) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -1049,8 +943,8 @@ const WatchPageContent = () => {
       setCommentActionCooldown((prev) => ({ ...prev, [cooldownKey]: false }));
     }, 300);
 
-    let originalComment: CommentData | undefined;
-    let originalReply: ReplyData | undefined;
+    let originalComment;
+    let originalReply;
 
     if (replyId) {
       const comment = comments.find((c) => c._id === commentId);
@@ -1270,7 +1164,7 @@ const WatchPageContent = () => {
     }
   };
 
-  const toggleReplies = (commentId: string) => {
+  const toggleReplies = (commentId) => {
     setExpandedReplies((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(commentId)) {
@@ -1288,13 +1182,13 @@ const WatchPageContent = () => {
     }
   };
 
-  const handleSortChange = (newSort: "recent" | "popular" | "oldest") => {
+  const handleSortChange = (newSort) => {
     setCommentSort(newSort);
     setCommentsPage(1);
     fetchComments(1, newSort, true);
   };
 
-  const handleCommentUserClick = (username: string) => {
+  const handleCommentUserClick = (username) => {
     router.push(`/profile?user=${username}`);
   };
 
@@ -1314,7 +1208,7 @@ const WatchPageContent = () => {
   }, [comments]);
 
   // Ad settings will be passed from NavBar via callback
-  const handleAdSettingsLoad = useCallback((settings: any) => {
+  const handleAdSettingsLoad = useCallback((settings) => {
     setAdSettings(settings);
   }, []);
 
@@ -1327,10 +1221,7 @@ const WatchPageContent = () => {
     });
   }, []);
 
-  const { avatarUrl: userAvatarUrl } = useUserAvatar(user) as {
-    avatarUrl: string;
-    isLoading: boolean;
-  };
+  const { avatarUrl: userAvatarUrl } = useUserAvatar(user);
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [modalActive, setModalActive] = useState(false);
@@ -1570,7 +1461,7 @@ const WatchPageContent = () => {
           {relatedVideos.map((relatedVideo) => (
             <VideoGrid 
               key={relatedVideo._id} 
-              video={relatedVideo as any}
+              video={relatedVideo}
               popunderSettings={adSettings?.popunderAd}
             />
           ))}
@@ -1621,7 +1512,7 @@ const WatchPageContent = () => {
           {recommendedVideos.map((recommendedVideo) => (
             <VideoGrid
               key={recommendedVideo._id}
-              video={recommendedVideo as any}
+              video={recommendedVideo}
               popunderSettings={adSettings?.popunderAd}
             />
           ))}
@@ -1786,7 +1677,7 @@ const WatchPageContent = () => {
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
         {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
           <BannerAds 
-            ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+            ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
             className="mb-6" 
           />
         )}
@@ -2267,7 +2158,7 @@ const WatchPageContent = () => {
 
         {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
           <BannerAds 
-            ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+            ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
             className="mb-3 mt-6" 
           />
         )}
@@ -2334,7 +2225,7 @@ const WatchPageContent = () => {
           )}
           {video?.contentType != "image" && adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
             <BannerAds 
-              ads={adSettings.bannerAds.ads.map((ad: BannerAdData) => ({ href: ad.link, imgSrc: ad.gif }))}
+              ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
               className="mb-3 mt-6" 
             />
           )}
@@ -2350,7 +2241,7 @@ const WatchPageContent = () => {
                   value={commentSort}
                   onChange={(e) =>
                     handleSortChange(
-                      e.target.value as "recent" | "popular" | "oldest"
+                      e.target.value
                     )
                   }
                   className="bg-[#1a1a1a] text-[#d0d0d0] border border-[#3a3a3a] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#ea4197] transition-all duration-200 hover:border-[#4a4a4a]"
@@ -2391,7 +2282,7 @@ const WatchPageContent = () => {
                         if (user && newComment.trim() && !isPostingComment) {
                           handlePostComment();
                           setTimeout(() => {
-                            const textarea = e.target as HTMLTextAreaElement;
+                            const textarea = e.target;
                             if (textarea) {
                               textarea.style.height = "40px";
                             }
@@ -2406,7 +2297,7 @@ const WatchPageContent = () => {
                     className="w-full bg-transparent border-b-2 border-[#3a3a3a] text-[#e0e0e0] py-3 px-1 focus:outline-none focus:border-[#ea4197] resize-none transition-all duration-200 placeholder-[#888] disabled:opacity-50 min-h-[48px] hover:border-[#4a4a4a]"
                     rows={1}
                     onInput={(e) => {
-                      const target = e.target as HTMLTextAreaElement;
+                      const target = e.target;
                       target.style.height = "auto";
                       target.style.height =
                         Math.max(40, target.scrollHeight) + "px";
@@ -2419,7 +2310,7 @@ const WatchPageContent = () => {
                           setNewComment("");
                           const textarea = document.querySelector(
                             "textarea"
-                          ) as HTMLTextAreaElement;
+                          );
                           if (textarea) {
                             textarea.style.height = "50px";
                           }
@@ -2434,7 +2325,7 @@ const WatchPageContent = () => {
                           setTimeout(() => {
                             const textarea = document.querySelector(
                               "textarea"
-                            ) as HTMLTextAreaElement;
+                            );
                             if (textarea) {
                               textarea.style.height = "40px";
                             }
@@ -2502,14 +2393,23 @@ const WatchPageContent = () => {
                         <div className="flex-grow min-w-0">
                           {/* Comment Header */}
                           <div className="flex items-center gap-1.5">
-                            <span
-                              className="text-[#f5f5f5] font-semibold text-sm font-roboto truncate cursor-pointer hover:text-[#ea4197] transition-colors"
-                              onClick={() =>
-                                handleCommentUserClick(comment.username)
-                              }
-                            >
-                              {comment.username}
-                            </span>
+                            <div className="flex items-center gap-1">{/* username + crown slightly closer */}
+                              <span
+                                className="text-[#f5f5f5] font-semibold text-sm font-roboto truncate cursor-pointer hover:text-[#ea4197] transition-colors"
+                                onClick={() =>
+                                  handleCommentUserClick(comment.username)
+                                }
+                              >
+                                {comment.username}
+                              </span>
+                              {comment.isAdmin && (
+                                <span title="Admin" className="flex-shrink-0">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" style={{ color: '#fbbf24' }}>
+                                    <path d="M2.00488 19H22.0049V21H2.00488V19ZM2.00488 5L7.00488 8L12.0049 2L17.0049 8L22.0049 5V17H2.00488V5Z"></path>
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[#999] text-xs flex-shrink-0">
                               {getRelativeTimeFromDate(comment.createdAt)}
                             </span>
@@ -2712,16 +2612,26 @@ const WatchPageContent = () => {
 
                                     <div className="flex-grow min-w-0">
                                       <div className="flex items-center gap-1.5 mb-1">
-                                        <span
-                                          className="text-[#f5f5f5] whitespace-nowrap font-semibold text-sm truncate cursor-pointer hover:text-[#ea4197] transition-colors"
-                                          onClick={() =>
-                                            handleCommentUserClick(
-                                              reply.username
-                                            )
-                                          }
-                                        >
-                                          {reply.username}
-                                        </span>
+                                        
+                                        <div className="flex items-center gap-1">{/* reply username + crown */}
+                                          <span
+                                            className="text-[#f5f5f5] whitespace-nowrap font-semibold text-sm truncate cursor-pointer hover:text-[#ea4197] transition-colors"
+                                            onClick={() =>
+                                              handleCommentUserClick(
+                                                reply.username
+                                              )
+                                            }
+                                          >
+                                            {reply.username}
+                                          </span>
+                                          {reply.isAdmin && (
+                                            <span title="Admin" className="flex-shrink-0">
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" style={{ color: '#fbbf24' }}>
+                                                <path d="M2.00488 19H22.0049V21H2.00488V19ZM2.00488 5L7.00488 8L12.0049 2L17.0049 8L22.0049 5V17H2.00488V5Z"></path>
+                                              </svg>
+                                            </span>
+                                          )}
+                                        </div>
                                         <span className="text-[#999] whitespace-nowrap text-xs flex-shrink-0">
                                           {getRelativeTimeFromDate(
                                             reply.createdAt
@@ -2849,7 +2759,7 @@ const WatchPageContent = () => {
   );
 };
 
-const WatchPage = () => {
+const WatchClient = () => {
   return (
     <Suspense fallback={<WatchPageLoading />}>
       <WatchPageContent />
@@ -2857,4 +2767,4 @@ const WatchPage = () => {
   );
 };
 
-export default WatchPage;
+export default WatchClient;

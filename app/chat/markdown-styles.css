@@ -1,0 +1,141 @@
+/* Discord-like Markdown Styles */
+.message-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.message-content a {
+  word-break: break-all;
+}
+
+.message-content pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.message-content code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+}
+
+.message-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.message-content p:not(:last-child) {
+  margin-bottom: 0.25rem;
+}
+
+.message-content ul,
+.message-content ol {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+
+.message-content li {
+  margin: 0.125rem 0;
+}
+
+.message-content blockquote {
+  margin: 0.25rem 0;
+  padding-left: 0.75rem;
+  border-left-width: 4px;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+  margin: 0.25rem 0;
+}
+
+/* Link Preview Styles */
+.link-preview {
+  max-width: 520px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.link-preview:hover {
+  opacity: 0.85;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.link-preview img {
+  object-fit: cover;
+  max-height: 400px;
+}
+
+/* Spoiler tags support */
+.spoiler {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.spoiler.revealed,
+.spoiler:hover {
+  background-color: transparent;
+}
+
+/* Strike-through */
+.message-content del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Underline */
+.message-content u {
+  text-decoration: underline;
+}
+
+/* Twemoji styles */
+img.twemoji {
+  height: 1.2em;
+  width: 1.2em;
+  margin: 0 0.05em 0 0.1em;
+  vertical-align: -0.2em;
+  display: inline-block;
+  user-select: text; /* allow selection to include emojis */
+  -webkit-user-drag: none;
+  pointer-events: auto; /* allow hover to show text cursor and selection start over emoji */
+  cursor: text;
+}
+
+/* Prevent emoji flicker during load - instant transition */
+.twemoji-text img.twemoji {
+  opacity: 1;
+  transition: none;
+}
+
+/* Smooth copy behavior - preserve native emoji structure */
+[data-twemoji-content] {
+  user-select: text;
+}
+
+/* Ensure twemoji loads instantly with no layout shift */
+img.twemoji[src] {
+  content-visibility: auto;
+  will-change: auto;
+}
+
+.message-content .mention-chip {
+  background-color: rgba(88, 101, 242, 0.2);
+  color: #7781f1;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+  box-shadow: inset 0 0 0 1px rgba(88, 101, 242, 0.3);
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.message-content .mention-chip:hover {
+  background-color: rgba(88, 101, 242, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(88, 101, 242, 0.5);
+}

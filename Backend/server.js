@@ -34,6 +34,7 @@ import contentRoute from "./routes/content.js";
 import interactionsRoute from "./routes/interactions.js";
 import updateBioRoute from "./routes/updateBio.js";
 import updateAvatarRoute from "./routes/updateAvatar.js";
+import updateAvatarColorRoute from "./routes/updateAvatarColor.js";
 import updateUsernameRoute from "./routes/updateUsername.js";
 import discoverRoute from "./routes/discover.js";
 import discoverImagesRoute from "./routes/discoverImages.js";
@@ -48,8 +49,15 @@ import analyticsRoute from "./routes/analytics.js";
 import analyticsManager from "./services/analyticsManager.js";
 import adminSettingsRoute from "./routes/adminSettings.js";
 import settingsManager from "./services/settingsManager.js";
-import userManagementRoute from "./routes/userManagement.js";
+import userManagementRoute, { setBanIO } from "./routes/userManagement.js";
 import adminDataRoute from "./routes/adminData.js";
+import conversationsRoute, { setIO as setConversationsIO } from "./routes/chat/conversations.js";
+import messagesRoute from "./routes/chat/messages.js";
+import userProfileRoute, { setUserProfileIO } from "./routes/chat/userProfile.js";
+import statusRoute, { setStatusIO } from "./routes/chat/status.js";
+import muteRoute, { setMuteIO } from "./routes/chat/mute.js";
+import notificationPreferenceRoute from "./routes/chat/notificationPreference.js";
+import { initializeChatSocket } from "./services/socketHandler.js";
 
 const app = new Hono();
 
@@ -88,6 +96,7 @@ app.route('/api/content', contentRoute);
 app.route('/api/interactions', interactionsRoute);
 app.route('/api/updateBio', updateBioRoute);
 app.route('/api/updateAvatar', updateAvatarRoute);
+app.route('/api/updateAvatarColor', updateAvatarColorRoute);
 app.route('/api/updateUsername', updateUsernameRoute);
 app.route('/api/discover', discoverRoute);
 app.route('/api/discoverImages', discoverImagesRoute);
@@ -101,6 +110,12 @@ app.route('/api/analytics', analyticsRoute);
 app.route('/api/admin/settings', adminSettingsRoute);
 app.route('/api/admin/users', userManagementRoute);
 app.route('/api/admin/data', adminDataRoute);
+app.route('/api/chat/conversations', conversationsRoute);
+app.route('/api/chat/messages', messagesRoute);
+app.route('/api/chat/profile', userProfileRoute);
+app.route('/api/chat/status', statusRoute);
+app.route('/api/chat/mute', muteRoute);
+app.route('/api/chat/notification-preference', notificationPreferenceRoute);
 
 app.get('/api/queue', async (c) => {
     try {
@@ -128,6 +143,16 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+
+// Initialize chat socket handlers
+initializeChatSocket(io);
+
+// Pass io to routes for broadcasting
+setConversationsIO(io);
+setStatusIO(io);
+setUserProfileIO(io);
+setMuteIO(io);
+setBanIO(io);
 
 const memoryQueue = [];
 let isProcessing = false;

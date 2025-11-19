@@ -195,8 +195,13 @@ const AdminPage = () => {
   };
 
   const handleViewContent = (report) => {
-    const identifier = report.contentSnapshot?.slug || report.contentId;
-    window.open(`/watch?v=${identifier}`, '_blank');
+    if (report.contentType === 'message') {
+
+    } else {
+      // For video/image reports
+      const identifier = report.contentSnapshot?.slug || report.contentId;
+      window.open(`/watch?v=${identifier}`, '_blank');
+    }
   };
 
   const clearFilters = () => {
@@ -207,31 +212,28 @@ const AdminPage = () => {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="h-8 bg-[#1a1a1a] rounded-md w-80 animate-pulse"></div>
-              <div className="h-4 bg-[#1a1a1a] rounded-md w-64 animate-pulse"></div>
+      <div className="min-h-screen">
+        <div className="max-w-[77rem] mx-auto px-6 py-16">
+          <div className="space-y-12">
+            <div className="space-y-3">
+              <div className="h-9 bg-white/5 rounded w-72 animate-pulse"></div>
+              <div className="h-5 bg-white/5 rounded w-96 animate-pulse"></div>
             </div>
 
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-[#121212] rounded-lg p-6 border border-[#2a2a2a]/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-6 bg-[#1a1a1a] rounded-md animate-pulse"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-[#1a1a1a] rounded-md w-48 animate-pulse"></div>
-                      <div className="h-3 bg-[#1a1a1a] rounded-md w-32 animate-pulse"></div>
+            <div className="space-y-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="border border-white/10 rounded-lg p-6 bg-white/[0.02]">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-24 bg-white/5 rounded animate-pulse"></div>
+                      <div className="h-6 w-20 bg-white/5 rounded animate-pulse"></div>
                     </div>
-                  </div>
-                  <div className="flex space-x-3">
-                    <div className="h-8 bg-[#1a1a1a] rounded-md w-20 animate-pulse"></div>
-                    <div className="h-8 bg-[#1a1a1a] rounded-md w-16 animate-pulse"></div>
+                    <div className="h-5 bg-white/5 rounded w-3/4 animate-pulse"></div>
+                    <div className="h-4 bg-white/5 rounded w-1/2 animate-pulse"></div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -239,71 +241,70 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#080808] via-[#0a0a0a] to-[#0c0c0c] min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen">
+      <div className="max-w-[77rem] mx-auto px-6 py-16">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-              <h1 className="text-3xl font-semibold text-white mb-1">Report Management</h1>
-              <p className="text-white/60">Review and manage user reports</p>
-            </div>
+        <div className="mb-12">
+          <h1 className="text-4xl font-medium text-white mb-3 tracking-tight">Reports</h1>
+          <p className="text-[15px] text-white/50 leading-relaxed">
+            Review and manage user-submitted reports across the platform
+          </p>
+        </div>
 
-            <div className="flex gap-4">
-              <div className="bg-[#121212] border border-[#2a2a2a]/50 rounded-lg px-4 py-3">
-                <div className="text-white/60 text-xs">Total Reports</div>
-                <div className="text-white font-semibold text-lg">{reports.length}</div>
-              </div>
-              <div className="bg-[#121212] border border-[#2a2a2a]/50 rounded-lg px-4 py-3">
-                <div className="text-white/60 text-xs">Filtered</div>
-                <div className="text-[#ea4197] font-semibold text-lg">{filteredReports.length}</div>
-              </div>
-            </div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-10">
+          <div className="border border-white/10 rounded-lg px-5 py-4 bg-white/[0.02]">
+            <div className="text-[13px] text-white/40 mb-1">Total Reports</div>
+            <div className="text-2xl font-medium text-white">{reports.length}</div>
+          </div>
+          <div className="border border-white/10 rounded-lg px-5 py-4 bg-white/[0.02]">
+            <div className="text-[13px] text-white/40 mb-1">Active Filters</div>
+            <div className="text-2xl font-medium text-white">{filteredReports.length}</div>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
+        <div className="mb-10 space-y-4">
           <div className="relative">
-            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40" />
+            <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/30 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search reports..."
+              placeholder="Search by content, user, or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#121212] border border-[#2a2a2a]/50 text-white rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-[#ea4197]/50 transition-colors placeholder-white/40"
+              className="w-full bg-white/[0.03] border border-white/10 text-white rounded-lg pl-11 pr-4 py-3 text-[15px] focus:outline-none focus:border-white/30 transition-colors placeholder-white/30"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] text-white/70 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/[0.03] text-white/70 text-[14px] rounded-lg border border-white/10 hover:bg-white/[0.05] hover:border-white/20 transition-all"
             >
-              <FaFilter />
+              <FaFilter className="w-3 h-3" />
               Filters
-              {showFilters ? <FaChevronUp /> : <FaChevronDown />}
+              {showFilters ? <FaChevronUp className="w-3 h-3" /> : <FaChevronDown className="w-3 h-3" />}
             </button>
 
             {(filterCategory !== 'all' || filterContentType !== 'all' || searchTerm) && (
               <button
                 onClick={clearFilters}
-                className="px-4 py-2 bg-[#ea4197] text-white rounded-lg hover:bg-[#d63384] transition-colors"
+                className="px-4 py-2 text-[14px] text-white/70 hover:text-white transition-colors"
               >
-                Clear Filters
+                Clear all
               </button>
             )}
           </div>
 
           {showFilters && (
-            <div className="bg-[#121212] border border-[#2a2a2a]/50 rounded-lg p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="border border-white/10 rounded-lg p-6 bg-white/[0.02]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-white font-medium mb-2 text-sm">Category</label>
+                  <label className="block text-[13px] text-white/60 mb-2 font-medium">Category</label>
                   <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a]/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-[#ea4197]/50"
+                    className="w-full bg-white/[0.03] border border-white/10 text-white text-[14px] rounded-lg px-3 py-2.5 focus:outline-none focus:border-white/30 transition-colors"
                   >
                     <option value="all">All Categories</option>
                     {reportCategories.map(category => (
@@ -313,15 +314,16 @@ const AdminPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-white font-medium mb-2 text-sm">Content Type</label>
+                  <label className="block text-[13px] text-white/60 mb-2 font-medium">Content Type</label>
                   <select
                     value={filterContentType}
                     onChange={(e) => setFilterContentType(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a]/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-[#ea4197]/50"
+                    className="w-full bg-white/[0.03] border border-white/10 text-white text-[14px] rounded-lg px-3 py-2.5 focus:outline-none focus:border-white/30 transition-colors"
                   >
                     <option value="all">All Types</option>
                     <option value="video">Videos</option>
                     <option value="image">Images</option>
+                    <option value="message">Messages</option>
                   </select>
                 </div>
               </div>
@@ -331,122 +333,157 @@ const AdminPage = () => {
 
         {/* Reports List */}
         {filteredReports.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="bg-[#121212] border border-[#2a2a2a]/50 rounded-lg p-8 max-w-md mx-auto">
-              <i className="ri-flag-line text-4xl text-[#ea4197] mb-4"></i>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                {reports.length === 0 ? 'No Reports Found' : 'No Matching Reports'}
-              </h3>
-              <p className="text-white/60 text-sm">
-                {reports.length === 0 
-                  ? "No reports to review at the moment."
-                  : "Try adjusting your filters to find what you're looking for."
-                }
-              </p>
+          <div className="text-center py-20">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 mb-6">
+              <i className="ri-flag-line text-2xl text-white/40"></i>
             </div>
+            <h3 className="text-lg font-medium text-white mb-2">
+              {reports.length === 0 ? 'No reports yet' : 'No matching reports'}
+            </h3>
+            <p className="text-[15px] text-white/50 max-w-md mx-auto">
+              {reports.length === 0 
+                ? "No reports have been submitted. They'll appear here once users start reporting content."
+                : "Try adjusting your filters or search query to find what you're looking for."
+              }
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {filteredReports.map((report) => {
               const categoryData = getCategoryData(report.category);
+              const isMessageReport = report.contentType === 'message';
               
               return (
                 <div
                   key={report._id}
-                  className="bg-[#121212] border border-[#2a2a2a]/50 rounded-lg p-6 transition-colors"
+                  className="border border-white/10 rounded-lg p-6 bg-white/[0.02] transition-all group"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                    <div className="flex flex-col gap-3 flex-1">
-                      <div className="flex items-start gap-4">
-                        <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium border ${categoryData.color}`}>
-                          <i className={`${categoryData.icon}`}></i>
-                          <span>{categoryData.label}</span>
-                        </div>
-                        
-                        {/* <div className="flex items-center gap-2 text-white/60 text-xs">
-                          {report.contentType === 'video' ? (
-                            <FaVideo className="text-blue-400" />
-                          ) : (
-                            <FaImage className="text-green-400" />
-                          )}
-                          <span className="capitalize">{report.contentType}</span>
-                        </div> */}
-                      </div>
-
-                      {/* Content Info */}
-                      <div>
-                        <h3 className="text-white text-lg font-semibold mb-2">
-                          {report.contentSnapshot?.title || 'Content Title Not Available'}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-4 text-white/60 text-xs">
-                          <div className="flex items-center gap-1">
-                            <FaUser />
-                            <span>by <span className="text-white/80 hover:text-white/100 transition-colors cursor-pointer" onClick={() => router.push(`/profile?user=${report.contentSnapshot?.uploaderUsername}`)}>{report.contentSnapshot?.uploaderUsername || 'Unknown'}</span></span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <FaClock />
-                            <span>Reported {getRelativeTime(report.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Header Row */}
+                  <div className="flex items-start justify-between gap-4 mb-5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-medium border ${categoryData.color}`}>
+                        <i className={`${categoryData.icon} text-[13px]`}></i>
+                        {categoryData.label}
+                      </span>
+                      
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] border border-white/10 text-white/60">
+                        {report.contentType === 'video' ? (
+                          <>
+                            <FaVideo className="w-3 h-3 text-blue-400" />
+                            Video
+                          </>
+                        ) : report.contentType === 'image' ? (
+                          <>
+                            <FaImage className="w-3 h-3 text-green-400" />
+                            Image
+                          </>
+                        ) : (
+                          <>
+                            <i className="ri-chat-3-line text-[13px] text-purple-400"></i>
+                            Message
+                          </>
+                        )}
+                      </span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleViewContent(report)}
-                        className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-[#ea4197] hover:bg-[#d63384] text-white rounded-lg transition-colors text-sm"
+                        className={`inline-flex items-center gap-2 px-3.5 py-2 bg-[#1b1b1b] text-[#cecece] text-[13px] font-medium rounded-lg hover:bg-white/10 cursor-pointer transition-all ${isMessageReport ? 'hidden' : ''}`}
                       >
-                        <FaEye />
-                        <span className="hidden sm:inline">View</span>
+                        <FaEye className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">{isMessageReport ? 'View Chat' : 'View'}</span>
                       </button>
                       
                       <button
                         onClick={() => handleDeleteReport(report._id)}
                         disabled={actionLoading[report._id]}
-                        className="flex items-center gap-2 cursor-pointer px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors text-sm disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-2 px-3.5 py-2 bg-red-500/10 text-red-400 text-[13px] font-medium rounded-lg cursor-pointer border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       >
                         {actionLoading[report._id] ? (
-                          <i className="ri-loader-4-line animate-spin"></i>
+                          <i className="ri-loader-4-line animate-spin text-[14px]"></i>
                         ) : (
-                          <FaTrash />
+                          <FaTrash className="w-3.5 h-3.5" />
                         )}
-                        <span className="hidden sm:inline">Delete Report</span>
+                        <span className="hidden sm:inline">Delete</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Report Details */}
-                  <div className="mt-6 pt-4 border-t border-[#2a2a2a]/50">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Reporter Info */}
-                      <div className="bg-[#1a1a1a] rounded-lg p-4">
-                        <h4 className="text-white font-medium mb-3 text-sm flex items-center gap-2">
-                          <i className="ri-user-line text-[#ea4197]"></i>
-                          Reported By
-                        </h4>
+                  {/* Content */}
+                  {isMessageReport ? (
+                    <div className="mb-5">
+                      <div className="border-l-2 border-purple-500/50 pl-4 py-1 mb-4 bg-purple-500/5 rounded-r">
+                        <p className="text-[14px] text-white/80 leading-relaxed font-mono">
+                          "{report.contentSnapshot?.messageContent || 'Message content not available'}"
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4 text-[13px] text-white/40">
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaUser className="w-3 h-3" />
+                          <span className="text-white/60 hover:text-white cursor-pointer transition-colors" onClick={() => router.push(`/profile?user=${report.contentSnapshot?.senderUsername}`)}>
+                            {report.contentSnapshot?.senderUsername || 'Unknown'}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <i className="ri-chat-3-line"></i>
+                          {report.contentSnapshot?.conversationName || 'Unknown Conversation'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaClock className="w-3 h-3" />
+                          {getRelativeTime(report.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-5">
+                      <h3 className="text-[15px] font-medium text-white mb-3 leading-snug">
+                        {report.contentSnapshot?.title || 'Content Title Not Available'}
+                      </h3>
+                      <div className="flex items-center gap-4 text-[13px] text-white/40">
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaUser className="w-3 h-3" />
+                          <span className="text-white/60 hover:text-white cursor-pointer transition-colors" onClick={() => router.push(`/profile?user=${report.contentSnapshot?.uploaderUsername}`)}>
+                            {report.contentSnapshot?.uploaderUsername || 'Unknown'}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaClock className="w-3 h-3" />
+                          {getRelativeTime(report.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="pt-5 border-t border-white/5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {/* Reporter */}
+                      <div>
+                        <div className="text-[13px] text-white/40 mb-3 font-medium">Reported By</div>
                         <div className="flex items-center gap-3">
                           <ReporterAvatar reporter={report.reporter} />
                           <div>
-                            <div className="text-white text-sm font-medium hover:text-white/80 transition-colors cursor-pointer" onClick={() => router.push(`/profile?user=${report.reporter?.username}`)}>
+                            <div className="text-[14px] text-white font-medium hover:text-white/80 cursor-pointer transition-colors" onClick={() => router.push(`/profile?user=${report.reporter?.username}`)}>
                               {report.reporter?.username || 'Unknown User'}
                             </div>
-                            <div className="text-white/60 text-xs">
+                            <div className="text-[13px] text-white/40">
                               {report.reporter?.email || 'Email not available'}
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Additional Details */}
-                      <div className="bg-[#1a1a1a] rounded-lg p-4">
-                        <h4 className="text-white font-medium mb-3 text-sm">Additional Details</h4>
+                      {/* Details */}
+                      <div>
+                        <div className="text-[13px] text-white/40 mb-3 font-medium">Additional Details</div>
                         {report.details ? (
-                          <p className="text-white/80 text-xs leading-relaxed">
+                          <p className="text-[14px] text-white/60 leading-relaxed">
                             {report.details}
                           </p>
                         ) : (
-                          <p className="text-white/40 text-xs italic">
+                          <p className="text-[14px] text-white/30 italic">
                             No additional details provided
                           </p>
                         )}

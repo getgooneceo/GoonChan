@@ -61,6 +61,17 @@ router.post('/', limiter, async (c) => {
       }, 400)
     }
 
+    // Check if username was taken (case-insensitive) since signup
+    const existingUsername = await User.findOne({ 
+      username: { $regex: new RegExp(`^${pendingUser.username}$`, 'i') } 
+    })
+    if (existingUsername) {
+      return c.json({
+        success: false,
+        message: 'Username is no longer available. Please sign up again with a different username.'
+      }, 409)
+    }
+
     const token = jwt.sign(
       { email },
       process.env.JWT_SECRET || 'fallback_secret',

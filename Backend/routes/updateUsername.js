@@ -56,9 +56,9 @@ router.post('/', limiter, async (c) => {
       }, 404)
     }
 
-    // Check if username is already taken
+    // Check if username is already taken (case-insensitive)
     const existingUser = await User.findOne({ 
-      username: username,
+      username: { $regex: new RegExp(`^${username}$`, 'i') },
       _id: { $ne: user._id }
     })
     

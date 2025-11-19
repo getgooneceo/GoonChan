@@ -139,7 +139,7 @@ const PrivacyPolicy = () => {
               ],
               extra: (
                 <div className="bg-[#101010] rounded-lg p-5 border border-[#1f1f1f] mt-3 space-y-1">
-                  <p><strong>Email:</strong> <a href="mailto:support@goonchan.org" className="text-[#ea4197] hover:underline">support@goonchan.org</a></p>
+                  <p><strong>Email:</strong> <a href="mailto:goonchan.support@proton.me" className="text-[#ea4197] hover:underline">goonchan.support@proton.me</a></p>
                 </div>
               )
             }

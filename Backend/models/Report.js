@@ -12,7 +12,7 @@ const ReportSchema = new mongoose.Schema({
   },
   contentType: { 
     type: String, 
-    enum: ['video', 'image'], 
+    enum: ['video', 'image', 'message'], 
     required: true 
   },
   category: {
@@ -28,7 +28,12 @@ const ReportSchema = new mongoose.Schema({
     title: String,
     slug: String,
     uploaderUsername: String,
-    uploadedAt: Date
+    uploadedAt: Date,
+    // For message reports
+    messageContent: String,
+    senderUsername: String,
+    conversationId: String,
+    conversationName: String
   }
 }, { timestamps: true });
 

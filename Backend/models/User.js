@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema({
   token: { type: String, default: null },
   isAdmin: { type: Boolean, default: false },
   isBanned: { type: Boolean, default: false },
+  mutedUntil: { type: Date, default: null },
   isDummy: { type: Boolean, default: false },
   subscriberCount: { type: Number, default: 0 },
   subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

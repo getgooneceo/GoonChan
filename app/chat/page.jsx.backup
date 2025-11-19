@@ -1,0 +1,2492 @@
+"use client";
+import React, { useState, useRef, useEffect } from 'react';
+import { FiSearch, FiX, FiMoreHorizontal, FiSettings } from 'react-icons/fi';
+import { HiStatusOnline, HiStatusOffline } from 'react-icons/hi';
+import { HiUserGroup } from 'react-icons/hi';
+import { BsEmojiSmile } from 'react-icons/bs';
+import { IoSettingsOutline } from 'react-icons/io5';
+import { RiArrowGoBackLine } from 'react-icons/ri';
+import { HexColorPicker } from 'react-colorful';
+import Link from 'next/link';
+import { useChat } from '../../hooks/useChat';
+
+// Theme configurations
+const THEMES = {
+  dark: {
+    name: 'Super Dark',
+    bg: {
+      primary: '#080808',
+      secondary: '#0a0a0a',
+      tertiary: '#0f0f0f',
+      hover: '#1a1a1a',
+      input: '#0f0f0f',
+    },
+    border: {
+      primary: '#1a1a1a',
+      secondary: '#2a2a2a',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#b5b5b5',
+      tertiary: '#666666',
+      muted: '#555555',
+    },
+    accent: '#ea4197',
+  },
+  gray: {
+    name: 'Dark Gray',
+    bg: {
+      primary: '#1a1a1d',
+      secondary: '#16161a',
+      tertiary: '#1f1f23',
+      hover: '#252529',
+      input: '#16161a',
+    },
+    border: {
+      primary: '#252529',
+      secondary: '#2e2e35',
+    },
+    text: {
+      primary: '#e4e4e7',
+      secondary: '#b4b4bb',
+      tertiary: '#72727a',
+      muted: '#5a5a62',
+    },
+    accent: '#d946a6',
+  },
+  light: {
+    name: 'Light',
+    bg: {
+      primary: '#ffffff',
+      secondary: '#f9fafb',
+      tertiary: '#f3f4f6',
+      hover: '#e5e7eb',
+      input: '#ffffff',
+    },
+    border: {
+      primary: '#e5e7eb',
+      secondary: '#d1d5db',
+    },
+    text: {
+      primary: '#111827',
+      secondary: '#4b5563',
+      tertiary: '#6b7280',
+      muted: '#9ca3af',
+    },
+    accent: '#ea4197',
+  },
+};
+
+const ChatPage = () => {
+  { 
+    id: 1, 
+    name: "Alex Rivera", 
+    username: "alex_r", 
+    avatar: "https://i.pravatar.cc/150?img=1", 
+    status: "online", 
+    lastSeen: null, 
+    activity: "Watching videos",
+    bannerColor: "#5865f2",
+    badge: "Premium",
+    bio: "Software engineer | Coffee enthusiast | Always learning something new",
+    gender: "Male",
+    pronouns: "he/him",
+    videosUploaded: 24,
+    imagesUploaded: 156
+  },
+  { 
+    id: 2, 
+    name: "Sarah Chen", 
+    username: "sarah_c", 
+    avatar: "https://i.pravatar.cc/150?img=2", 
+    status: "online", 
+    lastSeen: null, 
+    activity: "Browsing",
+    bannerColor: "#eb459e",
+    badge: "Designer",
+    bio: "UI/UX Designer | Creative mind | Love to create beautiful things",
+    gender: "Female",
+    pronouns: "she/her",
+    videosUploaded: 8,
+    imagesUploaded: 342
+  },
+  { 
+    id: 3, 
+    name: "Marcus Lee", 
+    username: "marcus", 
+    avatar: "https://i.pravatar.cc/150?img=3", 
+    status: "offline", 
+    lastSeen: "2h ago", 
+    activity: null,
+    bannerColor: "#57f287",
+    badge: "Streamer",
+    bio: "Content creator | Gamer | Streaming daily",
+    gender: "Male",
+    pronouns: "he/him",
+    videosUploaded: 142,
+    imagesUploaded: 89
+  },
+  { 
+    id: 4, 
+    name: "Emma Wilson", 
+    username: "emma_w", 
+    avatar: "https://i.pravatar.cc/150?img=4", 
+    status: "online", 
+    lastSeen: null, 
+    activity: "Active now",
+    bannerColor: "#fee75c",
+    badge: "Artist",
+    bio: "Digital artist | Illustrator | Commission open",
+    gender: "Female",
+    pronouns: "she/her",
+    videosUploaded: 3,
+    imagesUploaded: 487
+  },
+  { 
+    id: 5, 
+    name: "Jake Thompson", 
+    username: "jakethompson", 
+    avatar: "https://i.pravatar.cc/150?img=5", 
+    status: "offline", 
+    lastSeen: "1d ago", 
+    activity: null,
+    bannerColor: "#ed4245",
+    badge: "Developer",
+    bio: "Full-stack developer | Open source contributor",
+    gender: "Male",
+    pronouns: "he/him",
+    videosUploaded: 18,
+    imagesUploaded: 67
+  },
+  { 
+    id: 6, 
+    name: "Sophia Martinez", 
+    username: "sophia_m", 
+    avatar: "https://i.pravatar.cc/150?img=6", 
+    status: "online", 
+    lastSeen: null, 
+    activity: "Uploading content",
+    bannerColor: "#f26522",
+    badge: "Photographer",
+    bio: "Photographer | Travel lover | Capturing moments",
+    gender: "Female",
+    pronouns: "she/her",
+    videosUploaded: 45,
+    imagesUploaded: 823
+  },
+  { 
+    id: 7, 
+    name: "Chris Anderson", 
+    username: "chris_a", 
+    avatar: "https://i.pravatar.cc/150?img=7", 
+    status: "offline", 
+    lastSeen: "3h ago", 
+    activity: null,
+    bannerColor: "#9b59b6",
+    badge: "Musician",
+    bio: "Music producer | DJ | Creating beats",
+    gender: "Male",
+    pronouns: "he/him",
+    videosUploaded: 76,
+    imagesUploaded: 234
+  },
+  { 
+    id: 8, 
+    name: "Olivia Brown", 
+    username: "olivia_b", 
+    avatar: "https://i.pravatar.cc/150?img=8", 
+    status: "online", 
+    lastSeen: null, 
+    activity: "Active now",
+    bannerColor: "#3498db",
+    badge: "Writer",
+    bio: "Writer | Blogger | Storyteller at heart",
+    gender: "Female",
+    pronouns: "she/her",
+    videosUploaded: 12,
+    imagesUploaded: 398
+  },
+];
+
+const SAMPLE_CONVERSATIONS = [
+  { 
+    id: 1, 
+    user: SAMPLE_USERS[0], 
+    lastMessage: "Hey! Did you see that new video?", 
+    timestamp: "2m ago",
+    unread: 3,
+  },
+  { 
+    id: 2, 
+    user: SAMPLE_USERS[1], 
+    lastMessage: "That's amazing! 🔥", 
+    timestamp: "5m ago",
+    unread: 0,
+  },
+  { 
+    id: 3, 
+    user: SAMPLE_USERS[2], 
+    lastMessage: "Thanks for sharing", 
+    timestamp: "2h ago",
+    unread: 0,
+  },
+  { 
+    id: 4, 
+    user: SAMPLE_USERS[3], 
+    lastMessage: "Can you send me that link?", 
+    timestamp: "1d ago",
+    unread: 1,
+  },
+  { 
+    id: 5, 
+    user: SAMPLE_USERS[4], 
+    lastMessage: "Sure thing!", 
+    timestamp: "1d ago",
+    unread: 0,
+  },
+  { 
+    id: 6, 
+    user: SAMPLE_USERS[5], 
+    lastMessage: "Looking forward to it!", 
+    timestamp: "2d ago",
+    unread: 0,
+  },
+];
+
+// Different conversations for each user
+const MESSAGES_BY_USER = {
+  1: [
+    { id: 1, senderId: 1, content: "Hey! How are you?", timestamp: "10:30 AM" },
+    { id: 2, senderId: "me", content: "I'm good! Just checking out some content", timestamp: "10:32 AM" },
+    { id: 3, senderId: 1, content: "Did you see that new video I shared?", timestamp: "10:33 AM" },
+    { id: 4, senderId: "me", content: "Not yet, I'll check it out now", timestamp: "10:35 AM" },
+    { id: 5, senderId: 1, content: "It's really cool, let me know what you think", timestamp: "10:36 AM" },
+    { id: 6, senderId: "me", content: "Will do! Thanks for sharing", timestamp: "10:37 AM" },
+    { id: 7, senderId: 1, content: "No problem! Talk soon", timestamp: "10:38 AM" },
+    { id: 8, senderId: "me", content: "Actually, I have a question about that video", timestamp: "10:40 AM", replyTo: { id: 5, senderId: 1, content: "It's really cool, let me know what you think", senderName: "Alex Rivera", senderAvatar: "https://i.pravatar.cc/150?img=1" } },
+    { id: 9, senderId: 1, content: "Sure, what's your question?", timestamp: "10:41 AM" },
+  ],
+  2: [
+    { id: 1, senderId: "me", content: "Did you finish that project?", timestamp: "9:15 AM" },
+    { id: 2, senderId: 2, content: "Yeah! Just submitted it this morning", timestamp: "9:20 AM" },
+    { id: 3, senderId: "me", content: "That's amazing! 🔥", timestamp: "9:21 AM" },
+    { id: 4, senderId: 2, content: "Thanks! Couldn't have done it without your help", timestamp: "9:22 AM" },
+    { id: 5, senderId: "me", content: "Happy to help anytime", timestamp: "9:23 AM" },
+  ],
+  3: [
+    { id: 1, senderId: 3, content: "Hey, got a minute?", timestamp: "Yesterday" },
+    { id: 2, senderId: 3, content: "is it about me?", timestamp: "Yesterday" },
+    { id: 3, senderId: "me", content: "Yes, it is", timestamp: "Yesterday" },
+    { id: 4, senderId: 3, content: "What is it?", timestamp: "Yesterday" },
+    { id: 5, senderId: "me", content: "It is a new feature that will help us to track the performance of the website", timestamp: "Yesterday" },
+    { id: 6, senderId: 3, content: "That's great! Thank you", timestamp: "Yesterday" },
+  ],
+  4: [
+    { id: 1, senderId: 4, content: "Can you send me that link?", timestamp: "Yesterday" },
+    { id: 2, senderId: "me", content: "Which one?", timestamp: "Yesterday" },
+    { id: 3, senderId: 4, content: "The one from last week", timestamp: "Yesterday" },
+  ],
+  5: [
+    { id: 1, senderId: "me", content: "Need any help with that?", timestamp: "2 days ago" },
+    { id: 2, senderId: 5, content: "Sure thing!", timestamp: "2 days ago" },
+  ],
+  6: [
+    { id: 1, senderId: 6, content: "Looking forward to it!", timestamp: "2 days ago" },
+    { id: 2, senderId: "me", content: "Me too!", timestamp: "2 days ago" },
+  ],
+};
+
+const ChatPage = () => {
+  // Start with default theme, then update from localStorage after mount
+  const [theme, setTheme] = useState('dark');
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
+  
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState(SAMPLE_CONVERSATIONS[0]);
+  const [messages, setMessages] = useState(MESSAGES_BY_USER[1]);
+  const [inputValue, setInputValue] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showMembers, setShowMembers] = useState(true);
+  const [showProfileCard, setShowProfileCard] = useState(false);
+  const [userStatus, setUserStatus] = useState("online");
+  const [userBio, setUserBio] = useState("Just vibing");
+  const [userName, setUserName] = useState("Siddharth");
+  const [userAvatar, setUserAvatar] = useState("https://i.pravatar.cc/150?img=34");
+  const [bannerColor, setBannerColor] = useState("#ea4197");
+  const [customStatus, setCustomStatus] = useState("");
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [tempUsername, setTempUsername] = useState(userName);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const usernameInputRef = useRef(null);
+  const colorPickerRef = useRef(null);
+  
+  // Settings state tracking
+  const [originalSettings, setOriginalSettings] = useState({
+    userName: "Siddharth",
+    userAvatar: "https://i.pravatar.cc/150?img=34",
+    userBio: "Just vibing",
+    theme: "dark",
+    bannerColor: "#ea4197",
+    customStatus: ""
+  });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [showMoreMenu, setShowMoreMenu] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0, openUpward: false });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportingMessage, setReportingMessage] = useState(null);
+  const [showProfilePreview, setShowProfilePreview] = useState(false);
+  const [previewUser, setPreviewUser] = useState(null);
+  const [profilePreviewPosition, setProfilePreviewPosition] = useState({ top: 0, left: 0 });
+  const [profilePreviewAnimating, setProfilePreviewAnimating] = useState(false);
+  const [profilePreviewSourceId, setProfilePreviewSourceId] = useState(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+  const editInputRef = useRef(null);
+  const moreMenuRef = useRef(null);
+  const moreButtonRef = useRef(null);
+  
+  // Chat selector hover effect states
+  const [hoveredConvIndex, setHoveredConvIndex] = useState(null);
+  const [hoverStyle, setHoverStyle] = useState({});
+  const conversationsContainerRef = useRef(null);
+
+  // Load theme from localStorage on client mount only
+  useEffect(() => {
+    setIsClient(true);
+    const savedTheme = localStorage.getItem('goonChat_theme');
+    const savedBannerColor = localStorage.getItem('goonChat_bannerColor');
+    const savedCustomStatus = localStorage.getItem('goonChat_customStatus');
+    if (savedTheme && THEMES[savedTheme]) {
+      setTheme(savedTheme);
+    }
+    if (savedBannerColor) {
+      setBannerColor(savedBannerColor);
+    }
+    if (savedCustomStatus) {
+      setCustomStatus(savedCustomStatus);
+    }
+    
+    // Initialize original settings
+    setOriginalSettings({
+      userName,
+      userAvatar,
+      userBio,
+      theme: savedTheme || 'dark',
+      bannerColor: savedBannerColor || '#ea4197',
+      customStatus: savedCustomStatus || ''
+    });
+    
+    // Trigger fade-in animation after a brief delay
+    requestAnimationFrame(() => {
+      setTimeout(() => setFadeIn(true), 10);
+    });
+  }, []);
+  
+  // Track changes in settings
+  useEffect(() => {
+    const hasChanges = 
+      userName !== originalSettings.userName ||
+      userAvatar !== originalSettings.userAvatar ||
+      userBio !== originalSettings.userBio ||
+      theme !== originalSettings.theme ||
+      bannerColor !== originalSettings.bannerColor ||
+      customStatus !== originalSettings.customStatus;
+    setHasUnsavedChanges(hasChanges);
+  }, [userName, userAvatar, userBio, theme, bannerColor, customStatus, originalSettings]);
+
+  // Sync temp username with actual username
+  useEffect(() => {
+    setTempUsername(userName);
+  }, [userName]);
+
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showColorPicker]);
+
+  // Save theme to localStorage when it changes
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+  };
+  
+  // Save settings changes
+  const handleSaveSettings = () => {
+    localStorage.setItem('goonChat_theme', theme);
+    localStorage.setItem('goonChat_userName', userName);
+    localStorage.setItem('goonChat_userAvatar', userAvatar);
+    localStorage.setItem('goonChat_userBio', userBio);
+    localStorage.setItem('goonChat_bannerColor', bannerColor);
+    localStorage.setItem('goonChat_customStatus', customStatus);
+    
+    setOriginalSettings({
+      userName,
+      userAvatar,
+      userBio,
+      theme,
+      bannerColor,
+      customStatus
+    });
+    setHasUnsavedChanges(false);
+  };
+  
+  // Cancel settings changes
+  const handleCancelSettings = () => {
+    setUserName(originalSettings.userName);
+    setUserAvatar(originalSettings.userAvatar);
+    setUserBio(originalSettings.userBio);
+    setTheme(originalSettings.theme);
+    setBannerColor(originalSettings.bannerColor);
+    setCustomStatus(originalSettings.customStatus);
+    setHasUnsavedChanges(false);
+  };
+
+  // Block/unblock user
+  const toggleBlockUser = (userId) => {
+    const newBlockedUsers = blockedUsers.includes(userId)
+      ? blockedUsers.filter(id => id !== userId)
+      : [...blockedUsers, userId];
+    setBlockedUsers(newBlockedUsers);
+    localStorage.setItem('goonChat_blockedUsers', JSON.stringify(newBlockedUsers));
+  };
+
+  const currentTheme = THEMES[theme];
+
+  // Update hover style for conversation selector
+  useEffect(() => {
+    if (hoveredConvIndex !== null && conversationsContainerRef.current) {
+      const convElement = conversationsContainerRef.current.querySelector(`[data-conv-index="${hoveredConvIndex}"]`);
+      if (convElement) {
+        const container = conversationsContainerRef.current;
+        const scrollTop = container.scrollTop;
+        const offsetTop = convElement.offsetTop;
+
+        // Read the conversation id directly from the DOM to avoid
+        // referencing `filteredConversations` before it's initialized
+        const hoveredConvId = convElement.getAttribute('data-conv-id');
+        const isSelectedHovered = selectedConversation && Number(hoveredConvId) === selectedConversation.id;
+
+        setHoverStyle({
+          top: `${offsetTop - scrollTop}px`,
+          height: `${convElement.offsetHeight}px`,
+          opacity: 1,
+          // Use a subtle dark overlay for both selected and non-selected to avoid
+          // intensifying the pink when hovering the already-selected convo
+          backgroundColor: currentTheme.bg.tertiary,
+        });
+      }
+    } else {
+      setHoverStyle({ opacity: 0 });
+    }
+  }, [hoveredConvIndex, currentTheme, selectedConversation]);
+
+  // Update hover position on scroll
+  useEffect(() => {
+    const container = conversationsContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (hoveredConvIndex !== null) {
+        const convElement = container.querySelector(`[data-conv-index="${hoveredConvIndex}"]`);
+        if (convElement) {
+          const scrollTop = container.scrollTop;
+          const offsetTop = convElement.offsetTop;
+          
+          setHoverStyle(prev => ({
+            ...prev,
+            top: `${offsetTop - scrollTop}px`,
+          }));
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [hoveredConvIndex]);
+
+  const scrollToBottom = (smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Scroll when replying to keep chat at bottom
+  useEffect(() => {
+    if (replyingTo) {
+      // Small delay to ensure the reply banner is rendered
+      setTimeout(() => scrollToBottom(false), 0);
+    }
+  }, [replyingTo]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      const newHeight = Math.min(inputRef.current.scrollHeight, 120);
+      inputRef.current.style.height = `${newHeight}px`;
+    }
+  }, [inputValue]);
+
+  // Auto-resize edit textarea
+  useEffect(() => {
+    if (editInputRef.current) {
+      editInputRef.current.style.height = 'auto';
+      const newHeight = Math.min(editInputRef.current.scrollHeight, 120);
+      editInputRef.current.style.height = `${newHeight}px`;
+    }
+  }, [editValue]);
+
+  // Focus edit input when editing starts
+  useEffect(() => {
+    if (editingMessage && editInputRef.current) {
+      editInputRef.current.focus();
+      // Move cursor to end
+      const length = editInputRef.current.value.length;
+      editInputRef.current.setSelectionRange(length, length);
+    }
+  }, [editingMessage]);
+
+  // Close more menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setShowMoreMenu(null);
+      }
+    };
+
+    if (showMoreMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMoreMenu]);
+
+  // Handle profile picture click
+  const handleProfileClick = (event, user, sourceId = null) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const modalWidth = 325;
+    const modalHeight = 350; // Reduced height since we removed sections
+    
+    // Calculate position - try to place to the right, but shift if it goes offscreen
+    let left = rect.right + 10;
+    let top = rect.top;
+    
+    // If modal goes off right edge, place it to the left of avatar
+    if (left + modalWidth > windowWidth - 20) {
+      left = rect.left - modalWidth - 10;
+    }
+    
+    // If modal goes off bottom, place it above the avatar
+    if (top + modalHeight > windowHeight - 20) {
+      top = rect.bottom - modalHeight;
+      // If still goes off top, align to bottom of viewport with margin
+      if (top < 20) {
+        top = windowHeight - modalHeight - 20;
+      }
+    }
+    
+    // If modal goes off top, adjust downward
+    if (top < 20) {
+      top = 20;
+    }
+    
+    setProfilePreviewPosition({ top, left });
+    setPreviewUser(user);
+    setProfilePreviewSourceId(sourceId);
+    setShowProfilePreview(true);
+    // Trigger animation after a brief delay to ensure DOM is ready
+    setTimeout(() => setProfilePreviewAnimating(true), 10);
+  };
+
+  const handleCloseProfilePreview = () => {
+    setProfilePreviewAnimating(false);
+    setTimeout(() => {
+      setShowProfilePreview(false);
+      setPreviewUser(null);
+      setProfilePreviewSourceId(null);
+    }, 150); // Match animation duration
+  };
+
+  const handleSendMessage = () => {
+    if (inputValue.trim()) {
+      const newMessage = {
+        id: messages.length + 1,
+        senderId: "me",
+        content: inputValue,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          senderId: replyingTo.senderId,
+          content: replyingTo.content,
+          senderName: replyingTo.senderId === "me" ? userName : selectedConversation?.user.name,
+          senderAvatar: replyingTo.senderId === "me" ? userAvatar : selectedConversation?.user.avatar,
+        } : null,
+      };
+      setMessages([...messages, newMessage]);
+      setInputValue("");
+      setReplyingTo(null);
+      // Ensure scroll to bottom after sending
+      setTimeout(() => scrollToBottom(), 0);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    } else if (e.key === 'Escape' && replyingTo) {
+      e.preventDefault();
+      setReplyingTo(null);
+    }
+  };
+
+  const handleEditMessage = (message) => {
+    setEditingMessage(message);
+    setEditValue(message.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (editValue.trim() && editingMessage) {
+      const updatedMessages = messages.map(msg =>
+        msg.id === editingMessage.id
+          ? { ...msg, content: editValue, edited: true }
+          : msg
+      );
+      setMessages(updatedMessages);
+      setEditingMessage(null);
+      setEditValue("");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setEditValue("");
+  };
+
+  const handleEditKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit();
+    }
+  };
+
+  const handleCopyText = (message) => {
+    navigator.clipboard.writeText(message.content);
+    setShowMoreMenu(null);
+  };
+
+  const handleDeleteMessage = (messageId) => {
+    const updatedMessages = messages.filter(msg => msg.id !== messageId);
+    setMessages(updatedMessages);
+    setShowMoreMenu(null);
+  };
+
+  const handleOpenReport = (message) => {
+    setReportingMessage(message);
+    setShowReportModal(true);
+    setShowMoreMenu(null);
+  };
+
+  const handleSubmitReport = () => {
+    if (reportReason) {
+      // Here you would typically send the report to your backend
+      console.log('Report submitted:', {
+        message: reportingMessage,
+        reason: reportReason,
+        details: reportDetails
+      });
+      // Reset and close
+      setShowReportModal(false);
+      setReportReason("");
+      setReportDetails("");
+      setReportingMessage(null);
+    }
+  };
+
+  const handleConversationSelect = (conv) => {
+    // If there are unsaved changes in settings, revert them
+    if (showSettings && hasUnsavedChanges) {
+      handleCancelSettings();
+    }
+    setSelectedConversation(conv);
+    setMessages(MESSAGES_BY_USER[conv.user.id] || []);
+    setShowSettings(false); // Close settings when selecting a chat
+    setReplyingTo(null); // Clear any active reply
+  };
+
+  const filteredConversations = SAMPLE_CONVERSATIONS.filter(conv =>
+    conv.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.user.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const onlineMembers = SAMPLE_USERS.filter(user => user.status === "online");
+  const offlineMembers = SAMPLE_USERS.filter(user => user.status === "offline");
+
+  // Prevent hydration mismatch by waiting for client mount
+  if (!isClient) {
+    return (
+      <div className="h-screen flex overflow-hidden select-none" style={{ backgroundColor: THEMES.dark.bg.primary }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse" style={{ color: THEMES.dark.text.tertiary }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="h-screen flex overflow-hidden select-none" 
+      style={{ 
+        backgroundColor: currentTheme.bg.primary,
+        opacity: fadeIn ? 1 : 0,
+        transition: 'opacity 0.3s ease-in-out'
+      }}
+    >
+      
+      {/* Left Sidebar - Conversations */}
+      <div className="w-[320px] flex flex-col border-r relative" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+        {/* Header */}
+        <div className="h-12 px-5 flex items-center justify-between border-b flex-shrink-0" style={{ borderColor: currentTheme.border.primary }}>
+          {/* <h1 className="text-white font-semibold text-base font-pop">Messages</h1>
+          <button className="p-1.5 hover:bg-[#1a1a1a] rounded transition-colors text-[#999]">
+            <FiSettings className="text-lg" />
+          </button> */}
+          {/* back to website */}
+          <Link title="Back to website" href="/" className="flex items-center cursor-pointer hover:opacity-90 transition-all ease-in-out gap-3">
+            <div className="flex items-center gap-2">
+              <img src="/logo.webp" alt="logo" className="w-6 h-6 rounded-full object-cover" />
+              <h1 className="font-semibold text-base font-pop" style={{ color: currentTheme.text.primary }}>Goon<span style={{ color: currentTheme.accent }}>Chat</span></h1>
+            </div>
+          </Link>
+          <Link 
+            href="/"
+            className="flex group items-center gap-1 px-2.5 py-1.5 rounded transition-colors group"
+            style={{ color: currentTheme.text.tertiary, '&:hover': { color: currentTheme.text.secondary } }}
+            title="Back to website"
+          >
+            <i className="ri-arrow-left-line group-hover:-translate-x-[1.5px] transition-transform duration-300"></i>
+            <span className="text-xs font-medium font-inter">Back</span>
+          </Link>
+
+
+        </div>
+
+        {/* Search */}
+        {/* <div className="px-5 py-4 border-b border-[#1a1a1a] flex-shrink-0">
+          <div className="flex items-center bg-[#0f0f0f] border border-[#1a1a1a] rounded-md px-3 py-2 focus-within:border-[#ea4197]/40 transition-colors">
+            <FiSearch className="text-[#666] text-sm flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent ml-2.5 text-[#c0c0c0] placeholder-[#666] focus:outline-none text-sm font-inter"
+            />
+            {searchQuery && (
+              <FiX 
+                className="text-[#666] cursor-pointer hover:text-[#ea4197] transition-colors flex-shrink-0 text-sm" 
+                onClick={() => setSearchQuery("")}
+              />
+            )}
+          </div>
+        </div> */}
+
+        {/* Conversations List */}
+        <div 
+          ref={conversationsContainerRef} 
+          className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2 mb-[52px] relative"
+          onMouseLeave={() => setHoveredConvIndex(null)}
+        >
+          {/* Smooth hover overlay */}
+          <div
+            className="absolute left-2 right-2 rounded-md transition-all duration-200 ease-in-out pointer-events-none"
+            style={{
+              backgroundColor: currentTheme.bg.tertiary,
+              ...hoverStyle,
+            }}
+          />
+          
+          {filteredConversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-6">
+              <FiSearch className="text-3xl mb-3" style={{ color: currentTheme.border.secondary }} />
+              <p className="text-sm font-inter text-center" style={{ color: currentTheme.text.tertiary }}>No conversations found</p>
+            </div>
+          ) : (
+            filteredConversations.map((conv, index) => (
+              <div
+                key={conv.id}
+                data-conv-index={index}
+                data-conv-id={conv.id}
+                onClick={() => handleConversationSelect(conv)}
+                className="px-3 py-3 mb-1 flex items-center gap-3 cursor-pointer rounded-md relative z-10"
+                style={{
+                  backgroundColor: selectedConversation?.id === conv.id ? `${currentTheme.accent}11` : 'transparent',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={() => {
+                  // if (selectedConversation?.id !== conv.id) {
+                    setHoveredConvIndex(index);
+                  // }
+                }}
+              >
+                <div className="relative flex-shrink-0">
+                  <img 
+                    src={conv.user.avatar} 
+                    alt={conv.user.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  {conv.user.status === "online" && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#3ba55d] border-[2.5px] rounded-full" style={{ borderColor: currentTheme.bg.secondary }}></div>
+                  )}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold truncate font-inter" style={{
+                      color: selectedConversation?.id === conv.id ? currentTheme.text.secondary : currentTheme.text.secondary
+                    }}>
+                      {conv.user.name}
+                    </h3>
+                    <span className="text-xs font-roboto flex-shrink-0 ml-2" style={{ color: currentTheme.text.tertiary }}>{conv.timestamp}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium truncate font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      {conv.lastMessage}
+                    </p>
+                    {conv.unread > 0 && (
+                      <span className="flex-shrink-0 text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center" style={{ backgroundColor: currentTheme.accent, color: currentTheme.bg.primary }}>
+                        {conv.unread}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Profile Card at Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 border-t" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+          {/* Profile Status Popup */}
+          {showProfileCard && (
+            <>
+              <div 
+                className="fixed inset-0 z-10"
+                onClick={() => setShowProfileCard(false)}
+              />
+              <div 
+                className="absolute bottom-[60px] left-3 right-3 border rounded-lg shadow-lg z-20 overflow-hidden"
+                style={{ 
+                  backgroundColor: currentTheme.bg.secondary, 
+                  borderColor: currentTheme.border.primary,
+                }}
+              >
+                <div className="p-3">
+                  {/* Status Section */}
+                  <div className="mb-3">
+                    <label className="text-[11px] font-medium mb-2 block font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      Status
+                    </label>
+                    <div className="space-y-0.5">
+                      {[
+                        { value: 'online', label: 'Online', color: '#3ba55d' },
+                        { value: 'idle', label: 'Idle', color: '#f0b232' },
+                        { value: 'dnd', label: 'Do Not Disturb', color: '#ed4245' },
+                      ].map((status) => (
+                        <button
+                          key={status.value}
+                          onClick={() => setUserStatus(status.value)}
+                          className="w-full cursor-pointer flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-colors"
+                          style={{
+                            backgroundColor: userStatus === status.value ? currentTheme.bg.hover : 'transparent',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (userStatus !== status.value) {
+                              e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (userStatus !== status.value) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <div 
+                            className="w-2 h-2 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: status.color }}
+                          />
+                          <span 
+                            className="text-[13px] font-inter flex-1 text-left" 
+                            style={{
+                              color: userStatus === status.value ? currentTheme.text.primary : currentTheme.text.secondary
+                            }}
+                          >
+                            {status.label}
+                          </span>
+                          {userStatus === status.value && (
+                            <i 
+                              className="ri-check-line text-sm"
+                              style={{ color: currentTheme.text.tertiary }}
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-px my-3" style={{ backgroundColor: currentTheme.border.primary }} />
+
+                  {/* Custom Status */}
+                  <div>
+                    <label className="text-[11px] font-medium mb-2 block font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      Custom Status
+                    </label>
+                    <input
+                      type="text"
+                      value={userBio}
+                      onChange={(e) => setUserBio(e.target.value)}
+                      placeholder="Set a custom status"
+                      maxLength={40}
+                      className="w-full border rounded-md px-2.5 py-1.5 text-[13px] focus:outline-none transition-colors font-inter select-text"
+                      style={{
+                        backgroundColor: currentTheme.bg.input,
+                        borderColor: currentTheme.border.primary,
+                        color: currentTheme.text.secondary,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = currentTheme.text.tertiary;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = currentTheme.border.primary;
+                      }}
+                    />
+                    <p className="text-[10px] mt-1.5 font-inter" style={{ color: currentTheme.text.muted }}>
+                      {userBio.length}/40
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Profile Bar */}
+          <div 
+            className="px-3 py-2.5 flex items-center justify-between gap-3 transition-colors"
+          >
+            <div
+              className="px-3 py-2 flex-1 cursor-pointer rounded hover:bg-opacity-10 transition-colors flex items-center gap-3"
+              onClick={() => setShowProfileCard(!showProfileCard)}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <div className="relative">
+                <img 
+                  src={userAvatar} 
+                  alt={userName}
+                  className="w-9 h-9 rounded-full object-cover"
+                />
+                <div 
+                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-[2.5px] rounded-full"
+                  style={{ 
+                    borderColor: currentTheme.bg.secondary,
+                    backgroundColor: 
+                      userStatus === 'online' ? '#3ba55d' : 
+                      userStatus === 'idle' ? '#f0b232' : 
+                      userStatus === 'dnd' ? '#ed4245' : 
+                      '#747f8d'
+                  }}
+                />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate font-inter" style={{ color: currentTheme.text.primary }}>{userName}</p>
+                <p className="text-xs truncate font-inter" style={{ color: currentTheme.text.tertiary }}>{userBio}</p>
+              </div>
+            </div>
+
+            <div className="flex px-4 items-center gap-1 flex-shrink-0">
+              <button 
+                className="p-2 rounded-md cursor-pointer transition-all"
+                style={{ 
+                  color: currentTheme.text.tertiary
+                }}
+                onMouseEnter={(e) => {
+                  // e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  e.currentTarget.style.color = currentTheme.text.secondary;
+                }}
+                onMouseLeave={(e) => {
+                  // e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = currentTheme.text.tertiary;
+                }}
+                title="Mute"
+              >
+                <i className="ri-volume-mute-line text-lg" />
+              </button>
+              <button 
+                className="p-2 group rounded-md cursor-pointer transition-all"
+                style={{ 
+                  color: showSettings ? currentTheme.text.primary : currentTheme.text.tertiary
+                }}
+                onMouseEnter={(e) => {
+                  // e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  e.currentTarget.style.color = currentTheme.text.primary;
+                }}
+                onMouseLeave={(e) => {
+
+                  showSettings ? e.currentTarget.style.color = currentTheme.text.primary : e.currentTarget.style.color = currentTheme.text.tertiary;
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // If closing settings and there are unsaved changes, revert them
+                  if (showSettings && hasUnsavedChanges) {
+                    handleCancelSettings();
+                  }
+                  setShowSettings(!showSettings);
+                  setShowProfileCard(false);
+                  if (!showSettings) {
+                    // Unselect chat when opening settings
+                    setSelectedConversation(null);
+                  } else {
+                    // Restore first conversation when closing settings
+                    setSelectedConversation(SAMPLE_CONVERSATIONS[0]);
+                    setMessages(MESSAGES_BY_USER[1]);
+                  }
+                }}
+              >
+                <IoSettingsOutline className="text-lg group-hover:rotate-80 transition-transform duration-400"></IoSettingsOutline>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area - Settings or Chat */}
+      {showSettings ? (
+        /* Settings Panel */
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: currentTheme.bg.primary }}>
+          {/* Settings Header */}
+          <div className="h-12 px-5 flex items-center justify-between border-b flex-shrink-0" style={{ backgroundColor: currentTheme.bg.primary, borderColor: currentTheme.border.primary }}>
+            <h2 className="font-semibold text-base font-inter" style={{ color: currentTheme.text.primary }}>Settings</h2>
+            <button
+              onClick={() => {
+                // Revert changes if unsaved
+                if (hasUnsavedChanges) {
+                  handleCancelSettings();
+                }
+                setShowSettings(false);
+                // Restore first conversation when closing settings
+                if (!selectedConversation) {
+                  setSelectedConversation(SAMPLE_CONVERSATIONS[0]);
+                  setMessages(MESSAGES_BY_USER[1]);
+                }
+              }}
+              className="p-2 rounded-md transition-colors"
+              style={{ color: currentTheme.text.tertiary }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bg.hover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <FiX className="text-lg" />
+            </button>
+          </div>
+
+          {/* Settings Content */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <div className="max-w-[800px] mx-auto px-8 py-8">
+              
+              {/* Profile Section with Banner */}
+              <div className="rounded-lg border overflow-hidden mb-6" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+                {/* Banner */}
+                <div className="relative h-28" style={{ backgroundColor: bannerColor }}>
+                  {/* Banner Color Picker Button */}
+                  <div 
+                    onClick={() => setShowColorPicker(!showColorPicker)}
+                    className="absolute top-3 right-3 w-9 h-9 rounded border flex items-center justify-center cursor-pointer transition-all hover:scale-105"
+                    style={{ 
+                      backgroundColor: currentTheme.bg.secondary,
+                      borderColor: currentTheme.border.primary
+                    }}
+                  >
+                    <i className="ri-palette-line text-base" style={{ color: currentTheme.text.secondary }} />
+                  </div>
+                  
+                  {/* Color Picker Popover */}
+                  {showColorPicker && (
+                    <div 
+                      ref={colorPickerRef}
+                      className="absolute top-14 right-3 p-3 rounded-lg border shadow-xl z-50"
+                      style={{ 
+                        backgroundColor: currentTheme.bg.primary,
+                        borderColor: currentTheme.border.secondary
+                      }}
+                    >
+                      <HexColorPicker 
+                        color={bannerColor} 
+                        onChange={setBannerColor}
+                        // style={{ width: '200px', height: '150px' }}
+                      />
+                      <div className="mt-3 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={bannerColor}
+                          onChange={(e) => setBannerColor(e.target.value)}
+                          className="flex-1 px-2 py-1.5 text-xs rounded border focus:outline-none font-mono"
+                          style={{
+                            backgroundColor: currentTheme.bg.tertiary,
+                            borderColor: currentTheme.border.primary,
+                            color: currentTheme.text.primary,
+                          }}
+                        />
+                        <button
+                          onClick={() => setShowColorPicker(false)}
+                          className="px-3 cursor-pointer py-1.5 text-xs rounded transition-colors font-medium"
+                          style={{
+                            backgroundColor: currentTheme.accent,
+                            color: '#ffffff'
+                          }}
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Profile Picture & Username Section */}
+                <div className="px-6 pb-6">
+                  {/* Profile Picture - Overlapping Banner */}
+                  <div className="relative -mt-12 mb-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="avatar-upload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setUserAvatar(reader.result);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="block w-24 h-24 rounded-full cursor-pointer relative group"
+                      style={{ 
+                        borderWidth: '4px', 
+                        borderColor: currentTheme.bg.secondary,
+                        backgroundColor: currentTheme.bg.secondary
+                      }}
+                    >
+                      <img 
+                        src={userAvatar} 
+                        alt={userName} 
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                      >
+                        <i className="ri-camera-line text-xl text-white" />
+                      </div>
+                    </label>
+                  </div>
+                  
+                  {/* Username Input */}
+                  <div className="mb-5">
+                    <div className="group relative">
+                      {isEditingUsername ? (
+                        <div>
+                          <input
+                            ref={usernameInputRef}
+                            type="text"
+                            value={tempUsername}
+                            onChange={(e) => setTempUsername(e.target.value)}
+                            placeholder="Enter your username"
+                            maxLength={32}
+                            className="w-full text-xl font-semibold border-0 focus:outline-none transition-colors font-inter select-text p-0 mb-1"
+                            style={{
+                              backgroundColor: 'transparent',
+                              color: currentTheme.text.primary,
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setUserName(tempUsername);
+                                setIsEditingUsername(false);
+                              } else if (e.key === 'Escape') {
+                                setTempUsername(userName);
+                                setIsEditingUsername(false);
+                              }
+                            }}
+                            onBlur={() => {
+                              setTempUsername(userName);
+                              setIsEditingUsername(false);
+                            }}
+                            autoFocus
+                          />
+                          <p className="text-xs font-inter" style={{ color: currentTheme.text.muted }}>
+                            Press Enter to save, Esc to cancel
+                          </p>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer"
+                          onClick={() => {
+                          setTempUsername(userName);
+                          setIsEditingUsername(true);
+                        }}>
+                          <div 
+                            className="cursor-pointer flex items-center gap-2"
+                          >
+                            <h2 className="text-xl font-semibold font-inter" style={{ color: currentTheme.text.primary }}>
+                              {userName}
+                            </h2>
+                            <i 
+                              className="ri-pencil-line text-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ color: currentTheme.text.tertiary }}
+                            />
+                          </div>
+                          <p className="text-xs font-inter" style={{ color: currentTheme.text.muted }}>
+                            Click to edit your username
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Custom Status */}
+                  <div className="mb-5">
+                    <label className="text-xs font-medium mb-2 block font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      Custom Status
+                    </label>
+                    <input
+                      type="text"
+                      value={customStatus}
+                      onChange={(e) => setCustomStatus(e.target.value)}
+                      placeholder="What's on your mind?"
+                      maxLength={60}
+                      className="w-full rounded-md px-3 py-2 text-sm border focus:outline-none transition-colors font-inter select-text"
+                      style={{
+                        backgroundColor: currentTheme.bg.tertiary,
+                        borderColor: currentTheme.border.primary,
+                        color: currentTheme.text.primary,
+                      }}
+                      onFocus={(e) => e.currentTarget.style.borderColor = currentTheme.text.tertiary}
+                      onBlur={(e) => e.currentTarget.style.borderColor = currentTheme.border.primary}
+                    />
+                    <p className="text-xs mt-1.5 font-inter" style={{ color: currentTheme.text.muted }}>
+                      {customStatus.length}/60 characters
+                    </p>
+                  </div>
+
+                  {/* Bio */}
+                  <div>
+                    <label className="text-xs font-medium mb-2 block font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      Bio
+                    </label>
+                    <textarea
+                      value={userBio}
+                      onChange={(e) => setUserBio(e.target.value)}
+                      placeholder="Tell others about yourself..."
+                      maxLength={120}
+                      rows={3}
+                      className="w-full rounded-md px-3 py-2 text-sm border focus:outline-none resize-none transition-colors font-inter select-text"
+                      style={{
+                        backgroundColor: currentTheme.bg.tertiary,
+                        borderColor: currentTheme.border.primary,
+                        color: currentTheme.text.primary,
+                      }}
+                      onFocus={(e) => e.currentTarget.style.borderColor = currentTheme.text.tertiary}
+                      onBlur={(e) => e.currentTarget.style.borderColor = currentTheme.border.primary}
+                    />
+                    <p className="text-xs mt-1.5 font-inter" style={{ color: currentTheme.text.muted }}>
+                      {userBio.length}/120 characters
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Appearance Section */}
+              <div className="rounded-lg border p-5 mb-6" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+                <h3 className="text-sm font-medium mb-4 font-inter" style={{ color: currentTheme.text.primary }}>Appearance</h3>
+                <label className="text-xs font-medium mb-3 block font-inter" style={{ color: currentTheme.text.tertiary }}>
+                  Theme
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {Object.entries(THEMES).map(([key, themeData]) => (
+                    <button
+                      key={key}
+                      onClick={() => handleThemeChange(key)}
+                      className="flex flex-col items-center gap-2 p-3 rounded-md border transition-colors"
+                      style={{
+                        backgroundColor: theme === key ? currentTheme.bg.hover : currentTheme.bg.tertiary,
+                        borderColor: theme === key ? currentTheme.accent : currentTheme.border.primary,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (theme !== key) {
+                          e.currentTarget.style.borderColor = currentTheme.border.secondary;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (theme !== key) {
+                          e.currentTarget.style.borderColor = currentTheme.border.primary;
+                        }
+                      }}
+                    >
+                      <div className="w-full h-10 rounded flex gap-1 cursor-pointer overflow-hidden">
+                        <div className="flex-1 rounded" style={{ backgroundColor: themeData.bg.secondary }} />
+                        <div className="flex-1 rounded" style={{ backgroundColor: themeData.bg.tertiary }} />
+                        <div className="flex-1 rounded" style={{ backgroundColor: themeData.bg.primary }} />
+                      </div>
+                      <span className="text-xs font-medium font-inter" style={{ color: theme === key ? currentTheme.text.primary : currentTheme.text.secondary }}>
+                        {themeData.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Blocked Users Section */}
+              <div className="rounded-lg border p-5 mb-6" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+                <h3 className="text-sm font-medium mb-4 font-inter" style={{ color: currentTheme.text.primary }}>Blocked Users</h3>
+                {blockedUsers.length === 0 ? (
+                  <div 
+                    className="text-center py-8 rounded-md border"
+                    style={{ 
+                      backgroundColor: currentTheme.bg.tertiary,
+                      borderColor: currentTheme.border.primary 
+                    }}
+                  >
+                    <i className="ri-user-forbid-line text-2xl mb-2" style={{ color: currentTheme.text.muted }} />
+                    <p className="text-sm font-inter" style={{ color: currentTheme.text.tertiary }}>
+                      No blocked users
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {blockedUsers.map(userId => {
+                      const user = SAMPLE_USERS.find(u => u.id === userId);
+                      if (!user) return null;
+                      return (
+                        <div 
+                          key={userId} 
+                          className="flex items-center gap-3 p-3 rounded-md border group"
+                          style={{ 
+                            backgroundColor: currentTheme.bg.tertiary,
+                            borderColor: currentTheme.border.primary 
+                          }}
+                        >
+                          <img 
+                            src={user.avatar} 
+                            alt={user.name} 
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium font-inter truncate" style={{ color: currentTheme.text.primary }}>
+                              {user.name}
+                            </p>
+                            <p className="text-xs font-inter truncate" style={{ color: currentTheme.text.tertiary }}>
+                              @{user.username}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => toggleBlockUser(userId)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                            style={{ 
+                              backgroundColor: currentTheme.bg.hover, 
+                              color: currentTheme.text.secondary 
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = currentTheme.bg.primary;
+                              e.currentTarget.style.color = currentTheme.text.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                              e.currentTarget.style.color = currentTheme.text.secondary;
+                            }}
+                          >
+                            Unblock
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Floating Save/Cancel Bar */}
+            <div 
+              className="fixed bottom-6 left-1/2 rounded-lg border shadow-lg px-4 py-3 flex items-center gap-3"
+              style={{
+                backgroundColor: currentTheme.bg.secondary,
+                borderColor: currentTheme.border.secondary,
+                zIndex: 50,
+                transform: hasUnsavedChanges ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(150px)',
+                opacity: hasUnsavedChanges ? 1 : 0,
+                pointerEvents: hasUnsavedChanges ? 'auto' : 'none',
+                transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
+              }}
+            >
+              <span className="text-sm font-inter" style={{ color: currentTheme.text.secondary }}>
+                You have unsaved changes
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCancelSettings}
+                  className="px-3 cursor-pointer py-1.5 text-sm font-medium rounded-md transition-colors font-inter"
+                  style={{
+                    backgroundColor: currentTheme.bg.tertiary,
+                    color: currentTheme.text.secondary,
+                    borderWidth: '1px',
+                    borderColor: currentTheme.border.primary
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                    e.currentTarget.style.color = currentTheme.text.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary;
+                    e.currentTarget.style.color = currentTheme.text.secondary;
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSettings}
+                  className="px-3 cursor-pointer py-1.5 text-sm font-medium rounded-md transition-colors font-inter"
+                  style={{
+                    backgroundColor: currentTheme.accent,
+                    color: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Chat Area */
+        <>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col" style={{ backgroundColor: currentTheme.bg.primary }}>
+        {/* Chat Header */}
+        <div className="h-12 border-b px-5 flex items-center justify-between flex-shrink-0" style={{ backgroundColor: currentTheme.bg.primary, borderColor: currentTheme.border.primary }}>
+          {selectedConversation ? (
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={selectedConversation.user.avatar} 
+                  alt={selectedConversation.user.name}
+                  className="w-6 h-6 rounded-full object-cover"
+                />
+                {selectedConversation.user.status === "online" && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#3ba55d] border-2 rounded-full" style={{ borderColor: currentTheme.bg.primary }}></div>
+                )}
+              </div>
+              <div>
+                <h2 className="font-semibold text-sm font-inter" style={{ color: currentTheme.text.primary }}>{selectedConversation.user.name}</h2>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <h2 className="font-semibold text-sm font-inter" style={{ color: currentTheme.text.tertiary }}>Select a conversation</h2>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1">
+            {/* <button 
+              onClick={() => setShowMembers(!showMembers)}
+              className="p-2 rounded transition-colors"
+              style={{ color: showMembers ? currentTheme.text.primary : currentTheme.text.tertiary }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bg.hover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              title="Toggle Members"
+            >
+              <HiUserGroup className="text-xl" />
+            </button> */}
+            <button 
+              className="p-2 rounded transition-colors" 
+              style={{ color: currentTheme.text.tertiary }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = currentTheme.bg.hover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <FiMoreHorizontal className="text-xl" />
+            </button>
+          </div>
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin select-text">
+          <div className="max-w-[1100px] mx-auto py-4 select-text">
+            {!selectedConversation ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2 font-pop" style={{ color: currentTheme.text.secondary }}>No conversation selected</h3>
+                  <p className="text-sm font-inter" style={{ color: currentTheme.text.tertiary }}>Choose a conversation from the sidebar to start chatting</p>
+                </div>
+              </div>
+            ) : messages.map((message, index) => {
+              const isMe = message.senderId === "me";
+              const showAvatar = index === 0 || messages[index - 1].senderId !== message.senderId;
+              const isLastInGroup = index === messages.length - 1 || messages[index + 1].senderId !== message.senderId;
+              
+              return (
+                <div
+                  key={message.id || `${index}-${message.timestamp}`}
+                  className={`group px-5 relative ${showAvatar ? 'mt-2.5' : ''} ${isLastInGroup ? 'mb-1' : ''} ${showMoreMenu === message.id || profilePreviewSourceId === `message-${message.id}` || replyingTo?.id === message.id ? 'is-menu-active' : ''}`}
+                  style={{
+                    borderRadius: '6px',
+                    isolation: 'isolate'
+                  }}
+                >
+                  {/* Subtle hover background using pseudo-element */}
+                  <div
+                    className={`absolute inset-0 transition-opacity duration-0 pointer-events-none ${showMoreMenu === message.id || profilePreviewSourceId === `message-${message.id}` || replyingTo?.id === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    style={{
+                      backgroundColor: currentTheme.bg.secondary,
+                      borderRadius: '6px',
+                      zIndex: 0
+                    }}
+                  />
+                  <div className={`relative rounded-md -mx-2 px-2 select-text ${showAvatar ? 'py-0.5' : 'py-0'}`} style={{ zIndex: 1 }}>
+                    <div className="flex gap-4 select-text">
+                    <div className="w-10 flex-shrink-0 select-none">
+                      {showAvatar && (
+                        <img 
+                          src={isMe ? userAvatar : selectedConversation.user.avatar} 
+                          alt={isMe ? userName : selectedConversation.user.name}
+                          className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity select-none"
+                          onClick={(e) => {
+                            if (isMe) {
+                              handleProfileClick(e, {
+                                id: 'me',
+                                name: userName,
+                                username: 'siddharth_dev',
+                                avatar: userAvatar,
+                                status: userStatus,
+                                bannerColor: bannerColor,
+                                badge: 'Building',
+                                bio: userBio,
+                                gender: 'Male',
+                                pronouns: 'he/him',
+                                videosUploaded: 42,
+                                imagesUploaded: 215
+                              }, `message-${message.id}`);
+                            } else {
+                              handleProfileClick(e, selectedConversation.user, `message-${message.id}`);
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 select-text">
+                      {showAvatar && (
+                        <div className="flex items-baseline gap-2.5 mb-[1px] select-text">
+                          <span
+                            className="font-medium text-[15px] font-inter cursor-pointer hover:underline select-text"
+                            style={{
+                              color: currentTheme.text.primary,
+                              textDecorationThickness: '0.5px'
+                            }}
+                            onClick={(e) => {
+                            if (isMe) {
+                              handleProfileClick(e, {
+                                id: 'me',
+                                name: userName,
+                                username: 'siddharth_dev',
+                                avatar: userAvatar,
+                                status: userStatus,
+                                bannerColor: bannerColor,
+                                badge: 'Building',
+                                bio: userBio,
+                                gender: 'Male',
+                                pronouns: 'he/him',
+                                videosUploaded: 42,
+                                imagesUploaded: 215
+                              }, `message-${message.id}`);
+                            } else {
+                              handleProfileClick(e, selectedConversation.user, `message-${message.id}`);
+                            }
+                          }}
+                          >
+                            {isMe ? userName : selectedConversation.user.name}
+                          </span>
+                          <span className="text-xs opacity-60 font-roboto select-text" style={{ color: currentTheme.text.tertiary }}>{message.timestamp}</span>
+                        </div>
+                      )}
+                      
+                      {/* Reply Reference */}
+                      {message.replyTo && (
+                        <div className="flex items-center gap-2 mb-1 ml-0 mt-1 select-text group/reply">
+                          <div 
+                            className="w-0.5 h-5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: currentTheme.text.muted }}
+                          />
+                          <i className="ri-corner-up-right-line text-xs flex-shrink-0" style={{ color: currentTheme.text.muted }}></i>
+                          <div className="flex items-center gap-2 group hover:underline cursor-pointer font-medium font-inter select-text" 
+                          onClick={(e) => {
+                            let replyUser;
+                            if (message.replyTo.senderId === "me") {
+                              replyUser = {
+                                id: 'me',
+                                name: userName,
+                                username: 'siddharth_dev',
+                                avatar: userAvatar,
+                                status: userStatus,
+                                bannerColor: bannerColor,
+                                badge: 'Building',
+                                bio: userBio,
+                                gender: 'Male',
+                                pronouns: 'he/him',
+                                videosUploaded: 42,
+                                imagesUploaded: 215
+                              };
+                            } else {
+                              // Try to find the user in SAMPLE_USERS by id
+                              replyUser = SAMPLE_USERS.find(u => u.id === message.replyTo.senderId) || selectedConversation.user;
+                            }
+                            handleProfileClick(e, replyUser, `message-${message.id}`);
+                          }}>
+                            <img 
+                              src={message.replyTo.senderAvatar} 
+                              alt={message.replyTo.senderName}
+                              className="w-4 h-4 select-none rounded-full object-cover flex-shrink-0"
+                            />
+                            <span className="text-xs hover:underline cursor-pointer font-medium font-inter select-text" style={{ color: currentTheme.text.tertiary }}>
+                              {message.replyTo.senderName}
+                            </span>
+                          </div>
+                          <span 
+                            className="text-xs font-inter truncate select-text flex-1 min-w-0" 
+                            style={{ color: currentTheme.text.muted }}
+                          >
+                            {message.replyTo.content}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Message Content or Edit Input */}
+                      {editingMessage?.id === message.id ? (
+                        <div className="mt-1">
+                          <textarea
+                            ref={editInputRef}
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={handleEditKeyPress}
+                            className="w-full bg-transparent border rounded px-3 py-2 text-[15px] leading-[1.4] font-inter resize-none focus:outline-none select-text"
+                            style={{
+                              backgroundColor: currentTheme.bg.input,
+                              borderColor: currentTheme.border.primary,
+                              color: currentTheme.text.secondary,
+                              minHeight: '40px',
+                              maxHeight: '120px'
+                            }}
+                            rows={1}
+                          />
+                          <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: currentTheme.text.tertiary }}>
+                            <span>escape to <span 
+                              className="cursor-pointer hover:underline"
+                              style={{ color: currentTheme.accent }}
+                              onClick={handleCancelEdit}
+                            >cancel</span></span>
+                            <span>•</span>
+                            <span>enter to <span 
+                              className="cursor-pointer hover:underline font-medium"
+                              style={{ color: currentTheme.accent }}
+                              onClick={handleSaveEdit}
+                            >save</span></span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[15px] leading-[1.4] font-inter break-words select-text" style={{ color: currentTheme.text.secondary }}>
+                          {message.content}
+                          {message.edited && (
+                            <span className="text-[10px] ml-1.5 opacity-50" style={{ color: currentTheme.text.tertiary }}>(edited)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Floating Action Bubble - Discord Style */}
+                    <div className={`absolute -top-3 right-4 transition-opacity duration-0 select-none ${showMoreMenu === message.id || profilePreviewSourceId === `message-${message.id}` || replyingTo?.id === message.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'}`}>
+                      <div 
+                        className="flex items-center rounded-md shadow-lg border"
+                        style={{
+                          backgroundColor: currentTheme.bg.primary,
+                          borderColor: currentTheme.border.secondary
+                        }}
+                      >
+                        {/* Edit button - only for own messages */}
+                        {isMe && (
+                          <button 
+                            className="px-1.5 pl-2 py-0.5 cursor-pointer transition-colors rounded-l-md"
+                            style={{ color: currentTheme.text.tertiary }}
+                            onClick={() => handleEditMessage(message)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                              e.currentTarget.style.color = currentTheme.text.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = currentTheme.text.tertiary;
+                            }}
+                            title="Edit"
+                          >
+                            <i className="ri-pencil-line text-base"></i>
+                          </button>
+                        )}
+                        
+                        {/* Reply button */}
+                        <button 
+                          className="px-1.5 py-0.5 cursor-pointer transition-colors"
+                          style={{ color: currentTheme.text.tertiary }}
+                          onClick={() => {
+                            setReplyingTo(message);
+                            inputRef.current?.focus();
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                            e.currentTarget.style.color = currentTheme.text.primary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = currentTheme.text.tertiary;
+                          }}
+                          title="Reply"
+                        >
+                          <i className="ri-reply-line text-base"></i>
+                        </button>
+                        
+                        {/* More options button */}
+                        <div className="relative">
+                          <button 
+                            ref={showMoreMenu === message.id ? moreButtonRef : null}
+                            className="px-1.5 py-0.5 cursor-pointer transition-colors rounded-r-md"
+                            style={{ color: currentTheme.text.tertiary }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (showMoreMenu === message.id) {
+                                setShowMoreMenu(null);
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const menuHeight = 200; // Approximate menu height
+                                const spaceBelow = window.innerHeight - rect.bottom;
+                                const shouldOpenUpward = spaceBelow < menuHeight + 20;
+                                
+                                setMenuPosition({
+                                  top: shouldOpenUpward ? undefined : rect.bottom + 8,
+                                  bottom: shouldOpenUpward ? window.innerHeight - rect.top + 8 : undefined,
+                                  right: window.innerWidth - rect.right,
+                                  openUpward: shouldOpenUpward
+                                });
+                                setShowMoreMenu(message.id);
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                              e.currentTarget.style.color = currentTheme.text.primary;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = currentTheme.text.tertiary;
+                            }}
+                            title="More"
+                          >
+                            <i className="ri-more-fill text-base"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Fixed Position More Menu */}
+          {showMoreMenu && (
+            <div 
+              ref={moreMenuRef}
+              className="fixed w-48 rounded-lg shadow-xl border overflow-hidden"
+              style={{
+                ...(menuPosition.top !== undefined && { top: `${menuPosition.top}px` }),
+                ...(menuPosition.bottom !== undefined && { bottom: `${menuPosition.bottom}px` }),
+                right: `${menuPosition.right}px`,
+                backgroundColor: currentTheme.bg.secondary,
+                borderColor: currentTheme.border.secondary,
+                zIndex: 100
+              }}
+            >
+              {messages.find(m => m.id === showMoreMenu)?.senderId === "me" && (
+                <button
+                  className="w-full px-4 py-2 cursor-pointer text-left text-sm font-inter flex items-center gap-3 transition-colors"
+                  style={{ color: currentTheme.text.secondary }}
+                  onClick={() => {
+                    const msg = messages.find(m => m.id === showMoreMenu);
+                    if (msg) handleEditMessage(msg);
+                    setShowMoreMenu(null);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <i className="ri-pencil-line text-base" style={{ color: currentTheme.text.tertiary }}></i>
+                  Edit Message
+                </button>
+              )}
+
+              <button
+                className="w-full px-4 py-2 cursor-pointer text-left text-sm font-inter flex items-center gap-3 transition-colors"
+                style={{ color: currentTheme.text.secondary }}
+                onClick={() => {
+                  const msg = messages.find(m => m.id === showMoreMenu);
+                  if (msg) {
+                    setReplyingTo(msg);
+                    inputRef.current?.focus();
+                  }
+                  setShowMoreMenu(null);
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <i className="ri-reply-line text-base" style={{ color: currentTheme.text.tertiary }}></i>
+                Reply
+              </button>
+
+              <button
+                className="w-full px-4 py-2 cursor-pointer text-left text-sm font-inter flex items-center gap-3 transition-colors"
+                style={{ color: currentTheme.text.secondary }}
+                onClick={() => {
+                  const msg = messages.find(m => m.id === showMoreMenu);
+                  if (msg) handleCopyText(msg);
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <i className="ri-file-copy-line text-base" style={{ color: currentTheme.text.tertiary }}></i>
+                Copy Text
+              </button>
+
+              {messages.find(m => m.id === showMoreMenu)?.senderId === "me" && (
+                <button
+                  className="w-full px-4 py-2 cursor-pointer text-left text-sm font-inter flex items-center gap-3 transition-colors"
+                  style={{ color: '#ed4245' }}
+                  onClick={() => handleDeleteMessage(showMoreMenu)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <i className="ri-delete-bin-line text-base"></i>
+                  Delete Message
+                </button>
+              )}
+
+              {messages.find(m => m.id === showMoreMenu)?.senderId !== "me" && (
+                <button
+                  className="w-full px-4 py-2 cursor-pointer text-left text-sm font-inter flex items-center gap-3 transition-colors"
+                  style={{ color: '#ed4245' }}
+                  onClick={() => {
+                    const msg = messages.find(m => m.id === showMoreMenu);
+                    if (msg) handleOpenReport(msg);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <i className="ri-flag-line text-base"></i>
+                  Report Message
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Message Input - Discord Style */}
+        <div className="flex-shrink-0 px-5 pb-4" style={{ backgroundColor: currentTheme.bg.primary }}>
+          <div className="max-w-[1100px] mx-auto">
+            {/* Replying To Banner */}
+            {replyingTo && (
+              <div 
+                className="flex items-center gap-2.5 rounded-t-lg px-3 py-2"
+                style={{ 
+                  // borderLeft: `2px solid ${currentTheme.text.muted}`,
+                  backgroundColor: currentTheme.bg.tertiary,
+                }}
+              >
+                <i className="ri-corner-up-right-line text-sm flex-shrink-0" style={{ color: currentTheme.text.muted }}></i>
+                <img 
+                  src={replyingTo.senderId === "me" ? userAvatar : selectedConversation?.user.avatar} 
+                  alt={replyingTo.senderId === "me" ? userName : selectedConversation?.user.name}
+                  className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                />
+                <span className="text-xs font-medium font-inter" style={{ color: currentTheme.text.tertiary }}>
+                  {replyingTo.senderId === "me" ? userName : selectedConversation?.user.name}
+                </span>
+                <span className="text-xs truncate font-inter flex-1 min-w-0" style={{ color: currentTheme.text.muted }}>
+                  {replyingTo.content}
+                </span>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="p-0.5 cursor-pointer rounded transition-colors flex-shrink-0"
+                  style={{ color: currentTheme.text.muted }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = currentTheme.text.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = currentTheme.text.muted;
+                  }}
+                >
+                  <FiX className="text-sm" />
+                </button>
+              </div>
+            )}
+            
+            <div 
+              className={`border rounded-lg px-4 py-3.5 transition-colors flex items-end gap-2 ${replyingTo ? 'rounded-t-none' : ''}`}
+              style={{
+                backgroundColor: currentTheme.bg.tertiary,
+                borderColor: currentTheme.border.primary,
+              }}
+            >
+              <button 
+                className="p-0.5 pr-1.5 rounded-md transition-colors flex-shrink-0 mb-0.5"
+                style={{ color: currentTheme.text.tertiary }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  e.currentTarget.style.color = currentTheme.text.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = currentTheme.text.tertiary;
+                }}
+              >
+                <BsEmojiSmile className="text-lg" />
+              </button>
+              
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder={selectedConversation ? `Message @${selectedConversation.user.username}` : 'Select a conversation to start messaging'}
+                disabled={!selectedConversation}
+                className="flex-1 bg-transparent focus:outline-none text-[15px] resize-none font-inter leading-[1.375] py-0.5 select-text"
+                rows={1}
+                style={{ maxHeight: '120px', minHeight: '24px', color: currentTheme.text.secondary, opacity: selectedConversation ? 1 : 0.5 }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Sidebar - Members */}
+      {showMembers && !showSettings && (
+        <div className="w-[280px] border-l flex flex-col" style={{ backgroundColor: currentTheme.bg.secondary, borderColor: currentTheme.border.primary }}>
+          <div className="h-12 px-5 flex items-center border-b flex-shrink-0" style={{ borderColor: currentTheme.border.primary }}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider font-pop" style={{ color: currentTheme.text.tertiary }}>Members — {SAMPLE_USERS.length}</h3>
+          </div>
+
+          <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4">
+            {/* Online Members */}
+            {onlineMembers.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2 px-2 mb-2">
+                  <span className="text-xs uppercase tracking-wider font-semibold font-pop" style={{ color: currentTheme.text.tertiary }}>
+                    Online — {onlineMembers.length}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {onlineMembers.map(member => (
+                    <div 
+                      key={member.id}
+                      className="flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors group"
+                      style={{
+                        backgroundColor: profilePreviewSourceId === `member-${member.id}` ? currentTheme.bg.tertiary : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (profilePreviewSourceId !== `member-${member.id}`) {
+                          e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (profilePreviewSourceId !== `member-${member.id}`) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                      onClick={(e) => handleProfileClick(e, member, `member-${member.id}`)}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <img 
+                          src={member.avatar} 
+                          alt={member.name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#3ba55d] border-[2.5px] rounded-full" style={{ borderColor: currentTheme.bg.secondary }}></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate font-inter transition-colors" style={{ color: currentTheme.text.secondary }}>{member.name}</p>
+                        {member.activity && (
+                          <p className="text-xs truncate font-inter" style={{ color: currentTheme.text.tertiary }}>{member.activity}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Offline Members */}
+            {offlineMembers.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 px-2 mb-2">
+                  <span className="text-xs uppercase tracking-wider font-semibold font-pop" style={{ color: currentTheme.text.tertiary }}>
+                    Offline — {offlineMembers.length}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {offlineMembers.map(member => (
+                    <div 
+                      key={member.id}
+                      className="flex items-center gap-3 px-2 py-2 rounded cursor-pointer transition-colors group opacity-40"
+                      style={{
+                        backgroundColor: profilePreviewSourceId === `member-${member.id}` ? currentTheme.bg.tertiary : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (profilePreviewSourceId !== `member-${member.id}`) {
+                          e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (profilePreviewSourceId !== `member-${member.id}`) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                      onClick={(e) => handleProfileClick(e, member, `member-${member.id}`)}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <img 
+                          src={member.avatar} 
+                          alt={member.name}
+                          className="w-8 h-8 rounded-full object-cover grayscale"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate font-inter" style={{ color: currentTheme.text.secondary }}>{member.name}</p>
+                        {member.lastSeen && (
+                          <p className="text-xs truncate font-inter" style={{ color: currentTheme.text.tertiary }}>Last seen {member.lastSeen}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <>
+          {/* Blurred Backdrop */}
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backdropFilter: 'blur(4px)'
+            }}
+            onClick={() => {
+              setShowReportModal(false);
+              setReportReason("");
+              setReportDetails("");
+            }}
+          >
+            {/* Modal Card */}
+            <div 
+              className="w-full max-w-md mx-4 rounded-lg shadow-2xl border"
+              style={{
+                backgroundColor: currentTheme.bg.secondary,
+                borderColor: currentTheme.border.secondary
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-6 py-4 border-b" style={{ borderColor: currentTheme.border.primary }}>
+                <h2 className="text-lg font-semibold font-pop" style={{ color: currentTheme.text.primary }}>Report Message</h2>
+                <p className="text-xs mt-1 font-inter" style={{ color: currentTheme.text.tertiary }}>Please select a reason for reporting this message</p>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5 space-y-4">
+                {/* Reason Selection */}
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider mb-2 block font-pop" style={{ color: currentTheme.text.tertiary }}>Reason *</label>
+                  <div className="space-y-2">
+                    {[
+                      'Spam or misleading',
+                      'Harassment or bullying',
+                      'Hate speech or discrimination',
+                      'Violence or threats',
+                      'Inappropriate content',
+                      'Other'
+                    ].map((reason) => (
+                      <label
+                        key={reason}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded cursor-pointer transition-colors"
+                        style={{
+                          backgroundColor: reportReason === reason ? currentTheme.bg.hover : 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (reportReason !== reason) {
+                            e.currentTarget.style.backgroundColor = currentTheme.bg.tertiary;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (reportReason !== reason) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="reportReason"
+                          value={reason}
+                          checked={reportReason === reason}
+                          onChange={(e) => setReportReason(e.target.value)}
+                          className="cursor-pointer"
+                          style={{ accentColor: currentTheme.accent }}
+                        />
+                        <span className="text-sm font-inter" style={{ color: currentTheme.text.secondary }}>{reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Additional Details */}
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider mb-2 block font-pop" style={{ color: currentTheme.text.tertiary }}>Additional Details (Optional)</label>
+                  <textarea
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    placeholder="Provide any additional context..."
+                    rows={3}
+                    className="w-full rounded-md px-3 py-2 text-sm border focus:outline-none resize-none transition-all font-inter select-text"
+                    style={{
+                      backgroundColor: currentTheme.bg.input,
+                      borderColor: currentTheme.border.primary,
+                      color: currentTheme.text.secondary,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t flex items-center justify-end gap-3" style={{ borderColor: currentTheme.border.primary }}>
+                <button
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setReportReason("");
+                    setReportDetails("");
+                  }}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-colors font-inter"
+                  style={{
+                    color: currentTheme.text.secondary,
+                    backgroundColor: 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReport}
+                  disabled={!reportReason}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-all font-inter"
+                  style={{
+                    backgroundColor: reportReason ? '#ed4245' : currentTheme.bg.hover,
+                    color: reportReason ? '#ffffff' : currentTheme.text.muted,
+                    opacity: reportReason ? 1 : 0.5,
+                    cursor: reportReason ? 'pointer' : 'not-allowed'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (reportReason) {
+                      e.currentTarget.style.backgroundColor = '#c23639';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (reportReason) {
+                      e.currentTarget.style.backgroundColor = '#ed4245';
+                    }
+                  }}
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Profile Preview Modal */}
+      {showProfilePreview && previewUser && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-50 transition-opacity duration-150"
+            style={{
+              opacity: profilePreviewAnimating ? 0.3 : 0
+            }}
+            onClick={handleCloseProfilePreview}
+          />
+          
+          {/* Profile Card */}
+          <div 
+            className="fixed z-50 w-[310px] rounded-lg shadow-2xl border-3 overflow-hidden transition-all duration-150 ease-out"
+            style={{
+              top: `${profilePreviewPosition.top}px`,
+              left: `${profilePreviewPosition.left}px`,
+              backgroundColor: currentTheme.bg.secondary,
+              borderColor: currentTheme.border.secondary,
+              opacity: profilePreviewAnimating ? 1 : 0,
+              transform: profilePreviewAnimating ? 'translateX(0)' : 'translateX(10px)',
+            }}
+          >
+            {/* Banner */}
+            <div 
+              className="h-16 relative"
+              style={{ backgroundColor: previewUser.bannerColor }}
+            />
+            
+            {/* Profile Content */}
+            <div className="px-4 pb-4">
+              {/* Profile Picture - Overlapping Banner */}
+              <div className="relative -mt-8 mb-2">
+                <div 
+                  className="w-20 h-20 rounded-full relative"
+                  style={{ 
+                    borderWidth: '6px', 
+                    borderColor: currentTheme.bg.secondary,
+                    backgroundColor: currentTheme.bg.secondary
+                  }}
+                >
+                  <img 
+                    src={previewUser.avatar} 
+                    alt={previewUser.name} 
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                  {/* Status Badge */}
+                  <div 
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-4"
+                    style={{ 
+                      backgroundColor: 
+                        previewUser.status === 'online' ? '#3ba55d' : 
+                        previewUser.status === 'idle' ? '#f0b232' : 
+                        previewUser.status === 'dnd' ? '#ed4245' : 
+                        '#747f8d',
+                      borderColor: currentTheme.bg.secondary
+                    }}
+                  />
+                </div>
+
+                {/* Custom Status Thought Bubble */}
+                {(previewUser.id === 'me' ? customStatus : previewUser.activity) && (
+                  <div 
+                    className="absolute left-[95px] top-[25px] max-w-[200px]"
+                    style={{ zIndex: 10 }}
+                  >
+                    {/* Bubble Tail */}
+                    <div 
+                      className="absolute left-[-8px] top-[12px] w-0 h-0"
+                      style={{
+                        borderTop: '6px solid transparent',
+                        borderBottom: '6px solid transparent',
+                        borderRight: `8px solid ${currentTheme.bg.tertiary}`,
+                      }}
+                    />
+                    {/* Bubble Content */}
+                    <div 
+                      className="rounded-lg px-3 py-2 shadow-lg"
+                      style={{
+                        backgroundColor: currentTheme.bg.tertiary,
+                        borderWidth: '1px',
+                        borderColor: currentTheme.border.primary,
+                      }}
+                    >
+                      <p className="text-xs font-inter leading-relaxed break-words" style={{ color: currentTheme.text.secondary }}>
+                        {previewUser.id === 'me' ? customStatus : previewUser.activity}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Username */}
+              <div className="mb-2.5">
+                <p className="text-base font-semibold font-inter" style={{ color: currentTheme.text.primary }}>
+                  @{previewUser.username}
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px mb-3" style={{ backgroundColor: currentTheme.border.primary }} />
+
+              {/* Bio */}
+              {previewUser.bio && (
+                <div className="mb-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-1.5 font-pop" style={{ color: currentTheme.text.tertiary }}>
+                    About
+                  </h4>
+                  <p className="text-sm font-inter leading-relaxed" style={{ color: currentTheme.text.secondary }}>
+                    {previewUser.bio}
+                  </p>
+                </div>
+              )}
+
+              {/* Content Stats */}
+              {previewUser.videosUploaded !== undefined && previewUser.imagesUploaded !== undefined && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <i className="ri-video-line text-base" style={{ color: currentTheme.text.tertiary }} />
+                      <span className="text-sm font-inter" style={{ color: currentTheme.text.secondary }}>
+                        {previewUser.videosUploaded} video{previewUser.videosUploaded !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="ri-image-line text-base" style={{ color: currentTheme.text.tertiary }} />
+                      <span className="text-sm font-inter" style={{ color: currentTheme.text.secondary }}>
+                        {previewUser.imagesUploaded} image{previewUser.imagesUploaded !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ease-in-out duration-250 cursor-pointer font-inter"
+                  style={{
+                    backgroundColor: currentTheme.bg.hover,
+                    color: currentTheme.text.primary
+                  }}
+                  onMouseEnter={(e) => {
+                    // Convert hex to rgba with 80% opacity (20% less than full)
+                    const hex = currentTheme.bg.hover.replace('#', '');
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+                    e.currentTarget.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onClick={() => {
+                    handleCloseProfilePreview();
+                    if (previewUser.id !== 'me') {
+                      // Open chat with this user (already in chat)
+                    }
+                  }}
+                >
+                  Message
+                </button>
+                <button
+                  className="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ease-in-out duration-250 cursor-pointer font-inter"
+                  style={{
+                    backgroundColor: currentTheme.bg.hover,
+                    color: currentTheme.text.primary
+                  }}
+                  onMouseEnter={(e) => {
+                    // Convert hex to rgba with 80% opacity (20% less than full)
+                    const hex = currentTheme.bg.hover.replace('#', '');
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+                    e.currentTarget.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme.bg.hover;
+                  }}
+                  onClick={() => {
+                    handleCloseProfilePreview();
+                    // Navigate to full profile page
+                  }}
+                >
+                  View Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default ChatPage;

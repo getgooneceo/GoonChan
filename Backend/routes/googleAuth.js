@@ -24,7 +24,8 @@ const generateUniqueUsername = async (baseName) => {
   let finalUsername = username
   let counter = 1
 
-  while (await User.findOne({ username: finalUsername })) {
+  // Check case-insensitively for existing usernames
+  while (await User.findOne({ username: { $regex: new RegExp(`^${finalUsername}$`, 'i') } })) {
     finalUsername = username.substring(0, 13) + counter
     counter++
   }

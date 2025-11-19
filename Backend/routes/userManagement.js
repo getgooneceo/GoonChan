@@ -1,9 +1,16 @@
 import { Hono } from 'hono';
 import User from '../models/User.js';
+import UserStatus from '../models/UserStatus.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const app = new Hono();
+
+let io;
+
+export const setBanIO = (socketIO) => {
+  io = socketIO;
+};
 
 const verifyAdmin = async (token) => {
   if (!token) {
@@ -90,6 +97,61 @@ app.post('/ban', async (c) => {
     userToBan.isBanned = true;
     await userToBan.save();
 
+    console.log(`🚫 Admin ${verification.user.username} banned ${userToBan.username}`);
+
+    // Disconnect all sockets for the banned user and clear their status
+    if (io) {
+      // Get user's socket IDs
+      const userStatus = await UserStatus.findOne({ user: userToBan._id });
+      
+      // First, emit ban event to the banned user's sockets so they receive the notification
+      if (userStatus && userStatus.socketIds && userStatus.socketIds.length > 0) {
+        userStatus.socketIds.forEach(socketId => {
+          const socket = io.sockets.sockets.get(socketId);
+          if (socket) {
+            // Send ban notification directly to this user before disconnecting
+            socket.emit('user:banned', {
+              userId: userToBan._id.toString()
+            });
+            console.log(`📢 Sent ban notification to socket ${socketId}`);
+          }
+        });
+      }
+
+      // Wait a bit to let the client process the ban event
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Now disconnect all user's sockets
+      if (userStatus && userStatus.socketIds && userStatus.socketIds.length > 0) {
+        userStatus.socketIds.forEach(socketId => {
+          const socket = io.sockets.sockets.get(socketId);
+          if (socket) {
+            console.log(`🔌 Disconnecting socket ${socketId} for banned user ${userToBan.username}`);
+            socket.disconnect(true);
+          }
+        });
+      }
+
+      // Clear user status and set to offline
+      await UserStatus.findOneAndUpdate(
+        { user: userToBan._id },
+        { 
+          status: 'offline',
+          socketIds: [],
+          lastSeen: new Date()
+        },
+        { upsert: true }
+      );
+
+      // Broadcast user offline status to everyone else
+      io.emit('user:status', {
+        userId: userToBan._id.toString(),
+        status: 'offline',
+        username: userToBan.username,
+        lastSeen: new Date()
+      });
+    }
+
     return c.json({
       success: true,
       message: 'User banned successfully',
@@ -130,6 +192,15 @@ app.post('/unban', async (c) => {
 
     userToUnban.isBanned = false;
     await userToUnban.save();
+
+    console.log(`✅ Admin ${verification.user.username} unbanned ${userToUnban.username}`);
+
+    // Broadcast unban status via socket
+    if (io) {
+      io.emit('user:unbanned', {
+        userId: userToUnban._id.toString()
+      });
+    }
 
     return c.json({
       success: true,

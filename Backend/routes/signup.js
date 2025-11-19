@@ -57,14 +57,23 @@ router.post('/', limiter, async (c) => {
       }, 400)
     }
 
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    })
-    
-    if (existingUser) {
+    // Check for existing email
+    const existingEmail = await User.findOne({ email })
+    if (existingEmail) {
       return c.json({ 
         success: false, 
-        message: existingUser.email === email ? 'Email already in use' : 'Username already taken' 
+        message: 'Email already in use' 
+      }, 409)
+    }
+
+    // Check for existing username (case-insensitive for new users)
+    const existingUsername = await User.findOne({ 
+      username: { $regex: new RegExp(`^${username}$`, 'i') } 
+    })
+    if (existingUsername) {
+      return c.json({ 
+        success: false, 
+        message: 'Username already taken' 
       }, 409)
     }
 

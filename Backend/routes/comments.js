@@ -279,6 +279,7 @@ router.post('/:commentId/reply', postLimiter, async (c) => {
       username: user.username,
       avatar: user.avatar,
       avatarColor: user.avatarColor,
+      isAdmin: user.isAdmin,
       content: addedReply.content,
       likeCount: 0,
       dislikeCount: 0,
@@ -355,8 +356,8 @@ router.get('/:contentType/:contentId', commentLimiter, async (c) => {
     .sort(sortCriteria)
     .limit(limitNum)
     .skip(skip)
-    .populate('user', 'username avatar avatarColor')
-    .populate('replies.user', 'username avatar avatarColor')
+  .populate('user', 'username avatar avatarColor isAdmin')
+  .populate('replies.user', 'username avatar avatarColor isAdmin')
     .lean();
 
     const formattedComments = comments.map(comment => ({
@@ -365,6 +366,7 @@ router.get('/:contentType/:contentId', commentLimiter, async (c) => {
       username: comment.user.username,
       avatar: comment.user.avatar,
       avatarColor: comment.user.avatarColor,
+  isAdmin: comment.user?.isAdmin || false,
       content: comment.content,
       likeCount: comment.likedBy?.length || 0,
       dislikeCount: comment.dislikedBy?.length || 0,
@@ -380,6 +382,7 @@ router.get('/:contentType/:contentId', commentLimiter, async (c) => {
         username: reply.user.username,
         avatar: reply.user.avatar,
         avatarColor: reply.user.avatarColor,
+  isAdmin: reply.user?.isAdmin || false,
         content: reply.content,
         likeCount: reply.likedBy?.length || 0,
         dislikeCount: reply.dislikedBy?.length || 0,
@@ -476,6 +479,7 @@ router.post('/:contentType/:contentId', postLimiter, async (c) => {
       username: user.username,
       avatar: user.avatar,
       avatarColor: user.avatarColor,
+      isAdmin: user.isAdmin,
       content: newComment.content,
       likeCount: 0,
       dislikeCount: 0,
