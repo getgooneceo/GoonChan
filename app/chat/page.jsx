@@ -4665,7 +4665,7 @@ const ChatPage = () => {
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyPress}
-                      placeholder={currentConversation ? `Message @${findOtherParticipant(currentConversation?.participants || [])?.username || 'User'}` : 'Select a conversation to start messaging'}
+                      placeholder={currentConversation ? `Message ${currentConversation.isGroup ? currentConversation.groupName : `@${findOtherParticipant(currentConversation?.participants || [])?.username || 'User'}`}` : 'Select a conversation to start messaging'}
                       disabled={!currentConversation}
                       className="w-full bg-transparent focus:outline-none text-[15px] resize-none font-inter leading-[1.375] py-0.5 select-text"
                       rows={1}

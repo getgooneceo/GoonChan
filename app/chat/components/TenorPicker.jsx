@@ -61,12 +61,11 @@ export const TenorPicker = ({ currentTheme, onGifSelect }) => {
 
     setLoading(true);
     try {
-      const baseUrl = searchQuery.trim()
-        ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(searchQuery)}`
-        : `https://tenor.googleapis.com/v2/featured`;
+      const endpoint = searchQuery.trim() ? 'search' : 'featured';
+      const query = searchQuery.trim() ? `&q=${encodeURIComponent(searchQuery)}` : '';
       
       const response = await fetch(
-        `${baseUrl}&key=${TENOR_API_KEY}&client_key=${TENOR_CLIENT_KEY}&limit=20&pos=${next}`
+        `https://tenor.googleapis.com/v2/${endpoint}?key=${TENOR_API_KEY}&client_key=${TENOR_CLIENT_KEY}${query}&limit=20&pos=${next}`
       );
       const data = await response.json();
       setGifs(prev => [...prev, ...(data.results || [])]);
