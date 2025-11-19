@@ -45,10 +45,11 @@ export function initializeChatSocket(io) {
     console.log(`💬 User connected to chat: ${user.username} (${socket.id})`);
 
     // Add socket to user mappings
-    if (!userSockets.has(user._id.toString())) {
-      userSockets.set(user._id.toString(), new Set());
+    const userIdKey = user._id.toString();
+    if (!userSockets.has(userIdKey)) {
+      userSockets.set(userIdKey, new Set());
     }
-    userSockets.get(user._id.toString()).add(socket.id);
+    userSockets.get(userIdKey).add(socket.id);
 
     // Update user status to online with cleanup of stale socket IDs
     try {
@@ -227,7 +228,8 @@ export function initializeChatSocket(io) {
           Conversation.findOne({
             _id: conversationId,
             participants: user._id
-          }).select('participants isGroup unreadCount notificationPreferences').lean()
+          }).select('participants isGroup unreadCount notificationPreferences lastMessage lastMessageAt')
+          // Removed .lean() so we can call .save()
         ]);
 
         if (currentUser.isBanned) {
