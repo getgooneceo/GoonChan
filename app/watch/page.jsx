@@ -42,6 +42,10 @@ export async function generateMetadata({ searchParams }) {
         openGraph: {
           title: title,
           description: description,
+          url: `https://goonchan.org/watch?v=${videoSlug}`,
+          siteName: "GoonChan",
+          locale: "en_US",
+          type: "video.other",
           images: [
             {
               url: thumbnail,
@@ -50,7 +54,6 @@ export async function generateMetadata({ searchParams }) {
               alt: title,
             },
           ],
-          type: "video.other",
         },
         twitter: {
           card: "summary_large_image",

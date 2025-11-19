@@ -30,7 +30,7 @@ export const viewport = {
 export const metadata = {
   metadataBase: new URL("https://goonchan.org"),
   title: {
-    default: "GoonChan - Free Porn Videos, Enjoy NSFW Content & Sex Videos",
+    default: "GoonChan - Free Porn Videos, Enjoy Sexy NSFW Content",
     template: "%s | GoonChan"
   },
   description:
@@ -67,7 +67,7 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: "GoonChan - Free Porn Videos, Enjoy NSFW Content & Sex Videos",
+    title: "GoonChan - Free Porn Videos, Enjoy Sexy NSFW Content",
     description:
       "Watch free porn videos, hot sex clips, big tits, juicy asses, and tight pussy action on GoonChan. Stream hardcore, lesbian, blowjob, anal, and amateur videos while chatting with a global NSFW community who loves the same spicy content you do.",
     url: "https://goonchan.org",
@@ -77,7 +77,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary",
-    title: "GoonChan - Free Porn Videos, Enjoy NSFW Content & Sex Videos",
+    title: "GoonChan - Free Porn Videos, Enjoy Sexy NSFW Content",
     description:
       "Free porn streaming with hot babes, rough sex, lesbian action, creampies, facials, and more. Watch, chat, and enjoy NSFW content together on GoonChan.",
     creator: "@GoonChan",
