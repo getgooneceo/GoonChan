@@ -4,5 +4,6 @@
     "version": "1.0.0",
     "author": "Goonchan Team",
     "license": "MIT",
-    "url": "https://api.goonchan.org"
+    "url": "https://api.goonchan.org",
+    "socketUrl": "wss://api.goonchan.org"
 }
