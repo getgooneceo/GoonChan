@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema({
   isBanned: { type: Boolean, default: false },
   mutedUntil: { type: Date, default: null },
   isDummy: { type: Boolean, default: false },
+  acceptedRules: { type: Boolean, default: false },
   subscriberCount: { type: Number, default: 0 },
   subscriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   pendingUploads: [{

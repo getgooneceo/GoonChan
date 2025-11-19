@@ -57,6 +57,7 @@ import userProfileRoute, { setUserProfileIO } from "./routes/chat/userProfile.js
 import statusRoute, { setStatusIO } from "./routes/chat/status.js";
 import muteRoute, { setMuteIO } from "./routes/chat/mute.js";
 import notificationPreferenceRoute from "./routes/chat/notificationPreference.js";
+import acceptRulesRoute from "./routes/acceptRules.js";
 import { initializeChatSocket } from "./services/socketHandler.js";
 
 const app = new Hono();
@@ -116,6 +117,7 @@ app.route('/api/chat/profile', userProfileRoute);
 app.route('/api/chat/status', statusRoute);
 app.route('/api/chat/mute', muteRoute);
 app.route('/api/chat/notification-preference', notificationPreferenceRoute);
+app.route('/api/accept-rules', acceptRulesRoute);
 
 app.get('/api/queue', async (c) => {
     try {

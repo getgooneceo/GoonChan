@@ -44,7 +44,8 @@ import {
   ProfilePreview,
   TenorPicker,
   TwemojiTextarea,
-  TypingIndicator
+  TypingIndicator,
+  RulesOverlay
 } from './components';
 import { TwemojiText } from './components/TwemojiContent';
 import { MessageContent } from './components/MessageContent';
@@ -180,7 +181,7 @@ const ChatPage = () => {
   const [authError, setAuthError] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState('');
   
-  
+
   const {
     conversations,
     currentConversation,
@@ -216,6 +217,8 @@ const ChatPage = () => {
   const [isFullyLoaded, setIsFullyLoaded] = useState(false);
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
+  const [showRulesOverlay, setShowRulesOverlay] = useState(false);
+  const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
   
   const [showSettings, setShowSettings] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -495,11 +498,18 @@ const ChatPage = () => {
           const avatar = authData.user.avatar || '';
           const bio = authData.user.bio || '';
           const avatarColor = authData.user.avatarColor || '#ea4197';
+          const acceptedRules = authData.user.acceptedRules || false;
           
           setUserName(username);
           setUserAvatar(avatar);
           setUserBio(bio);
           setBannerColor(avatarColor);
+          setHasAcceptedRules(acceptedRules);
+          
+          // Show rules overlay if user hasn't accepted them yet
+          if (!acceptedRules) {
+            setShowRulesOverlay(true);
+          }
 
           const savedTheme = localStorage.getItem('goonChat_theme');
           const savedBannerColor = localStorage.getItem('goonChat_bannerColor');
@@ -2079,6 +2089,31 @@ const ChatPage = () => {
     resetMentionState();
   }, [mentionState, resetMentionState]);
 
+  const handleAcceptRules = async () => {
+    try {
+      const response = await fetch(`${config.url}/api/accept-rules`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setHasAcceptedRules(true);
+        setShowRulesOverlay(false);
+        toast.success('Rules accepted successfully!');
+      } else {
+        toast.error('Failed to accept rules. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error accepting rules:', error);
+      toast.error('An error occurred. Please try again.');
+    }
+  };
+
   const handleSendMessage = () => {
     if (inputValue.trim() && currentConversation) {
       const tempId = `temp-${Date.now()}`;
@@ -3037,6 +3072,9 @@ const ChatPage = () => {
 
   return (
     <>
+    {showRulesOverlay && (
+      <RulesOverlay onAccept={handleAcceptRules} theme={theme} />
+    )}
     {showLoadingOverlay && (
       <div
         style={{

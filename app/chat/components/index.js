@@ -11,3 +11,5 @@ export * from './TenorPicker';
 export * from './TwemojiInput';
 export * from './TwemojiContent';
 export * from './TypingIndicator';
+export { default as RulesOverlay } from './RulesOverlay';
+
