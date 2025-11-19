@@ -180,6 +180,7 @@ const ChatPage = () => {
   const [authError, setAuthError] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState('');
   
+  
   const {
     conversations,
     currentConversation,
