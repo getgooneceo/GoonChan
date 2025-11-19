@@ -360,6 +360,9 @@ export function initializeChatSocket(io) {
         conversation.lastMessage = message._id;
         conversation.lastMessageAt = new Date();
         
+        // Mark the unreadCount array as modified so Mongoose saves it
+        conversation.markModified('unreadCount');
+        
         // Save conversation asynchronously (don't block emission)
         conversation.save().catch(err => console.error('Error saving conversation:', err));
 

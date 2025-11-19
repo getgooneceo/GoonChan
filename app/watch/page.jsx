@@ -1,19 +1,27 @@
 import WatchClient from "./WatchClient";
 import config from "@/config.json";
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const videoSlug = resolvedSearchParams.v;
 
   if (!videoSlug) {
     return {
-      title: "Watch | GoonChan",
+      title: "Watch",
     };
   }
 
   try {
-    // Fetch video data
-    const response = await fetch(`${config.url}/api/content/${videoSlug}`);
+    // Fetch video data with no-store to ensure fresh data
+    const response = await fetch(`${config.url}/api/content/${videoSlug}`, {
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; GoonChanBot/1.0; +https://goonchan.org)',
+        'Accept': 'application/json'
+      }
+    });
     const data = await response.json();
 
     if (data.success && data.content) {
@@ -37,7 +45,7 @@ export async function generateMetadata({ searchParams }) {
       }
 
       return {
-        title: `${title} | GoonChan`,
+        title: title, 
         description: description,
         openGraph: {
           title: title,
@@ -61,14 +69,37 @@ export async function generateMetadata({ searchParams }) {
           description: description,
           images: [thumbnail],
         },
+        alternates: {
+          canonical: `https://goonchan.org/watch?v=${videoSlug}`,
+        },
       };
     }
   } catch (error) {
     console.error("Error fetching metadata:", error);
+    // Fallback with error info for debugging (optional, remove in prod if needed)
+    // return { title: `Error: ${error.message}` };
   }
 
   return {
-    title: "Watch | GoonChan",
+    title: "Watch",
+    openGraph: {
+      title: "Watch Video",
+      description: "Watch videos on GoonChan.",
+      url: `https://goonchan.org/watch`,
+      siteName: "GoonChan",
+      locale: "en_US",
+      type: "website",
+      images: [{
+        url: "https://goonchan.org/logo.webp", // Ensure this exists
+        width: 1200,
+        height: 630,
+        alt: "GoonChan"
+      }]
+    },
+    robots: {
+      index: false,
+      follow: true
+    }
   };
 }
 

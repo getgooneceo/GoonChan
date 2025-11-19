@@ -92,7 +92,10 @@ app.get('/:conversationId', verifyToken, async (c) => {
               'unreadCount.user': user._id
             },
             { 
-              $set: { 'unreadCount.$.count': 0 }
+              $set: { 
+                'unreadCount.$.count': 0,
+                'unreadCount.$.mentionsCount': 0
+              }
             }
           );
         } catch (err) {
@@ -144,7 +147,10 @@ app.post('/:conversationId/read', verifyToken, async (c) => {
         'unreadCount.user': user._id
       },
       { 
-        $set: { 'unreadCount.$.count': 0 }
+        $set: { 
+          'unreadCount.$.count': 0,
+          'unreadCount.$.mentionsCount': 0
+        }
       }
     );
 
