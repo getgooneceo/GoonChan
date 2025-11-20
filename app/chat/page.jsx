@@ -234,16 +234,28 @@ const ChatPage = () => {
   const [activeMessageId, setActiveMessageId] = useState(null);
 
   useEffect(() => {
+    const setVH = () => {
+      // Set CSS variable for actual viewport height (accounts for mobile browser UI)
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         setShowMembers(true);
       }
+      setVH(); // Update vh on resize
     };
     
+    setVH(); // Set initial vh
     handleResize();
     
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', setVH); // Also update on orientation change
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', setVH);
+    };
   }, []);
   const [isClosingStatusCard, setIsClosingStatusCard] = useState(false);
   const [userStatus, setUserStatus] = useState("online");
@@ -3144,11 +3156,12 @@ const ChatPage = () => {
       }
     `}</style>
     <div 
-      className="h-screen flex overflow-hidden select-none" 
+      className="h-screen lg:h-screen flex overflow-hidden select-none" 
       style={{ 
         backgroundColor: currentTheme.bg.primary,
         opacity: fadeIn ? 1 : 0,
-        transition: 'opacity 0.3s ease-in-out'
+        transition: 'opacity 0.3s ease-in-out',
+        height: 'calc(var(--vh, 1vh) * 100)'
       }}
     >
       
