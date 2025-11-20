@@ -258,27 +258,24 @@ const ChatPage = () => {
     };
   }, []);
   
-  // Handle mobile keyboard appearing and scroll input into view
+  // Scroll input into view on mobile when conversation changes and input is focused
   useEffect(() => {
-    const handleFocus = () => {
-      if (window.innerWidth < 1024 && inputContainerRef.current) {
-        // Wait for keyboard to appear (typically takes ~300ms)
+    if (window.innerWidth < 1024 && currentConversation && inputContainerRef.current) {
+      const inputElement = inputRef.current?.querySelector('textarea');
+      const isInputFocused = document.activeElement === inputElement;
+      
+      if (isInputFocused) {
+        // Input is focused, scroll it into view
         setTimeout(() => {
           inputContainerRef.current?.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'end',
             inline: 'nearest' 
           });
-        }, 300);
+        }, 100);
       }
-    };
-
-    const inputElement = inputRef.current?.querySelector('textarea');
-    if (inputElement) {
-      inputElement.addEventListener('focus', handleFocus);
-      return () => inputElement.removeEventListener('focus', handleFocus);
     }
-  }, [currentConversation]); // Re-attach when conversation changes
+  }, [currentConversation]);
   
   const [isClosingStatusCard, setIsClosingStatusCard] = useState(false);
   const [userStatus, setUserStatus] = useState("online");
