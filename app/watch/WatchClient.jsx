@@ -3,7 +3,7 @@
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @next/next/no-html-link-for-pages */
 "use client";
-import { useState, useEffect, useRef, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useNavBar } from "@/contexts/NavBarContext";
 import "remixicon/fonts/remixicon.css";
@@ -305,6 +305,13 @@ const WatchPageContent = () => {
 
   const isCurrentUserUploader =
     user && video?.uploader?._id && user._id === video.uploader._id;
+  
+  // Memoize banner ads to prevent re-rendering on every state change
+  const bannerAdsData = useMemo(() => {
+    if (!adSettings?.bannerAds?.ads) return [];
+    return adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }));
+  }, [adSettings?.bannerAds?.ads]);
+  
   const THUMBNAILS_PER_PAGE_DESKTOP = 6; // 3x2 grid
   const THUMBNAILS_PER_PAGE_MOBILE = 6; // 3x2 grid
   const getThumbnailsPerPage = () => {
@@ -1675,9 +1682,9 @@ const WatchPageContent = () => {
       )}
 
       <div className="max-w-[80rem] mx-auto px-0 pt-2 pb-8">
-        {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+        {adSettings?.bannerAds?.enabled && bannerAdsData.length > 0 && (
           <BannerAds 
-            ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
+            ads={bannerAdsData}
             className="mb-6" 
           />
         )}
@@ -2156,9 +2163,9 @@ const WatchPageContent = () => {
           </div>
         )}
 
-        {adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+        {adSettings?.bannerAds?.enabled && bannerAdsData.length > 0 && (
           <BannerAds 
-            ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
+            ads={bannerAdsData}
             className="mb-3 mt-6" 
           />
         )}
@@ -2223,9 +2230,9 @@ const WatchPageContent = () => {
               </div>
             </>
           )}
-          {video?.contentType != "image" && adSettings?.bannerAds?.enabled && adSettings?.bannerAds?.ads && adSettings.bannerAds.ads.length > 0 && (
+          {video?.contentType != "image" && adSettings?.bannerAds?.enabled && bannerAdsData.length > 0 && (
             <BannerAds 
-              ads={adSettings.bannerAds.ads.map((ad) => ({ href: ad.link, imgSrc: ad.gif }))}
+              ads={bannerAdsData}
               className="mb-3 mt-6" 
             />
           )}
@@ -2332,10 +2339,13 @@ const WatchPageContent = () => {
                           }, 100);
                         }}
                         disabled={isPostingComment || !newComment.trim()}
-                        className="px-5 py-2 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-full transition-all duration-200 text-sm font-medium cursor-pointer"
+                        className="px-5 py-2 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-full transition-all duration-200 text-sm font-medium cursor-pointer flex items-center gap-2 min-w-[100px] justify-center"
                       >
                         {isPostingComment ? (
-                          <i className="ri-loader-4-line animate-spin"></i>
+                          <>
+                            <i className="ri-loader-4-line animate-spin text-base"></i>
+                            <span>Posting...</span>
+                          </>
                         ) : (
                           "Comment"
                         )}
@@ -2418,7 +2428,7 @@ const WatchPageContent = () => {
                                 onClick={() =>
                                   handleCommentAction("delete", comment._id)
                                 }
-                                className="md:opacity-0 group-hover:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
+                                className="md:opacity-0 cursor-pointer group-hover:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
                                 title="Delete comment"
                               >
                                 <i className="ri-delete-bin-line text-xs"></i>
@@ -2469,12 +2479,24 @@ const WatchPageContent = () => {
 
                             {user && (
                               <button
-                                onClick={() =>
-                                  setShowReplyBox((prev) => ({
-                                    ...prev,
-                                    [comment._id]: !prev[comment._id],
-                                  }))
-                                }
+                                onClick={() => {
+                                  setShowReplyBox((prev) => {
+                                    const newState = {
+                                      ...prev,
+                                      [comment._id]: !prev[comment._id],
+                                    };
+                                    // Focus textarea after state updates
+                                    if (!prev[comment._id]) {
+                                      setTimeout(() => {
+                                        const textarea = document.querySelector(
+                                          `textarea[data-reply-id="${comment._id}"]`
+                                        );
+                                        textarea?.focus();
+                                      }, 50);
+                                    }
+                                    return newState;
+                                  });
+                                }}
                                 className="text-[#999] hover:text-[#ea4197] hover:bg-[#ea4197]/5 text-xs transition-all duration-200 font-medium px-2 py-1 rounded cursor-pointer"
                               >
                                 <i className="ri-reply-line text-xs"></i>
@@ -2522,6 +2544,7 @@ const WatchPageContent = () => {
                               </div>
                               <div className="flex-grow">
                                 <textarea
+                                  data-reply-id={comment._id}
                                   value={replyText[comment._id] || ""}
                                   onChange={(e) =>
                                     setReplyText((prev) => ({
@@ -2567,10 +2590,13 @@ const WatchPageContent = () => {
                                       isPostingReply[comment._id] ||
                                       !replyText[comment._id]?.trim()
                                     }
-                                    className="px-3 py-1 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded transition-all duration-200 text-sm font-medium cursor-pointer"
+                                    className="px-3 py-1.5 bg-[#ea4197] hover:bg-[#d63384] disabled:bg-[#666] disabled:cursor-not-allowed text-white rounded-full transition-all duration-200 text-sm font-medium cursor-pointer flex items-center gap-2 min-w-[80px] justify-center"
                                   >
                                     {isPostingReply[comment._id] ? (
-                                      <i className="ri-loader-4-line animate-spin"></i>
+                                      <>
+                                        <i className="ri-loader-4-line animate-spin text-sm"></i>
+                                        <span>Sending...</span>
+                                      </>
                                     ) : (
                                       "Reply"
                                     )}
@@ -2647,7 +2673,7 @@ const WatchPageContent = () => {
                                                 reply._id
                                               )
                                             }
-                                            className="md:opacity-0 group-hover/reply:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
+                                            className="md:opacity-0 cursor-pointer group-hover/reply:opacity-100 text-[#ff4444] hover:text-[#ff6666] hover:bg-[#ff4444]/10 text-xs transition-all duration-200 ml-auto p-1 rounded flex-shrink-0"
                                             title="Delete reply"
                                           >
                                             <i className="ri-delete-bin-line text-xs"></i>
