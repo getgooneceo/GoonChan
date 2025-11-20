@@ -257,6 +257,29 @@ const ChatPage = () => {
       window.removeEventListener('orientationchange', setVH);
     };
   }, []);
+  
+  // Handle mobile keyboard appearing and scroll input into view
+  useEffect(() => {
+    const handleFocus = () => {
+      if (window.innerWidth < 1024 && inputContainerRef.current) {
+        // Wait for keyboard to appear (typically takes ~300ms)
+        setTimeout(() => {
+          inputContainerRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end',
+            inline: 'nearest' 
+          });
+        }, 300);
+      }
+    };
+
+    const inputElement = inputRef.current?.querySelector('textarea');
+    if (inputElement) {
+      inputElement.addEventListener('focus', handleFocus);
+      return () => inputElement.removeEventListener('focus', handleFocus);
+    }
+  }, [currentConversation]); // Re-attach when conversation changes
+  
   const [isClosingStatusCard, setIsClosingStatusCard] = useState(false);
   const [userStatus, setUserStatus] = useState("online");
   const [userBio, setUserBio] = useState("");
@@ -375,6 +398,7 @@ const ChatPage = () => {
   const isLoadingOlderMessagesRef = useRef(false); // Track when we're loading older messages to prevent scroll
   const scrollRestorationRef = useRef(null); // Track scroll position for restoration
   const inputRef = useRef(null);
+  const inputContainerRef = useRef(null); // For scrolling input into view on mobile
   const editInputRef = useRef(null);
   const moreMenuRef = useRef(null);
   const moreButtonRef = useRef(null);
@@ -4533,7 +4557,11 @@ const ChatPage = () => {
         />
 
         {/* Message Input - Discord Style */}
-        <div className="flex-shrink-0 px-2 lg:px-5 pb-4" style={{ backgroundColor: currentTheme.bg.primary }}>
+        <div 
+          ref={inputContainerRef}
+          className="flex-shrink-0 px-2 lg:px-5 pb-4" 
+          style={{ backgroundColor: currentTheme.bg.primary }}
+        >
           <div className="max-w-[1100px] mx-auto">
             {/* Muted Notice for Groups */}
             {isMuted && currentConversation?.isGroup && mutedUntil && (
