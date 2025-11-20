@@ -226,7 +226,7 @@ const AdminPageContent = () => {
     { id: "analytics", label: "Analytics", icon: <RiDashboardLine /> },
     { id: "admin-settings", label: "Admin Settings", icon: <RiSettings3Line /> },
     { id: "manage-users", label: "Manage Users", icon: <FiUsers /> },
-    { id: "video-reupload", label: "Video Reupload", icon: <RiVideoUploadLine /> },
+    // { id: "video-reupload", label: "Video Reupload", icon: <RiVideoUploadLine /> },
     { id: "user-reports", label: "User Reports", icon: <RiFlagLine /> },
   ];
 
@@ -928,7 +928,7 @@ const AdminPageContent = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-semibold text-white">
-                            {analyticsLoading ? '...' : (analyticsData.totals.users + 30).toLocaleString()}
+                            {analyticsLoading ? '...' : (analyticsData.totals.users).toLocaleString()}
                           </div>
                           {/* <div className="text-sm text-green-400 flex items-center justify-end gap-1">
                             <FiTrendingUp className="text-xs" />
