@@ -609,13 +609,7 @@ const WatchPageContent = () => {
   }, [video?.contentType, video?.imageUrls]);
 
   // Adblock Detection
-  const adBaitRef = useRef(null);
-  
   useEffect(() => {
-    const CHECK_INTERVAL_MS = 100;
-    const CHECK_RETRIES = 10;
-    const INITIAL_DELAY = 500; // Wait longer for adblockers to act
-
     const log = (message, type = 'info') => {
       const timestamp = new Date().toISOString();
       const prefix = '[AdBlock Detection]';
@@ -629,107 +623,210 @@ const WatchPageContent = () => {
     };
 
     const onDetected = () => {
-      log('AdBlock DETECTED - showing overlay', 'warn');
+      log('🚫 AdBlock DETECTED - blocking page access', 'warn');
       setAdblockDetected(true);
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
     };
 
     const onNotDetected = () => {
-      log('AdBlock not detected - page accessible');
+      log('✅ AdBlock not detected - page accessible');
       setAdblockDetected(false);
     };
 
-    const isBaitBlocked = (baitEl) => {
-      if (!baitEl) {
-        log('Bait element is null/undefined - blocked or not rendered');
-        return true;
-      }
+    let detectionComplete = false;
+
+    const runDetection = async () => {
+      log('Starting multi-method adblock detection...');
       
-      // Check if element was removed from DOM
-      if (!document.body.contains(baitEl)) {
-        log('Bait element removed from DOM - blocked');
-        return true;
-      }
+      // Method 1: Create a bait element that looks like a real ad
+      // This must be VISIBLE (not off-screen) for adblockers to target it
+      const bait = document.createElement('div');
+      bait.id = 'ad-test-bait';
+      bait.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads text-ad-links ad-text adSense adBlock adContent adBanner';
+      bait.setAttribute('data-ad-slot', '1234567890');
+      bait.setAttribute('data-ad-client', 'ca-pub-1234567890123456');
+      bait.setAttribute('data-google-query-id', 'test-query-id');
+      bait.innerHTML = '&nbsp;';
+      bait.style.cssText = `
+        width: 1px !important;
+        height: 1px !important;
+        position: absolute !important;
+        left: 0px !important;
+        top: 0px !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      `;
+      document.body.appendChild(bait);
+      log('Bait element created and appended');
 
-      const rect = baitEl.getBoundingClientRect();
-      log(`Bait dimensions: ${rect.width}x${rect.height}`);
+      // Method 2: Try to load actual ad scripts that adblockers block
+      const adUrls = [
+        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+        'https://www.googletagservices.com/tag/js/gpt.js',
+        'https://securepubads.g.doubleclick.net/tag/js/gpt.js',
+        'https://ad.doubleclick.net/ddm/activity/',
+      ];
+
+      let scriptBlocked = false;
       
-      if (rect.width === 0 && rect.height === 0) {
-        log('Bait has zero dimensions - blocked');
-        return true;
-      }
-
-      const cs = window.getComputedStyle(baitEl);
-      log(`Bait styles - display: ${cs.display}, visibility: ${cs.visibility}, opacity: ${cs.opacity}, height: ${cs.height}`);
-      
-      if (cs.display === 'none') {
-        log('Bait display is none - blocked');
-        return true;
-      }
-      if (cs.visibility === 'hidden') {
-        log('Bait visibility is hidden - blocked');
-        return true;
-      }
-      if (cs.opacity === '0') {
-        log('Bait opacity is 0 - blocked');
-        return true;
-      }
-
-      if (rect.width < 2 || rect.height < 2) {
-        log(`Bait has tiny dimensions (${rect.width}x${rect.height}) - blocked`);
-        return true;
-      }
-
-      // Check offsetParent (null if element or ancestor is display:none)
-      if (baitEl.offsetParent === null && cs.position !== 'fixed') {
-        log('Bait offsetParent is null - likely hidden - blocked');
-        return true;
-      }
-
-      return false;
-    };
-
-    const runDetection = () => {
-      log('Starting adblock detection...');
-      let tries = 0;
-      let detected = false;
-
-      const interval = setInterval(() => {
-        tries++;
-        log(`Detection check ${tries}/${CHECK_RETRIES}`);
-        
-        // Check the React-rendered bait element
-        const bait = adBaitRef.current || document.getElementById('ad-bait');
-        
-        if (!bait) {
-          log('Bait element not found at all', 'warn');
+      // Test with fetch (some adblockers block network requests)
+      const testFetch = async (url) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          
+          const response = await fetch(url, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          log(`Fetch to ${url} - completed`);
+          return false; // Not blocked
+        } catch (e) {
+          log(`Fetch to ${url} - blocked/failed: ${e.message}`);
+          return true; // Likely blocked
         }
+      };
+
+      // Test with script injection
+      const testScript = (url) => {
+        return new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = url;
+          script.async = true;
+          
+          const timeout = setTimeout(() => {
+            log(`Script ${url} - timeout (likely blocked)`);
+            script.remove();
+            resolve(true); // Blocked
+          }, 2000);
+          
+          script.onload = () => {
+            clearTimeout(timeout);
+            log(`Script ${url} - loaded successfully`);
+            script.remove();
+            resolve(false); // Not blocked
+          };
+          
+          script.onerror = () => {
+            clearTimeout(timeout);
+            log(`Script ${url} - error (likely blocked)`);
+            script.remove();
+            resolve(true); // Blocked
+          };
+          
+          document.head.appendChild(script);
+        });
+      };
+
+      // Method 3: Check if Google Ads iframe would be blocked
+      const testGoogleAdsIframe = () => {
+        return new Promise((resolve) => {
+          const iframe = document.createElement('iframe');
+          iframe.id = 'aswift_0';
+          iframe.name = 'aswift_0';
+          iframe.className = 'adsbygoogle';
+          iframe.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px;visibility:hidden;';
+          iframe.src = 'about:blank';
+          document.body.appendChild(iframe);
+
+          setTimeout(() => {
+            const exists = document.getElementById('aswift_0');
+            const blocked = !exists || 
+              (exists && window.getComputedStyle(exists).display === 'none') ||
+              (exists && exists.offsetHeight === 0 && exists.offsetWidth === 0);
+            
+            log(`Google Ads iframe check - ${blocked ? 'blocked' : 'not blocked'}`);
+            if (exists) exists.remove();
+            resolve(blocked);
+          }, 500);
+        });
+      };
+
+      // Wait a bit for adblockers to act on the bait
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Check bait element
+      const checkBait = () => {
+        const el = document.getElementById('ad-test-bait');
+        if (!el) {
+          log('Bait element was removed from DOM');
+          return true;
+        }
+        if (!document.body.contains(el)) {
+          log('Bait element not in body');
+          return true;
+        }
+        const cs = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
         
-        const blocked = isBaitBlocked(bait);
+        log(`Bait check - display:${cs.display}, visibility:${cs.visibility}, opacity:${cs.opacity}, width:${rect.width}, height:${rect.height}`);
         
-        if (blocked) {
-          detected = true;
-          clearInterval(interval);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') {
+          log('Bait element is hidden via CSS');
+          return true;
+        }
+        if (rect.width === 0 && rect.height === 0) {
+          log('Bait element has zero dimensions');
+          return true;
+        }
+        return false;
+      };
+
+      // Run all detection methods
+      const results = await Promise.all([
+        // Check bait element multiple times
+        (async () => {
+          for (let i = 0; i < 5; i++) {
+            await new Promise(r => setTimeout(r, 100));
+            if (checkBait()) return true;
+          }
+          return false;
+        })(),
+        // Check Google Ads script
+        testScript(adUrls[0]),
+        // Check GPT script
+        testScript(adUrls[1]),
+        // Check iframe
+        testGoogleAdsIframe(),
+      ]);
+
+      // Cleanup bait
+      const baitEl = document.getElementById('ad-test-bait');
+      if (baitEl) baitEl.remove();
+
+      log(`Detection results: bait=${results[0]}, adsbygoogle=${results[1]}, gpt=${results[2]}, iframe=${results[3]}`);
+
+      // If ANY method detected blocking, show the overlay
+      const adblockFound = results.some(r => r === true);
+      
+      if (!detectionComplete) {
+        detectionComplete = true;
+        if (adblockFound) {
           onDetected();
-          return;
+        } else {
+          onNotDetected();
         }
-        
-        if (tries >= CHECK_RETRIES) {
-          clearInterval(interval);
-          if (!detected) onNotDetected();
-        }
-      }, CHECK_INTERVAL_MS);
+      }
     };
 
-    // Wait for page to fully load and adblockers to act
-    log('Scheduling detection after initial delay...');
-    const detectionTimeout = setTimeout(runDetection, INITIAL_DELAY);
+    // Start detection after a short delay
+    const timeout = setTimeout(runDetection, 100);
 
     return () => {
-      clearTimeout(detectionTimeout);
+      clearTimeout(timeout);
+      detectionComplete = true;
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
+      // Cleanup any leftover elements
+      const bait = document.getElementById('ad-test-bait');
+      if (bait) bait.remove();
     };
   }, []);
 
@@ -1671,31 +1768,6 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
-      {/* AdBlock Detection Bait - This element is targeted by adblockers */}
-      <div
-        ref={adBaitRef}
-        id="ad-bait"
-        className="pub_300x250 text-ad textAd adsbygoogle ad-banner adsbox ad-placement"
-        data-ad-slot="1234567890"
-        data-ad-client="ca-pub-1234567890"
-        aria-hidden="true"
-        style={{
-          width: '300px',
-          height: '250px',
-          minWidth: '300px',
-          minHeight: '250px',
-          position: 'absolute',
-          left: '-9999px',
-          top: '-9999px',
-          visibility: 'visible',
-          opacity: 1,
-          pointerEvents: 'none',
-          background: 'transparent',
-        }}
-      >
-        &nbsp;
-      </div>
-
       {/* AdBlock Detection Overlay */}
       <div
         className={`fixed inset-0 flex items-center justify-center z-[9999] transition-opacity duration-300 ease-out ${
