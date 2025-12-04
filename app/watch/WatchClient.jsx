@@ -682,6 +682,14 @@ const WatchPageContent = () => {
           detected = true;
           clearInterval(interval);
           onDetected();
+          // Do not remove bait if detected, as it might be needed for re-check or it's in JSX
+          // But user code removes it. We should follow user code.
+          // However, if it's in JSX, removing it from DOM is fine (React might complain on next render but we are unmounting or reloading anyway)
+          if (bait && bait.parentNode && bait.parentNode !== document.body) {
+             // It's likely the JSX element. Removing it might cause React issues if we navigate away.
+             // But we are showing overlay.
+             // Let's stick to user code: remove it.
+          }
           if (bait && bait.parentNode) try { bait.parentNode.removeChild(bait); } catch(e){}
           return;
         }
@@ -1654,6 +1662,28 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
+      {/* AdBlock Bait - Hidden but detectable */}
+      <div 
+        id="ad-bait" 
+        className="pub_300x250 text-ad"
+        style={{
+          width: '300px', 
+          height: '250px', 
+          minWidth: '300px', 
+          minHeight: '250px', 
+          position: 'absolute', 
+          left: '-10000px', 
+          top: '0', 
+          visibility: 'visible', 
+          opacity: 1,
+          pointerEvents: 'none',
+          zIndex: -1
+        }}
+        aria-hidden="true"
+      >
+        &nbsp;
+      </div>
+
       {/* AdBlock Detection Overlay */}
       <div
         className={`fixed inset-0 flex items-center justify-center z-[9999] transition-opacity duration-300 ease-out ${
