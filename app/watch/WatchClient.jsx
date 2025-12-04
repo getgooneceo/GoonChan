@@ -609,10 +609,12 @@ const WatchPageContent = () => {
   }, [video?.contentType, video?.imageUrls]);
 
   // Adblock Detection
+  const adBaitRef = useRef(null);
+  
   useEffect(() => {
-    const CHECK_INTERVAL_MS = 60;
-    const CHECK_RETRIES = 6;
-    const BaitSelector = '#ad-bait';
+    const CHECK_INTERVAL_MS = 100;
+    const CHECK_RETRIES = 10;
+    const INITIAL_DELAY = 500; // Wait longer for adblockers to act
 
     const log = (message, type = 'info') => {
       const timestamp = new Date().toISOString();
@@ -636,89 +638,96 @@ const WatchPageContent = () => {
     const onNotDetected = () => {
       log('AdBlock not detected - page accessible');
       setAdblockDetected(false);
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
     };
 
     const isBaitBlocked = (baitEl) => {
-      if (!baitEl) return true;
-      const rect = baitEl.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return true;
-      const cs = window.getComputedStyle(baitEl);
-      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return true;
-      if (rect.width < 2 || rect.height < 2) return true;
-      const hiddenByClass = ['pub_300x250','text-ad','textAd','adsbygoogle','ad-banner','ad', 'ads'];
-      for (const cls of hiddenByClass) {
-        if (baitEl.classList && baitEl.classList.contains(cls)) {
-          const style = cs;
-          if (style.display === 'none' || style.visibility === 'hidden') return true;
-        }
+      if (!baitEl) {
+        log('Bait element is null/undefined - blocked or not rendered');
+        return true;
       }
+      
+      // Check if element was removed from DOM
+      if (!document.body.contains(baitEl)) {
+        log('Bait element removed from DOM - blocked');
+        return true;
+      }
+
+      const rect = baitEl.getBoundingClientRect();
+      log(`Bait dimensions: ${rect.width}x${rect.height}`);
+      
+      if (rect.width === 0 && rect.height === 0) {
+        log('Bait has zero dimensions - blocked');
+        return true;
+      }
+
+      const cs = window.getComputedStyle(baitEl);
+      log(`Bait styles - display: ${cs.display}, visibility: ${cs.visibility}, opacity: ${cs.opacity}, height: ${cs.height}`);
+      
+      if (cs.display === 'none') {
+        log('Bait display is none - blocked');
+        return true;
+      }
+      if (cs.visibility === 'hidden') {
+        log('Bait visibility is hidden - blocked');
+        return true;
+      }
+      if (cs.opacity === '0') {
+        log('Bait opacity is 0 - blocked');
+        return true;
+      }
+
+      if (rect.width < 2 || rect.height < 2) {
+        log(`Bait has tiny dimensions (${rect.width}x${rect.height}) - blocked`);
+        return true;
+      }
+
+      // Check offsetParent (null if element or ancestor is display:none)
+      if (baitEl.offsetParent === null && cs.position !== 'fixed') {
+        log('Bait offsetParent is null - likely hidden - blocked');
+        return true;
+      }
+
       return false;
     };
 
-    const createBait = () => {
-      let bait = document.querySelector(BaitSelector);
-      if (!bait) {
-        bait = document.createElement('div');
-        bait.id = 'ad-bait';
-        bait.className = 'pub_300x250 text-ad';
-        bait.textContent = 'ad bait';
-        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:relative;left:0;top:0;visibility:visible;opacity:1;';
-        document.body.appendChild(bait);
-      }
-      return bait;
-    };
-
     const runDetection = () => {
-      const bait = createBait();
+      log('Starting adblock detection...');
       let tries = 0;
       let detected = false;
 
       const interval = setInterval(() => {
         tries++;
+        log(`Detection check ${tries}/${CHECK_RETRIES}`);
+        
+        // Check the React-rendered bait element
+        const bait = adBaitRef.current || document.getElementById('ad-bait');
+        
+        if (!bait) {
+          log('Bait element not found at all', 'warn');
+        }
+        
         const blocked = isBaitBlocked(bait);
+        
         if (blocked) {
           detected = true;
           clearInterval(interval);
           onDetected();
-          // Do not remove bait if detected, as it might be needed for re-check or it's in JSX
-          // But user code removes it. We should follow user code.
-          // However, if it's in JSX, removing it from DOM is fine (React might complain on next render but we are unmounting or reloading anyway)
-          if (bait && bait.parentNode && bait.parentNode !== document.body) {
-             // It's likely the JSX element. Removing it might cause React issues if we navigate away.
-             // But we are showing overlay.
-             // Let's stick to user code: remove it.
-          }
-          if (bait && bait.parentNode) try { bait.parentNode.removeChild(bait); } catch(e){}
           return;
         }
+        
         if (tries >= CHECK_RETRIES) {
           clearInterval(interval);
           if (!detected) onNotDetected();
-          if (bait && bait.parentNode) try { bait.parentNode.removeChild(bait); } catch(e){}
         }
       }, CHECK_INTERVAL_MS);
-
-      try {
-        const t = document.createElement('script');
-        t.src = 'https://example.com/ads.js';
-        t.async = true;
-        t.onload = function(){};
-        t.onerror = function(){};
-        document.head.appendChild(t);
-        setTimeout(()=>{ if (t.parentNode) t.parentNode.removeChild(t); }, 1000);
-      } catch(e){}
     };
 
-    const detectionTimeout = setTimeout(runDetection, 40);
+    // Wait for page to fully load and adblockers to act
+    log('Scheduling detection after initial delay...');
+    const detectionTimeout = setTimeout(runDetection, INITIAL_DELAY);
 
     return () => {
       clearTimeout(detectionTimeout);
-      const bait = document.querySelector(BaitSelector);
-      if (bait && bait.parentNode) {
-        bait.parentNode.removeChild(bait);
-      }
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
@@ -1662,24 +1671,27 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
-      {/* AdBlock Bait - Hidden but detectable */}
-      <div 
-        id="ad-bait" 
-        className="pub_300x250 text-ad"
+      {/* AdBlock Detection Bait - This element is targeted by adblockers */}
+      <div
+        ref={adBaitRef}
+        id="ad-bait"
+        className="pub_300x250 text-ad textAd adsbygoogle ad-banner adsbox ad-placement"
+        data-ad-slot="1234567890"
+        data-ad-client="ca-pub-1234567890"
+        aria-hidden="true"
         style={{
-          width: '300px', 
-          height: '250px', 
-          minWidth: '300px', 
-          minHeight: '250px', 
-          position: 'absolute', 
-          left: '-10000px', 
-          top: '0', 
-          visibility: 'visible', 
+          width: '300px',
+          height: '250px',
+          minWidth: '300px',
+          minHeight: '250px',
+          position: 'absolute',
+          left: '-9999px',
+          top: '-9999px',
+          visibility: 'visible',
           opacity: 1,
           pointerEvents: 'none',
-          zIndex: -1
+          background: 'transparent',
         }}
-        aria-hidden="true"
       >
         &nbsp;
       </div>
