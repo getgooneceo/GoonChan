@@ -295,6 +295,7 @@ const WatchPageContent = () => {
   const commentsRef = useRef(null);
   const [uploaderProfile, setUploaderProfile] = useState(null);
   const [adSettings, setAdSettings] = useState(null);
+  const [adblockDetected, setAdblockDetected] = useState(false);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentThumbnailPage, setCurrentThumbnailPage] = useState(0);
@@ -606,6 +607,172 @@ const WatchPageContent = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [video?.contentType, video?.imageUrls]);
+
+  // Adblock Detection
+  useEffect(() => {
+    const CHECK_INTERVAL_MS = 60;
+    const CHECK_RETRIES = 6;
+
+    const log = (message, type = 'info') => {
+      const timestamp = new Date().toISOString();
+      const prefix = '[AdBlock Detection]';
+      if (type === 'warn') {
+        console.warn(`${prefix} ${timestamp}: ${message}`);
+      } else if (type === 'error') {
+        console.error(`${prefix} ${timestamp}: ${message}`);
+      } else {
+        console.log(`${prefix} ${timestamp}: ${message}`);
+      }
+    };
+
+    const isBaitBlocked = (baitEl) => {
+      if (!baitEl) {
+        log('Bait element not found in DOM - likely blocked', 'warn');
+        return true;
+      }
+
+      const rect = baitEl.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        log('Bait element has zero dimensions - likely blocked', 'warn');
+        return true;
+      }
+
+      const cs = window.getComputedStyle(baitEl);
+      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) {
+        log(`Bait element hidden via CSS (display: ${cs.display}, visibility: ${cs.visibility}, opacity: ${cs.opacity}) - likely blocked`, 'warn');
+        return true;
+      }
+
+      if (rect.width < 2 || rect.height < 2) {
+        log(`Bait element has tiny dimensions (${rect.width}x${rect.height}) - likely blocked`, 'warn');
+        return true;
+      }
+
+      const hiddenByClass = ['pub_300x250', 'text-ad', 'textAd', 'adsbygoogle', 'ad-banner', 'ad', 'ads'];
+      for (const cls of hiddenByClass) {
+        if (baitEl.classList && baitEl.classList.contains(cls)) {
+          const style = cs;
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            log(`Bait element hidden by class "${cls}" - likely blocked`, 'warn');
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    const createBait = () => {
+      let bait = document.getElementById('ad-bait-detection');
+      if (!bait) {
+        log('Creating bait element');
+        bait = document.createElement('div');
+        bait.id = 'ad-bait-detection';
+        bait.className = 'pub_300x250 text-ad textAd adsbygoogle ad-banner';
+        bait.setAttribute('data-ad-slot', '1234567890');
+        bait.innerHTML = '&nbsp;';
+        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:absolute;left:-9999px;top:-9999px;visibility:visible;opacity:1;pointer-events:none;';
+        document.body.appendChild(bait);
+        log('Bait element created and appended to DOM');
+      }
+      return bait;
+    };
+
+    const onDetected = () => {
+      log('AdBlock DETECTED - showing overlay', 'warn');
+      setAdblockDetected(true);
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    };
+
+    const onNotDetected = () => {
+      log('AdBlock not detected - page accessible');
+      setAdblockDetected(false);
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+
+    const runDetection = () => {
+      log('Starting adblock detection...');
+      const bait = createBait();
+      let tries = 0;
+      let detected = false;
+
+      const interval = setInterval(() => {
+        tries++;
+        log(`Detection check ${tries}/${CHECK_RETRIES}`);
+        const blocked = isBaitBlocked(bait);
+        
+        if (blocked) {
+          detected = true;
+          clearInterval(interval);
+          onDetected();
+          if (bait && bait.parentNode) {
+            try {
+              bait.parentNode.removeChild(bait);
+              log('Bait element removed from DOM');
+            } catch (e) {
+              log('Error removing bait element: ' + e.message, 'error');
+            }
+          }
+          return;
+        }
+        
+        if (tries >= CHECK_RETRIES) {
+          clearInterval(interval);
+          if (!detected) {
+            onNotDetected();
+          }
+          if (bait && bait.parentNode) {
+            try {
+              bait.parentNode.removeChild(bait);
+              log('Bait element cleaned up after detection');
+            } catch (e) {
+              log('Error cleaning up bait element: ' + e.message, 'error');
+            }
+          }
+        }
+      }, CHECK_INTERVAL_MS);
+
+      // Additional heuristic: try loading a script that looks like an ad
+      try {
+        const testScript = document.createElement('script');
+        testScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+        testScript.async = true;
+        testScript.onerror = () => {
+          log('Ad script failed to load - additional signal for adblock', 'warn');
+        };
+        testScript.onload = () => {
+          log('Ad script loaded successfully');
+        };
+        document.head.appendChild(testScript);
+        setTimeout(() => {
+          if (testScript.parentNode) {
+            testScript.parentNode.removeChild(testScript);
+          }
+        }, 1000);
+      } catch (e) {
+        log('Error in script load test: ' + e.message, 'error');
+      }
+    };
+
+    // short delay
+    const detectionTimeout = setTimeout(() => {
+      runDetection();
+    }, 40);
+
+    return () => {
+      clearTimeout(detectionTimeout);
+      // cleanup
+      const bait = document.getElementById('ad-bait-detection');
+      if (bait && bait.parentNode) {
+        bait.parentNode.removeChild(bait);
+      }
+      // restore scroll
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   const fetchUploaderProfile = async (username) => {
     try {
@@ -1545,6 +1712,56 @@ const WatchPageContent = () => {
 
   return (
     <div className="bg-[#080808] min-h-screen w-full">
+      {/* AdBlock Detection Overlay */}
+      <div
+        className={`fixed inset-0 flex items-center justify-center z-[9999] transition-opacity duration-300 ease-out ${
+          adblockDetected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{
+          background: 'rgba(10, 10, 10, 0.85)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!adblockDetected}
+      >
+        <div
+          className={`w-[min(480px,92%)] bg-[#151515] rounded-2xl p-8 shadow-2xl text-center border border-[#2a2a2a] transition-all duration-300 ease-out ${
+            adblockDetected ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+          }`}
+        >
+          <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-[#ea4197]/10 flex items-center justify-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-8 h-8 text-[#ea4197]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-pop font-semibold text-white mb-3">
+            Ad Blocker Detected
+          </h2>
+          <p className="text-[#a0a0a0] font-pop text-[13px] w-[88%] mx-auto leading-relaxed mb-6">
+            We rely on ads to keep our content free. Please disable your ad blocker for this site and reload the page to continue watching.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2.5  bg-[#b11164f1] hover:bg-[#c3116df1] text-white font-semibold rounded-xl transition-all duration-200 ease-in cursor-pointer active:scale-[0.98]"
+          >
+            I have disabled it
+          </button>
+        </div>
+      </div>
+
       <Toaster theme="dark" position="bottom-right" richColors />
       {showAuthModal && (
         <AuthModel setShowAuthModel={setShowAuthModal} setUser={setUser} />
