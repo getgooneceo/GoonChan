@@ -663,15 +663,14 @@ const WatchPageContent = () => {
     };
 
     const createBait = () => {
-      let bait = document.getElementById('ad-bait-detection');
+      let bait = document.querySelector('#ad-bait');
       if (!bait) {
         log('Creating bait element');
         bait = document.createElement('div');
-        bait.id = 'ad-bait-detection';
-        bait.className = 'pub_300x250 text-ad textAd adsbygoogle ad-banner';
-        bait.setAttribute('data-ad-slot', '1234567890');
-        bait.innerHTML = '&nbsp;';
-        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:absolute;left:-9999px;top:-9999px;visibility:visible;opacity:1;pointer-events:none;';
+        bait.id = 'ad-bait';
+        bait.className = 'pub_300x250 text-ad';
+        bait.textContent = 'ad bait';
+        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:relative;left:0;top:0;visibility:visible;opacity:1;';
         document.body.appendChild(bait);
         log('Bait element created and appended to DOM');
       }
@@ -723,52 +722,32 @@ const WatchPageContent = () => {
           if (!detected) {
             onNotDetected();
           }
-          if (bait && bait.parentNode) {
-            try {
-              bait.parentNode.removeChild(bait);
-              log('Bait element cleaned up after detection');
-            } catch (e) {
-              log('Error cleaning up bait element: ' + e.message, 'error');
-            }
-          }
         }
       }, CHECK_INTERVAL_MS);
 
-      // Additional heuristic: try loading a script that looks like an ad
+      // fallback: try loading a script that looks like an ad
       try {
-        const testScript = document.createElement('script');
-        testScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-        testScript.async = true;
-        testScript.onerror = () => {
-          log('Ad script failed to load - additional signal for adblock', 'warn');
-        };
-        testScript.onload = () => {
-          log('Ad script loaded successfully');
-        };
-        document.head.appendChild(testScript);
-        setTimeout(() => {
-          if (testScript.parentNode) {
-            testScript.parentNode.removeChild(testScript);
-          }
-        }, 1000);
+        const t = document.createElement('script');
+        t.src = 'https://example.com/ads.js';
+        t.async = true;
+        t.onload = function() { log('Ad script loaded'); };
+        t.onerror = function() { log('Ad script blocked/failed', 'warn'); };
+        document.head.appendChild(t);
+        setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 1000);
       } catch (e) {
         log('Error in script load test: ' + e.message, 'error');
       }
     };
 
-    // short delay
-    const detectionTimeout = setTimeout(() => {
-      runDetection();
-    }, 40);
+    // start detection after a short pause to let extensions do their work
+    const detectionTimeout = setTimeout(runDetection, 40);
 
     return () => {
       clearTimeout(detectionTimeout);
-      // cleanup
-      const bait = document.getElementById('ad-bait-detection');
+      const bait = document.querySelector('#ad-bait');
       if (bait && bait.parentNode) {
         bait.parentNode.removeChild(bait);
       }
-      // restore scroll
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
