@@ -1621,7 +1621,7 @@ const WatchPageContent = () => {
         aria-hidden={!adblockDetected}
       >
         <div
-          className={`w-[min(480px,92%)] bg-[#151515] rounded-2xl p-8 shadow-2xl text-center border border-[#2a2a2a] transition-all duration-300 ease-out ${
+          className={`w-[min(480px,92%)] bg-[#151515] rounded-2xl p-8 shadow-2xl text-center border border-[#2a2a2a] transition-all duration-100 ease-out ${
             adblockDetected ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
           }`}
         >
