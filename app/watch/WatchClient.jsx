@@ -612,6 +612,7 @@ const WatchPageContent = () => {
   useEffect(() => {
     const CHECK_INTERVAL_MS = 60;
     const CHECK_RETRIES = 6;
+    const BaitSelector = '#ad-bait';
 
     const log = (message, type = 'info') => {
       const timestamp = new Date().toISOString();
@@ -623,58 +624,6 @@ const WatchPageContent = () => {
       } else {
         console.log(`${prefix} ${timestamp}: ${message}`);
       }
-    };
-
-    const isBaitBlocked = (baitEl) => {
-      if (!baitEl) {
-        log('Bait element not found in DOM - likely blocked', 'warn');
-        return true;
-      }
-
-      const rect = baitEl.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
-        log('Bait element has zero dimensions - likely blocked', 'warn');
-        return true;
-      }
-
-      const cs = window.getComputedStyle(baitEl);
-      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) {
-        log(`Bait element hidden via CSS (display: ${cs.display}, visibility: ${cs.visibility}, opacity: ${cs.opacity}) - likely blocked`, 'warn');
-        return true;
-      }
-
-      if (rect.width < 2 || rect.height < 2) {
-        log(`Bait element has tiny dimensions (${rect.width}x${rect.height}) - likely blocked`, 'warn');
-        return true;
-      }
-
-      const hiddenByClass = ['pub_300x250', 'text-ad', 'textAd', 'adsbygoogle', 'ad-banner', 'ad', 'ads'];
-      for (const cls of hiddenByClass) {
-        if (baitEl.classList && baitEl.classList.contains(cls)) {
-          const style = cs;
-          if (style.display === 'none' || style.visibility === 'hidden') {
-            log(`Bait element hidden by class "${cls}" - likely blocked`, 'warn');
-            return true;
-          }
-        }
-      }
-
-      return false;
-    };
-
-    const createBait = () => {
-      let bait = document.querySelector('#ad-bait');
-      if (!bait) {
-        log('Creating bait element');
-        bait = document.createElement('div');
-        bait.id = 'ad-bait';
-        bait.className = 'pub_300x250 text-ad';
-        bait.textContent = 'ad bait';
-        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:relative;left:0;top:0;visibility:visible;opacity:1;';
-        document.body.appendChild(bait);
-        log('Bait element created and appended to DOM');
-      }
-      return bait;
     };
 
     const onDetected = () => {
@@ -691,60 +640,74 @@ const WatchPageContent = () => {
       document.body.style.overflow = '';
     };
 
+    const isBaitBlocked = (baitEl) => {
+      if (!baitEl) return true;
+      const rect = baitEl.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return true;
+      const cs = window.getComputedStyle(baitEl);
+      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return true;
+      if (rect.width < 2 || rect.height < 2) return true;
+      const hiddenByClass = ['pub_300x250','text-ad','textAd','adsbygoogle','ad-banner','ad', 'ads'];
+      for (const cls of hiddenByClass) {
+        if (baitEl.classList && baitEl.classList.contains(cls)) {
+          const style = cs;
+          if (style.display === 'none' || style.visibility === 'hidden') return true;
+        }
+      }
+      return false;
+    };
+
+    const createBait = () => {
+      let bait = document.querySelector(BaitSelector);
+      if (!bait) {
+        bait = document.createElement('div');
+        bait.id = 'ad-bait';
+        bait.className = 'pub_300x250 text-ad';
+        bait.textContent = 'ad bait';
+        bait.style.cssText = 'width:300px;height:250px;min-width:300px;min-height:250px;position:relative;left:0;top:0;visibility:visible;opacity:1;';
+        document.body.appendChild(bait);
+      }
+      return bait;
+    };
+
     const runDetection = () => {
-      log('Starting adblock detection...');
       const bait = createBait();
       let tries = 0;
       let detected = false;
 
       const interval = setInterval(() => {
         tries++;
-        log(`Detection check ${tries}/${CHECK_RETRIES}`);
         const blocked = isBaitBlocked(bait);
-        
         if (blocked) {
           detected = true;
           clearInterval(interval);
           onDetected();
-          if (bait && bait.parentNode) {
-            try {
-              bait.parentNode.removeChild(bait);
-              log('Bait element removed from DOM');
-            } catch (e) {
-              log('Error removing bait element: ' + e.message, 'error');
-            }
-          }
+          if (bait && bait.parentNode) try { bait.parentNode.removeChild(bait); } catch(e){}
           return;
         }
-        
         if (tries >= CHECK_RETRIES) {
           clearInterval(interval);
-          if (!detected) {
-            onNotDetected();
-          }
+          if (!detected) onNotDetected();
+          if (bait && bait.parentNode) try { bait.parentNode.removeChild(bait); } catch(e){}
         }
       }, CHECK_INTERVAL_MS);
 
-      // fallback: try loading a script that looks like an ad
       try {
         const t = document.createElement('script');
         t.src = 'https://example.com/ads.js';
         t.async = true;
-        t.onload = function() { log('Ad script loaded'); };
-        t.onerror = function() { log('Ad script blocked/failed', 'warn'); };
+        t.onload = function(){};
+        t.onerror = function(){};
         document.head.appendChild(t);
-        setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 1000);
-      } catch (e) {
-        log('Error in script load test: ' + e.message, 'error');
-      }
+        setTimeout(()=>{ if (t.parentNode) t.parentNode.removeChild(t); }, 1000);
+      } catch(e){}
     };
 
-    // start detection after a short pause to let extensions do their work
     const detectionTimeout = setTimeout(runDetection, 40);
 
     return () => {
       clearTimeout(detectionTimeout);
-      const bait = document.querySelector('#ad-bait');
+      const bait = document.querySelector(BaitSelector);
       if (bait && bait.parentNode) {
         bait.parentNode.removeChild(bait);
       }
