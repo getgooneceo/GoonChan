@@ -634,7 +634,7 @@ const WatchPageContent = () => {
       log('Bait2 (adsbygoogle) created');
 
       const bait3 = document.createElement('div');
-      bait3.id = 'ad-banner-detection';
+      bait3.id = 'bottom-banner-ad';
       bait3.className = 'ad-banner textAd text-ad';
       bait3.style.cssText = 'width:728px;height:90px;position:absolute;top:-9999px;left:-9999px;display:block;';
       bait3.innerHTML = '&nbsp;';
@@ -690,10 +690,9 @@ const WatchPageContent = () => {
       if (bait3.parentNode) bait3.remove();
       log('Baits cleaned up');
 
-      // Only detect if at least 2 methods agree (reduces false positives)
-      const positiveCount = [detected.bait1, detected.bait2, detected.bait3].filter(Boolean).length;
-      const adblockFound = positiveCount >= 2;
-      log(`Positive count: ${positiveCount}, AdBlock detected: ${adblockFound}`);
+      // Detect if ANY method found adblock
+      const adblockFound = detected.bait1 || detected.bait2 || detected.bait3;
+      log(`AdBlock detected: ${adblockFound}`);
 
       if (!detectionComplete) {
         detectionComplete = true;
