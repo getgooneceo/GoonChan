@@ -64,6 +64,28 @@ const normalizeId = (value) => {
   return String(value);
 };
 
+const formatMessageTimestamp = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return timeStr;
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return `Yesterday, ${timeStr}`;
+  } else {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month}/${day}/${year} ${timeStr}`;
+  }
+};
+
 const THEMES = {
   dark: {
     name: 'Super Dark',
@@ -2913,7 +2935,13 @@ const ChatPage = () => {
   }, [mentionState.isOpen, mentionState.selectedIndex, mentionSuggestions.length]);
   
   const onlineMembers = allUsers.filter(user => ['online', 'idle', 'away', 'dnd'].includes(user.status));
-  const offlineMembers = allUsers.filter(user => !['online', 'idle', 'away', 'dnd'].includes(user.status));
+  const offlineMembers = allUsers
+    .filter(user => !['online', 'idle', 'away', 'dnd'].includes(user.status))
+    .sort((a, b) => {
+      const aTime = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+      const bTime = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+      return bTime - aTime;
+    });
   const bannedUsersStamp = useMemo(() => Object.keys(bannedUsers).sort().join('|'), [bannedUsers]);
 
   const loadingMessages = [
@@ -3903,7 +3931,7 @@ const ChatPage = () => {
                             )}
                           </div>
                           <span className="text-xs opacity-60 font-roboto select-text" style={{ color: currentTheme.text.tertiary }}>
-                            {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatMessageTimestamp(message.createdAt)}
                           </span>
                         </div>
                       )}

@@ -5,5 +5,6 @@
     "author": "Goonchan Team",
     "license": "MIT",
     "url": "https://api.goonchan.org",
+    "urlLocal": "http://localhost:3001",
     "socketUrl": "wss://api.goonchan.org"
 }

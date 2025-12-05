@@ -42,6 +42,7 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
   const [stickyNavOpacity, setStickyNavOpacity] = useState(0);
   const [adSettings, setAdSettings] = useState<any>(null);
   const [adSettingsLoading, setAdSettingsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY;
@@ -134,7 +135,15 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
     const fetchAdSettings = async () => {
       setAdSettingsLoading(true);
       try {
-        const response = await fetch(`${config.url}/api/admin/settings/ads`);
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${config.url}/api/admin/settings/ads`, {
+          headers
+        });
         
         if (!response.ok) {
           console.error('Ad settings fetch failed:', response.status, response.statusText);
@@ -146,8 +155,13 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
         
         try {
           const data = JSON.parse(text);
-          if (data.success && data.adSettings) {
-            setAdSettings(data.adSettings);
+          if (data.success) {
+            if (data.adSettings) {
+              setAdSettings(data.adSettings);
+            }
+            if (typeof data.unreadConversationsCount === 'number') {
+              setUnreadCount(data.unreadConversationsCount);
+            }
           }
         } catch (parseError) {
           console.error('Failed to parse ad settings JSON:', parseError);
@@ -451,12 +465,17 @@ const NavBar = ({user, setUser, showCategories = true, activeCategory, setActive
             <div className="flex items-center lg:ml-3 md:ml-2 space-x-2 sm:space-x-2">
               <Link 
                 href="/chat"
-                className="hidden md:flex items-center cursor-pointer justify-center bg-[#ca961c] hover:bg-[#d0991a] hover:scale-[1.03] duration-200 transition-all ease-out text-black group rounded-full p-2 sm:py-2 sm:px-4"
+                className="hidden md:flex items-center cursor-pointer justify-center bg-[#ca961c] hover:bg-[#d0991a] hover:scale-[1.03] duration-200 transition-all ease-out text-black group rounded-full p-2 sm:py-2 sm:px-4 relative"
               >
                 <IoChatbubbles size={18} />
                 <span className="font-pop font-semibold hidden sm:ml-2 md:inline">
                   Chat
                 </span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#ca0303] text-white text-[10px] font-bold font-inter px-[6px] py-[6px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center border-2 border-[#080808]">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               {adSettingsLoading ? (

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import settingsManager from '../services/settingsManager.js';
 import AdminSettings from '../models/AdminSettings.js';
 import User from '../models/User.js';
+import Conversation from '../models/Conversation.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -111,9 +112,34 @@ app.get('/ads', async (c) => {
       undressButton: { enabled: true, text: 'Undress Her', url: 'https://pornworks.com/?refid=goonproject' }
     };
 
+    let unreadConversationsCount = 0;
+
+    const authHeader = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await User.findOne({ email: decoded.email }).select('_id');
+        
+        if (user) {
+          unreadConversationsCount = await Conversation.countDocuments({
+            participants: user._id,
+            unreadCount: {
+              $elemMatch: {
+                user: user._id,
+                count: { $gt: 0 }
+              }
+            }
+          });
+        }
+      } catch (err) {
+      }
+    }
+
     return c.json({
       success: true,
-      adSettings: safeAdSettings
+      adSettings: safeAdSettings,
+      unreadConversationsCount
     });
 
   } catch (error) {
