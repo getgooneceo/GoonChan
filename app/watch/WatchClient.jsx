@@ -612,59 +612,109 @@ const WatchPageContent = () => {
   useEffect(() => {
     let detectionComplete = false;
 
+    const log = (msg) => console.log(`[AdBlock] ${msg}`);
+
     const runDetection = async () => {
-      const bait = document.createElement('div');
-      bait.id = 'ad-test-bait';
-      bait.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads text-ad-links ad-text adSense adBlock adContent adBanner';
-      bait.setAttribute('data-ad-slot', '1234567890');
-      bait.setAttribute('data-ad-client', 'ca-pub-1234567890123456');
-      bait.innerHTML = '&nbsp;';
-      bait.style.cssText = 'width:1px!important;height:1px!important;position:absolute!important;left:0!important;top:0!important;overflow:hidden!important;pointer-events:none!important;visibility:visible!important;opacity:1!important;';
-      document.body.appendChild(bait);
+      log('Starting detection...');
+      const detected = { bait1: false, bait2: false, bait3: false };
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      const bait1 = document.createElement('div');
+      bait1.className = 'adsbox';
+      bait1.style.cssText = 'position:absolute;top:-10px;left:-10px;width:1px;height:1px;background:transparent;';
+      bait1.innerHTML = '&nbsp;';
+      document.body.appendChild(bait1);
+      log('Bait1 (adsbox) created');
 
-      const checkBait = () => {
-        const el = document.getElementById('ad-test-bait');
-        if (!el || !document.body.contains(el)) return true;
+      const bait2 = document.createElement('ins');
+      bait2.className = 'adsbygoogle';
+      bait2.setAttribute('data-ad-client', 'ca-pub-1234567890123456');
+      bait2.setAttribute('data-ad-slot', '1234567890');
+      bait2.style.cssText = 'display:block;width:300px;height:250px;position:absolute;top:-9999px;left:-9999px;';
+      document.body.appendChild(bait2);
+      log('Bait2 (adsbygoogle) created');
+
+      const bait3 = document.createElement('div');
+      bait3.id = 'ad-banner-detection';
+      bait3.className = 'ad-banner textAd text-ad';
+      bait3.style.cssText = 'width:728px;height:90px;position:absolute;top:-9999px;left:-9999px;display:block;';
+      bait3.innerHTML = '&nbsp;';
+      document.body.appendChild(bait3);
+      log('Bait3 (ad-banner) created');
+
+      await new Promise(r => setTimeout(r, 500));
+
+      const check1 = () => {
+        const el = bait1;
+        if (!el || !document.body.contains(el)) {
+          log('Bait1: Element removed from DOM');
+          return true;
+        }
         const cs = window.getComputedStyle(el);
-        const rect = el.getBoundingClientRect();
-        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return true;
-        if (rect.width === 0 && rect.height === 0) return true;
-        return false;
+        const blocked = cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
+        log(`Bait1: display=${cs.display}, visibility=${cs.visibility}, offsetHeight=${el.offsetHeight}, blocked=${blocked}`);
+        return blocked;
       };
 
-      let adblockFound = false;
-      for (let i = 0; i < 5; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        if (checkBait()) {
-          adblockFound = true;
-          break;
+      const check2 = () => {
+        const el = bait2;
+        if (!el || !document.body.contains(el)) {
+          log('Bait2: Element removed from DOM');
+          return true;
         }
-      }
+        const cs = window.getComputedStyle(el);
+        const blocked = cs.display === 'none' || cs.visibility === 'hidden';
+        log(`Bait2: display=${cs.display}, visibility=${cs.visibility}, blocked=${blocked}`);
+        return blocked;
+      };
 
-      const baitEl = document.getElementById('ad-test-bait');
-      if (baitEl) baitEl.remove();
+      const check3 = () => {
+        const el = bait3;
+        if (!el || !document.body.contains(el)) {
+          log('Bait3: Element removed from DOM');
+          return true;
+        }
+        const cs = window.getComputedStyle(el);
+        const blocked = cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
+        log(`Bait3: display=${cs.display}, visibility=${cs.visibility}, offsetHeight=${el.offsetHeight}, blocked=${blocked}`);
+        return blocked;
+      };
+
+      detected.bait1 = check1();
+      detected.bait2 = check2();
+      detected.bait3 = check3();
+
+      log(`Results: bait1=${detected.bait1}, bait2=${detected.bait2}, bait3=${detected.bait3}`);
+
+      if (bait1.parentNode) bait1.remove();
+      if (bait2.parentNode) bait2.remove();
+      if (bait3.parentNode) bait3.remove();
+      log('Baits cleaned up');
+
+      // Only detect if at least 2 methods agree (reduces false positives)
+      const positiveCount = [detected.bait1, detected.bait2, detected.bait3].filter(Boolean).length;
+      const adblockFound = positiveCount >= 2;
+      log(`Positive count: ${positiveCount}, AdBlock detected: ${adblockFound}`);
 
       if (!detectionComplete) {
         detectionComplete = true;
         if (adblockFound) {
+          log('Showing adblock overlay');
           setAdblockDetected(true);
           document.documentElement.style.overflow = 'hidden';
           document.body.style.overflow = 'hidden';
+        } else {
+          log('No adblock detected, page accessible');
         }
       }
     };
 
-    const timeout = setTimeout(runDetection, 100);
+    const timeout = setTimeout(runDetection, 200);
 
     return () => {
       clearTimeout(timeout);
       detectionComplete = true;
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
-      const bait = document.getElementById('ad-test-bait');
-      if (bait) bait.remove();
     };
   }, []);
 
