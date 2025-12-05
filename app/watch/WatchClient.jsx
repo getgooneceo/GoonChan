@@ -612,10 +612,7 @@ const WatchPageContent = () => {
   useEffect(() => {
     let detectionComplete = false;
 
-    const log = (msg) => console.log(`[AdBlock] ${msg}`);
-
     const runDetection = async () => {
-      log('Starting detection...');
       const detected = { bait1: false, bait2: false, bait3: false };
 
       const bait1 = document.createElement('div');
@@ -623,7 +620,6 @@ const WatchPageContent = () => {
       bait1.style.cssText = 'position:absolute;top:-10px;left:-10px;width:1px;height:1px;background:transparent;';
       bait1.innerHTML = '&nbsp;';
       document.body.appendChild(bait1);
-      log('Bait1 (adsbox) created');
 
       const bait2 = document.createElement('ins');
       bait2.className = 'adsbygoogle';
@@ -631,7 +627,6 @@ const WatchPageContent = () => {
       bait2.setAttribute('data-ad-slot', '1234567890');
       bait2.style.cssText = 'display:block;width:300px;height:250px;position:absolute;top:-9999px;left:-9999px;';
       document.body.appendChild(bait2);
-      log('Bait2 (adsbygoogle) created');
 
       const bait3 = document.createElement('div');
       bait3.id = 'bottom-banner-ad';
@@ -639,70 +634,48 @@ const WatchPageContent = () => {
       bait3.style.cssText = 'width:728px;height:90px;position:absolute;top:-9999px;left:-9999px;display:block;';
       bait3.innerHTML = '&nbsp;';
       document.body.appendChild(bait3);
-      log('Bait3 (ad-banner) created');
 
       await new Promise(r => setTimeout(r, 500));
 
       const check1 = () => {
         const el = bait1;
-        if (!el || !document.body.contains(el)) {
-          log('Bait1: Element removed from DOM');
-          return true;
-        }
+        if (!el || !document.body.contains(el)) return true;
         const cs = window.getComputedStyle(el);
-        const blocked = cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
-        log(`Bait1: display=${cs.display}, visibility=${cs.visibility}, offsetHeight=${el.offsetHeight}, blocked=${blocked}`);
-        return blocked;
+        return cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
       };
 
       const check2 = () => {
         const el = bait2;
-        if (!el || !document.body.contains(el)) {
-          log('Bait2: Element removed from DOM');
-          return true;
-        }
+        if (!el || !document.body.contains(el)) return true;
         const cs = window.getComputedStyle(el);
-        const blocked = cs.display === 'none' || cs.visibility === 'hidden';
-        log(`Bait2: display=${cs.display}, visibility=${cs.visibility}, blocked=${blocked}`);
-        return blocked;
+        return cs.display === 'none' || cs.visibility === 'hidden';
       };
 
       const check3 = () => {
         const el = bait3;
-        if (!el || !document.body.contains(el)) {
-          log('Bait3: Element removed from DOM');
-          return true;
-        }
+        if (!el || !document.body.contains(el)) return true;
         const cs = window.getComputedStyle(el);
-        const blocked = cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
-        log(`Bait3: display=${cs.display}, visibility=${cs.visibility}, offsetHeight=${el.offsetHeight}, blocked=${blocked}`);
-        return blocked;
+        return cs.display === 'none' || cs.visibility === 'hidden' || el.offsetHeight === 0;
       };
 
       detected.bait1 = check1();
       detected.bait2 = check2();
       detected.bait3 = check3();
 
-      log(`Results: bait1=${detected.bait1}, bait2=${detected.bait2}, bait3=${detected.bait3}`);
-
       if (bait1.parentNode) bait1.remove();
       if (bait2.parentNode) bait2.remove();
       if (bait3.parentNode) bait3.remove();
-      log('Baits cleaned up');
 
-      // Detect if ANY method found adblock
       const adblockFound = detected.bait1 || detected.bait2 || detected.bait3;
-      log(`AdBlock detected: ${adblockFound}`);
 
       if (!detectionComplete) {
         detectionComplete = true;
+        // summary log
+        console.log(`[AdBlock] detected=${adblockFound}; bait1=${detected.bait1}; bait2=${detected.bait2}; bait3=${detected.bait3}`);
         if (adblockFound) {
-          log('Showing adblock overlay');
           setAdblockDetected(true);
           document.documentElement.style.overflow = 'hidden';
           document.body.style.overflow = 'hidden';
-        } else {
-          log('No adblock detected, page accessible');
         }
       }
     };
